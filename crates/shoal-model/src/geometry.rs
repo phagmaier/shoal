@@ -59,9 +59,12 @@ fn collect_rects(layout: &Layout, area: Rect, gap: u32, result: &mut BTreeMap<Pa
             };
             let local_gap = gap.min(extent);
             let usable = extent - local_gap;
-            // f64 exactly represents every u32, avoiding f32's loss of pixel
-            // precision for large areas before rounding down.
-            let first_extent = (f64::from(usable) * f64::from(*ratio)).floor() as u32;
+            // Every allowed f32 ratio (0.1..=0.9) is an exact multiple of 2^-27.
+            // Scaling by that power of two is exact; the integer product then
+            // fits in 59 bits and division floors without floating-point rounding.
+            const RATIO_SCALE: u64 = 1 << 27;
+            let share = (f64::from(*ratio) * RATIO_SCALE as f64) as u64;
+            let first_extent = (u64::from(usable) * share / RATIO_SCALE) as u32;
             let second_extent = usable - first_extent;
             let (first_area, second_area) = match axis {
                 Axis::Row => (

@@ -54,14 +54,34 @@ fn rects_nested_splits_floor_first_share_and_give_remainder_to_second() {
 
 #[test]
 fn rects_respect_ratios_and_large_pixel_extents() {
-    let layout = branch(1, Axis::Row, 0.25, Layout::Pane(p(2)), Layout::Pane(p(3)));
-    assert_eq!(
-        rects(&layout, r(0, 0, u32::MAX, 1), 0),
-        Ok(BTreeMap::from([
-            (p(2), r(0, 0, 1_073_741_823, 1)),
-            (p(3), r(1_073_741_823, 0, 3_221_225_472, 1)),
-        ]))
-    );
+    // The exact stored f32 values are 1/4, 13_421_773/134_217_728
+    // and 7_549_747/8_388_608. The expected integer shares are their
+    // products rounded down, including the case where f64 rounds up first.
+    for (ratio, extent, first, second) in [
+        (0.25, u32::MAX, 1_073_741_823, 3_221_225_472),
+        (0.1, u32::MAX, 429_496_735, 3_865_470_560),
+        (0.9, 4_290_772_997, 3_861_695_594, 429_077_403),
+    ] {
+        for axis in [Axis::Row, Axis::Column] {
+            let layout = branch(1, axis, ratio, Layout::Pane(p(2)), Layout::Pane(p(3)));
+            let (area, a, b) = match axis {
+                Axis::Row => (
+                    r(0, 0, extent, 1),
+                    r(0, 0, first, 1),
+                    r(first, 0, second, 1),
+                ),
+                Axis::Column => (
+                    r(0, 0, 1, extent),
+                    r(0, 0, 1, first),
+                    r(0, first, 1, second),
+                ),
+            };
+            assert_eq!(
+                rects(&layout, area, 0),
+                Ok(BTreeMap::from([(p(2), a), (p(3), b)]))
+            );
+        }
+    }
 }
 
 #[test]

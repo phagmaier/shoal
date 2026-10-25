@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01 and T02 done and merged into `main` (2026-10-25). T03 (layout operations) is done on `t03-layout-ops`, with checks and review complete; merge and push await approval. T04 and later are not started.
+**Current status:** T01 and T02 done and merged into `main` (2026-10-25). T03 (layout operations) is done on `t03-layout-ops`, including the standalone review follow-up; checks and review pass. Merge and push await approval. T04 and later are not started.
 
 **How to use this list**
 
@@ -59,6 +59,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 - **Status:** done 2026-10-25 on `t03-layout-ops`; not merged or pushed. The user settled caller-supplied split ids, fractional resize steps, integer rounding and zoom/close edge cases; recorded in M1 spec §3 before implementation.
 - **Verified:** `mise exec -- just check` passes (fmt, clippy with warnings denied, all 51 model tests, cargo-deny and dependency boundaries). Added 22 unit tests covering all seven operations, plus a proptest of random operation sequences that calls `validate` after every step, checks rejected edits are atomic, and independently checks pane/divider coverage pixel by pixel. Existing JSON snapshots remain unchanged.
 - **Review:** direct review of implementation, tests, dependency/lockfile changes and spec contracts complete. The property test exposed a capped gap propagating incorrectly to child splits; a focused regression failed before the fix and passes afterward, and its generated seed is saved. No unresolved in-scope findings. No manual checks required for this pure-model task.
+- **Standalone review follow-up (2026-10-25):** resolved the low-priority off-by-one floor for very large accepted pixel extents using exact scaling and integer division. Extended the existing large-area test with independently worked expectations at both ratio bounds on both axes; the regression failed before the fix and passes afterward. Direct review and a fresh `mise exec -- just check` pass, with all 51 model tests and no new dependencies.
 - **Needs:** T02.
 - **Build:** `split`, `close`, `rects`, `neighbor`, `resize`, `set_ratio`, `toggle_zoom` (M1 spec §3).
 - **Done when:** unit tests for each function's edge cases, plus a proptest running random operation sequences that checks every invariant and that `rects` tiles the area exactly.
