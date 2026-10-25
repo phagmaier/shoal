@@ -1,9 +1,9 @@
 //! Shoal's only wrapper around libghostty-vt. No other crate imports libghostty.
 //!
-//! The daemon's pane terminal is [`Terminal::with_replies`]: the one terminal
-//! that answers program queries. Windows build mirrors with
-//! [`Terminal::restore`] from a [`Terminal::snapshot`] taken by a daemon with
-//! the same [`core_id`], then feed them live output. Persistence formats the
+//! The daemon's pane terminal is [`Terminal::pane`]: the one terminal that
+//! answers program queries and reports metadata events. Windows build mirrors
+//! with [`Terminal::restore`] from a [`Terminal::snapshot`] taken by a daemon
+//! with the same [`core_id`], then feed them live output. Persistence formats the
 //! primary screen with [`Terminal::persisted`] and [`Persisted::into_vt`].
 //! Windows draw a terminal through [`Terminal::frame`] and encode input with
 //! [`Terminal::encode_key`], [`Terminal::encode_mouse`],
@@ -14,6 +14,7 @@ mod alloc;
 mod core;
 mod input;
 mod mouse;
+mod pane;
 mod persist;
 mod render;
 mod snapshot;
@@ -22,6 +23,7 @@ mod terminal;
 pub use core::core_id;
 pub use input::{Key, KeyAction, KeyEvent, Mods};
 pub use mouse::{CellSize, MouseAction, MouseButton, MouseEvent};
+pub use pane::{EventSink, PaneSetup, PromptMark, TermEvent, Theme};
 pub use persist::{FormatVtError, Persisted};
 pub use render::{
     Cell, CellStyle, CellWidth, Colors, Cursor, CursorPosition, CursorShape, Dirty, Frame, Rgb,

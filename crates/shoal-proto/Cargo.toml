@@ -8,7 +8,7 @@ publish.workspace = true
 description = "Wire protocol and frame codec for Shoal"
 
 [dependencies]
-shoal-model = { path = "../shoal-model" }
+shoal-model.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["float_roundtrip"] }
 thiserror.workspace = true

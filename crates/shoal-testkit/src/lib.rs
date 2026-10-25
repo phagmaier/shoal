@@ -6,7 +6,7 @@
 //! check that the daemon uses the locations M1 spec §4.1 and §4.6 name.
 
 use std::{
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     io::{ErrorKind, Read, Write},
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
@@ -102,24 +102,33 @@ impl TempEnv {
         std::fs::read_to_string(self.log_file()).unwrap_or_default()
     }
 
-    /// `program` with only this environment: `PATH` and the locale are kept,
-    /// everything else, `SHOAL_*` included, is cleared. Logging is at debug.
+    /// This environment's variables: `PATH` and the locale are kept from the
+    /// test's, everything else, `SHOAL_*` included, is left out. Logging is at
+    /// debug.
+    pub fn vars(&self) -> Vec<(OsString, OsString)> {
+        let mut vars: Vec<(OsString, OsString)> = ["PATH", "LANG", "LC_ALL"]
+            .into_iter()
+            .filter_map(|kept| Some((kept.into(), std::env::var_os(kept)?)))
+            .collect();
+        let dirs = [
+            ("HOME", self.home()),
+            ("XDG_CONFIG_HOME", self.config_home()),
+            ("XDG_STATE_HOME", self.state_home()),
+            ("XDG_CACHE_HOME", self.cache_home()),
+            ("XDG_DATA_HOME", self.data_home()),
+            ("XDG_RUNTIME_DIR", self.runtime_home()),
+        ];
+        vars.extend(dirs.map(|(key, dir)| (key.into(), dir.into())));
+        vars.push(("SHOAL_LOG".into(), "debug".into()));
+        vars
+    }
+
+    /// `program` with only [`TempEnv::vars`], started in `HOME`.
     pub fn command(&self, program: impl AsRef<OsStr>) -> Command {
         let mut command = Command::new(program);
-        command.env_clear();
-        for kept in ["PATH", "LANG", "LC_ALL"] {
-            if let Some(value) = std::env::var_os(kept) {
-                command.env(kept, value);
-            }
-        }
         command
-            .env("HOME", self.home())
-            .env("XDG_CONFIG_HOME", self.config_home())
-            .env("XDG_STATE_HOME", self.state_home())
-            .env("XDG_CACHE_HOME", self.cache_home())
-            .env("XDG_DATA_HOME", self.data_home())
-            .env("XDG_RUNTIME_DIR", self.runtime_home())
-            .env("SHOAL_LOG", "debug")
+            .env_clear()
+            .envs(self.vars())
             .current_dir(self.home());
         command
     }

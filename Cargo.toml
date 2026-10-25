@@ -21,6 +21,7 @@ publish = false
 
 [workspace.dependencies]
 shoal-config = { path = "crates/shoal-config" }
+shoal-model = { path = "crates/shoal-model" }
 shoal-proto = { path = "crates/shoal-proto" }
 insta = "1.49.0"
 jiff = { version = "0.2.38", default-features = false, features = ["std", "serde"] }
@@ -36,6 +37,7 @@ tokio = { version = "1.54.1", default-features = false }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false }
 rustix = { version = "1.1.5", default-features = false, features = ["std"] }
+portable-pty = { version = "0.9.0", default-features = false }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93", features = ["wayland", "font-kit"] }
 libghostty-vt = { git = "https://github.com/uzaaft/libghostty-rs", rev = "9ede35b8ea94a55ed3608408d67e102883129f1e", features = ["allocator_api"] }

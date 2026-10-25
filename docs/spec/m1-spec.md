@@ -188,6 +188,8 @@ pub enum PaneStatus {
 
 **Settled details (T10, 2026-10-25).** An existing runtime folder must be a directory owned by the daemon's user, or `shoald` exits 1. Its mode is reset to 0700. The lock file is created 0600 and never removed. A peer with another uid is closed without a reply. On stop, the socket is removed *before* the lock is released, so a daemon that takes the lock next never loses its fresh socket. A start error exits 1 with `shoald: <reason>` on stderr and in the log. A persistent accept error, such as running out of descriptors, pauses accepting for 100 ms.
 
+**Config at startup (T11, 2026-10-25).** Step 4 never stops the daemon. An unreadable or invalid `config.toml` means defaults, and theme problems fall through to the next color source (§9.2). Each problem is logged; T12 adds the watch and `daemon.notice`.
+
 **How it gets started.** `shoald.service` is a systemd user unit (`Type=simple`, `Restart=on-failure`, `TimeoutStopSec=10`). Any client that can't connect runs `systemctl --user start shoald.service` and polls the socket for up to 2 s. If that fails or systemd is absent, it spawns `shoald` detached (`setsid`, stdio to `/dev/null`). Shells run inside the service's cgroup, so closing windows or the Hyprland session doesn't touch them, and stopping the service ends them cleanly.
 
 ### 4.2 Pane runtime
@@ -205,6 +207,15 @@ pub enum PaneStatus {
 - **Commands:** `Write(bytes)`, `Resize(size)`, `Snapshot(reply)`, `Subscribe`, `Unsubscribe`, `Capture`, `Kill`.
 - **Kill:** `SIGHUP` to the process group, then `SIGKILL` after 2 s.
 - **Exit:** on EOF, collect the exit status and set `Exited`. With `close_pane_on_exit = true` (default) the workspace actor closes the pane, which may close its tab and session. Guard: if a pane exits within 1 s of starting with a non-zero code, keep it open showing the error.
+
+**Settled details (T11, 2026-10-25).**
+
+- *Starting:* `shell.program` names one program, with no arguments. A shell gets no arguments, so it is interactive and not a login shell. The passwd step reads `/etc/passwd` for the daemon's uid. A requested directory that isn't one falls back to `$HOME`. A program that can't be started is a spawn error for the caller; nothing is shown in a pane. The thread is named `pane-<number>` (`pane-40`), which fits Linux's 15-character thread names.
+- *Replies:* the pane terminal answers what Ghostty answers: DA1 `CSI ? 62 ; 22 c`, DA2 `CSI > 1 ; 0 ; 0 c`, DA3 unit id 0, XTVERSION `shoal <version>`, XTGETTCAP `TN` as `xterm-256color`, and XTWINOPS and mode 2048 sizes in cells with zero pixels. The color scheme report (`CSI ? 996 n`) says dark when the theme background's luminance is below half. Color queries (OSC 4, 10–12) get the theme's colors (§9.2) unless the program set its own. ENQ and clipboard reads get no answer, and window resize requests are ignored. Mode 2027 is the reset default, so a full reset (`ESC c`) keeps it on.
+- *Stream:* sequence numbers start at 1 and number output items and resizes alike. Output that arrives 4 ms or more after the last item goes out at once, so echo isn't delayed. Otherwise it waits until 4 ms have passed, and an item never holds more than 64 KiB. A snapshot or a new subscriber first numbers any output still waiting, so the snapshot at `N` holds exactly the items up to `N`. A resize to the current size is ignored.
+- *Input:* the PTY is non-blocking. Input and replies queue in order and are written as the shell reads, so a shell that stops reading never stalls output.
+- *Kill:* `SIGHUP` goes to the shell's process group and the PTY's foreground group, as a hangup does, and `SIGKILL` follows to both after 2 s. Dropping a pane's handle kills it the same way, and the thread ends once the shell has.
+- *Exit:* after EOF (`EIO`), the thread waits on a pidfd for the status, so a slow exit never blocks it. A process outside those groups that keeps the terminal open keeps the pane running. The guard counts only a non-zero exit code; a death by signal is not an early failure. An exited pane's thread keeps answering snapshots and captures, ignores input, and resizes only its terminal.
 
 ### 4.3 Pane metadata
 
