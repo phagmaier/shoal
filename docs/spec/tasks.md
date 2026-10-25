@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01 done and committed on `t01-scaffold`; the user confirmed the fresh-clone install-mode setup and `just check` succeeded on 2026-10-25. Next: T02 (model types) on `t02-model-types`, stacked on the T01 commit. Pushes and merging into `main` still need approval.
+**Current status:** T01 and T02 done and merged into `main` (2026-10-25). Next in the safe order: T03 (layout operations), not started.
 
 **How to use this list**
 
@@ -38,7 +38,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T01 · Repository scaffold
 
-- **Status:** done 2026-10-25 on `t01-scaffold`. Implementation, direct review and automated verification complete; the user reported success for install-mode setup plus `just check` in the prepared fresh clone. Committed on `t01-scaffold`; not pushed or merged.
+- **Status:** done 2026-10-25 on `t01-scaffold`. Implementation, direct review and automated verification complete; the user reported success for install-mode setup plus `just check` in the prepared fresh clone. Merged into `main` and pushed.
 - **Verified:** `just check` passes locally and in a fresh candidate clone after `mise install`, source fetching and setup `--check`. All 178 isolated dependency-policy probes pass. The actual pinned GPUI/platform graph is accepted in the GUI and rejected in the daemon; adding CLI→term makes `just check` fail at the deny gate. Shell syntax, repeated fetch, fetch integrity/failure paths, setup trust/missing-source failures and all three empty binary launches were exercised.
 - **Review:** fixed symlink read-only validation, accounted for upstream GPUI platform imports without permitting other Shoal crates to import them, and kept the deny policy scoped to dependency boundaries. No unresolved in-scope findings.
 - **Needs:** T00.
@@ -47,7 +47,9 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T02 · Model types
 
-- **Status:** ready; recommended next task, not started.
+- **Status:** done 2026-10-25; merged into `main` and pushed.
+- **Verified:** `just check` passes. A reviewed insta snapshot of the wire JSON covers two sessions, nested splits and a zoomed pane; round-trip, spec-shape and wrong-id-kind tests; 13 `validate` rejection tests, one per broken invariant, each asserting the exact error.
+- **Interpretations:** ids must be unique by number across all four kinds (they share one counter), and each `panes` key must equal its pane's `id`. `validate` does not check session-name uniqueness or the ratio range, since §3's `validate` list omits them.
 - **Needs:** T01.
 - **Build:** `shoal-model` types from M1 spec §3 with serde, prefixed-string ids, and `validate`.
 - **Done when:** insta JSON snapshot tests cover a workspace with two sessions, nested splits and a zoomed pane; `validate` rejects each broken invariant in its own test.

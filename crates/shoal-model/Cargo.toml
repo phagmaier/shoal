@@ -6,3 +6,12 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "Pure workspace types and layout operations for Shoal"
+
+[dependencies]
+jiff.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+serde_json.workspace = true

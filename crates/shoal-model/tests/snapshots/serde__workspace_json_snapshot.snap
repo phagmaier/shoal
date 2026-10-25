@@ -1,0 +1,180 @@
+---
+source: crates/shoal-model/tests/serde.rs
+expression: json
+---
+{
+  "rev": 42,
+  "next_id": 20,
+  "sessions": [
+    {
+      "id": "s1",
+      "name": "main",
+      "tabs": [
+        {
+          "id": "t2",
+          "name": null,
+          "layout": {
+            "split": {
+              "id": "x3",
+              "axis": "row",
+              "ratio": 0.6,
+              "first": {
+                "pane": "p4"
+              },
+              "second": {
+                "split": {
+                  "id": "x5",
+                  "axis": "column",
+                  "ratio": 0.5,
+                  "first": {
+                    "pane": "p6"
+                  },
+                  "second": {
+                    "pane": "p7"
+                  }
+                }
+              }
+            }
+          },
+          "focused": "p6",
+          "zoomed": "p6"
+        },
+        {
+          "id": "t8",
+          "name": "logs",
+          "layout": {
+            "pane": "p9"
+          },
+          "focused": "p9",
+          "zoomed": null
+        }
+      ],
+      "active_tab": "t2",
+      "created_at": "2026-10-20T09:00:00Z",
+      "last_active_at": "2026-10-24T14:01:58Z",
+      "windows": 1
+    },
+    {
+      "id": "s10",
+      "name": "2",
+      "tabs": [
+        {
+          "id": "t11",
+          "name": null,
+          "layout": {
+            "pane": "p12"
+          },
+          "focused": "p12",
+          "zoomed": null
+        }
+      ],
+      "active_tab": "t11",
+      "created_at": "2026-10-24T08:30:00.5Z",
+      "last_active_at": "2026-10-24T08:30:00.5Z",
+      "windows": 0
+    }
+  ],
+  "panes": {
+    "p4": {
+      "id": "p4",
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "size": {
+        "cols": 120,
+        "rows": 40
+      },
+      "cwd": "/home/parker/code/shoal",
+      "program": "nvim",
+      "title": "nvim",
+      "status": {
+        "state": "running"
+      },
+      "bell": false,
+      "restored_from": null
+    },
+    "p6": {
+      "id": "p6",
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "cwd": "/home/parker/code/shoal",
+      "program": null,
+      "title": "shoal",
+      "status": {
+        "state": "running"
+      },
+      "bell": false,
+      "restored_from": null
+    },
+    "p7": {
+      "id": "p7",
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "cwd": "/home/parker/code/shoal",
+      "program": null,
+      "title": "shoal",
+      "status": {
+        "state": "exited",
+        "code": 0,
+        "signal": null
+      },
+      "bell": true,
+      "restored_from": null
+    },
+    "p9": {
+      "id": "p9",
+      "kind": {
+        "kind": "shell",
+        "argv": [
+          "htop"
+        ]
+      },
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "cwd": null,
+      "program": "htop",
+      "title": "htop",
+      "status": {
+        "state": "running"
+      },
+      "bell": false,
+      "restored_from": "2026-10-24T14:02:11Z"
+    },
+    "p12": {
+      "id": "p12",
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "cwd": "/home/parker/code/shoal",
+      "program": null,
+      "title": "~",
+      "status": {
+        "state": "exited",
+        "code": null,
+        "signal": 9
+      },
+      "bell": false,
+      "restored_from": null
+    }
+  }
+}
