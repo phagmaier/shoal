@@ -1,6 +1,7 @@
 //! The workspace tree (M1 spec §3): sessions › tabs › layouts of panes.
 
 use std::collections::BTreeMap;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -59,7 +60,7 @@ pub enum Layout {
     Split {
         id: SplitId,
         axis: Axis,
-        /// Share of `first`, clamped to `0.1..=0.9`.
+        /// Share of `first`, clamped to [`Layout::RATIO_RANGE`].
         ratio: f32,
         first: Box<Layout>,
         second: Box<Layout>,
@@ -117,6 +118,9 @@ pub enum PaneStatus {
 }
 
 impl Layout {
+    /// The allowed share of a split's `first` child.
+    pub const RATIO_RANGE: RangeInclusive<f32> = 0.1..=0.9;
+
     /// Calls `f` for each pane, first subtree before second.
     pub fn for_each_pane(&self, f: &mut impl FnMut(PaneId)) {
         match self {

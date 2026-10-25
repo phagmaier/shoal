@@ -49,7 +49,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 - **Status:** done 2026-10-25; merged into `main` and pushed.
 - **Verified:** `just check` passes. A reviewed insta snapshot of the wire JSON covers two sessions, nested splits and a zoomed pane; round-trip, spec-shape and wrong-id-kind tests; 13 `validate` rejection tests, one per broken invariant, each asserting the exact error.
-- **Interpretations:** ids must be unique by number across all four kinds (they share one counter), and each `panes` key must equal its pane's `id`. `validate` does not check session-name uniqueness or the ratio range, since §3's `validate` list omits them.
+- **Follow-up (2026-10-25, `t02-validate-rules`):** the user confirmed cross-kind id uniqueness and the pane-key check, and asked `validate` to also reject repeated session names and split ratios outside 0.1..=0.9 or NaN, before T03's property test relies on it. M1 spec §3 now lists all of these.
 - **Needs:** T01.
 - **Build:** `shoal-model` types from M1 spec §3 with serde, prefixed-string ids, and `validate`.
 - **Done when:** insta JSON snapshot tests cover a workspace with two sessions, nested splits and a zoomed pane; `validate` rejects each broken invariant in its own test.

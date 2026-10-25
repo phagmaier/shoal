@@ -135,7 +135,7 @@ pub enum PaneStatus {
 | `resize(layout, pane, direction, step)` | Moves the edge of the nearest ancestor split on that axis, so the focused pane grows toward `direction`. |
 | `set_ratio(layout, split_id, ratio)` | Used by mouse drags on a divider. |
 | `toggle_zoom(tab, pane)` | Zoomed pane fills the tab; the others keep running at their old size. |
-| `validate(workspace)` | Every pane in `panes` appears in exactly one tab's layout and every layout pane is in `panes`; ids are unique and all below `next_id`; `active_tab` points inside its session; `focused` and `zoomed` point inside their tab; every session has a tab. Runs after every change in debug builds. |
+| `validate(workspace)` | Every pane in `panes` is stored under its own id, appears in exactly one tab's layout, and every layout pane is in `panes`; ids are unique across all four kinds (they share one counter) and all below `next_id`; `active_tab` points inside its session; `focused` and `zoomed` point inside their tab; every session has a tab; session names are unique; every split `ratio` is within 0.1..=0.9 (NaN fails). Runs after every change in debug builds. |
 
 ## 4. Daemon behaviour
 

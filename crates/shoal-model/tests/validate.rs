@@ -156,3 +156,53 @@ fn rejects_id_not_below_next_id() {
         },
     );
 }
+
+#[test]
+fn rejects_repeated_session_name() {
+    let mut ws = workspace();
+    ws.sessions[1].name = "main".into();
+    rejects(
+        &ws,
+        ValidationError::DuplicateSessionName {
+            first: SessionId::new(1),
+            second: SessionId::new(10),
+            name: "main".into(),
+        },
+    );
+}
+
+fn with_ratios(outer: f32, inner: f32) -> Workspace {
+    let mut ws = workspace();
+    let nested = split(5, Axis::Column, inner, leaf(6), leaf(7));
+    ws.sessions[0].tabs[0].layout = split(3, Axis::Row, outer, leaf(4), nested);
+    ws
+}
+
+#[test]
+fn accepts_ratios_at_the_clamp_bounds() {
+    assert_eq!(validate(&with_ratios(0.1, 0.9)), Ok(()));
+}
+
+#[test]
+fn rejects_ratio_outside_clamp() {
+    rejects(
+        &with_ratios(0.6, 0.95),
+        ValidationError::RatioOutOfRange {
+            split: SplitId::new(5),
+            ratio: 0.95,
+        },
+    );
+}
+
+#[test]
+fn rejects_nan_ratio() {
+    let result = validate(&with_ratios(f32::NAN, 0.5));
+    assert!(
+        matches!(
+            result,
+            Err(ValidationError::RatioOutOfRange { split, ratio })
+                if split == SplitId::new(3) && ratio.is_nan()
+        ),
+        "{result:?}"
+    );
+}
