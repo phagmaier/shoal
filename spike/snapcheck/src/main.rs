@@ -8,9 +8,10 @@
 //! attaching) and compare again, which catches hidden state such as scroll
 //! regions, tab stops, charsets and saved cursors.
 //!
-//! Usage: snapcheck [--programs] [--verbose]
+//! Usage: snapcheck [--programs] [--verbose] | --bench | --design
 
 mod compare;
+mod design;
 mod programs;
 mod scenarios;
 
@@ -214,6 +215,10 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--bench") {
         bench();
+        return;
+    }
+    if args.iter().any(|a| a == "--design") {
+        design::run();
         return;
     }
     let verbose = args.iter().any(|a| a == "--verbose");

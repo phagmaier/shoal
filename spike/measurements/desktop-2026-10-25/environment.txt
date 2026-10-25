@@ -1,0 +1,217 @@
+# Second machine (desktop), captured 2026-10-25T10:00:26Z. Not the laptop of the round 1/2 measurements.
+
+$ uname -a
+Linux omarchyDesktop 7.2.8-9-omarchy #1 SMP PREEMPT_DYNAMIC Sat, 17 Oct 2026 22:09:33 +0000 x86_64 GNU/Linux
+
+$ cat /etc/os-release
+NAME="Omarchy"
+PRETTY_NAME="Omarchy"
+ID=omarchy
+ID_LIKE=arch
+BUILD_ID="4.0.6"
+VERSION_ID="4.0.6"
+ANSI_COLOR="38;2;158;206;106"
+HOME_URL="https://omarchy.org/"
+DOCUMENTATION_URL="https://learn.omacom.io/2/the-omarchy-manual"
+SUPPORT_URL="https://discord.gg/tXFUdasqhY"
+BUG_REPORT_URL="https://github.com/basecamp/omarchy/issues"
+LOGO=omarchy
+
+$ omarchy-version
+4.0.6-1
+
+$ cat /sys/class/dmi/id/sys_vendor /sys/class/dmi/id/product_name
+Dell Inc.
+Inspiron 3671
+
+$ hyprctl version
+Hyprland 0.56.2 built from branch v0.56.2 at commit efb50993780079460b0cbed1363e2166a2de1d9f clean ([gha] Nix: update inputs).
+Date: Wed Aug 5 14:13:21 2026
+Tag: v0.56.2, commits: 7661
+
+Libraries:
+Hyprgraphics: built against 0.5.1, system has 0.5.1
+Hyprutils: built against 0.14.2, system has 0.14.2
+Hyprcursor: built against 0.1.13, system has 0.1.13
+Hyprlang: built against 0.6.8, system has 0.6.8
+Aquamarine: built against 0.15.1, system has 0.15.1
+
+Version ABI string: efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6
+no flags were set
+
+
+$ hyprctl -j monitors
+[{
+    "id": 0,
+    "name": "HDMI-A-1",
+    "description": "Samsung Electric Company C32F391 H4ZMA04944",
+    "make": "Samsung Electric Company",
+    "model": "C32F391",
+    "serial": "H4ZMA04944",
+    "width": 1920,
+    "height": 1080,
+    "physicalWidth": 700,
+    "physicalHeight": 390,
+    "refreshRate": 60.00000,
+    "x": 0,
+    "y": 0,
+    "activeWorkspace": {
+        "id": 1,
+        "name": "1"
+    },
+    "specialWorkspace": {
+        "id": 0,
+        "name": ""
+    },
+    "reserved": [0, 26, 0, 0],
+    "scale": 1,
+    "transform": 0,
+    "focused": true,
+    "dpmsStatus": true,
+    "vrr": false,
+    "solitary": "0",
+    "solitaryBlockedBy": ["WINDOWED","CANDIDATE"],
+    "activelyTearing": false,
+    "tearingBlockedBy": ["NOT_TORN","USER","CANDIDATE"],
+    "directScanoutTo": "0",
+    "directScanoutBlockedBy": ["USER","CANDIDATE"],
+    "disabled": false,
+    "currentFormat": "XRGB8888",
+    "mirrorOf": "none",
+    "availableModes": ["1920x1080@60.00Hz","1920x1080@60.00Hz","1920x1080@59.94Hz","1920x1080@50.00Hz","1680x1050@59.88Hz","1600x900@60.00Hz","1280x1024@60.02Hz","1440x900@59.90Hz","1280x800@59.91Hz","1280x720@60.00Hz","1280x720@60.00Hz","1280x720@59.94Hz","1280x720@50.00Hz","1280x720@50.00Hz","1024x768@60.00Hz","800x600@60.32Hz","800x600@56.25Hz","720x576@50.00Hz","720x576@50.00Hz","720x480@60.00Hz","720x480@60.00Hz","720x480@59.94Hz","720x480@59.94Hz","640x480@60.00Hz","640x480@59.94Hz"],
+    "colorManagementPreset": "srgb",
+    "sdrBrightness": 1,
+    "sdrSaturation": 1,
+    "sdrMinLuminance": 0.2,
+    "sdrMaxLuminance": 80,
+    "hardwareCursorsInUse": true
+}]
+
+$ lscpu
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           39 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  6
+On-line CPU(s) list:                     0-5
+Vendor ID:                               GenuineIntel
+Model name:                              Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz
+CPU family:                              6
+Model:                                   158
+Thread(s) per core:                      1
+Core(s) per socket:                      6
+Socket(s):                               1
+Stepping:                                13
+Microcode version:                       0x104
+CPU(s) scaling MHz:                      95%
+CPU max MHz:                             4100.0000
+CPU min MHz:                             800.0000
+BogoMIPS:                                5799.77
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp vnmi md_clear flush_l1d arch_capabilities
+Virtualization:                          VT-x
+L1d cache:                               192 KiB (6 instances)
+L1i cache:                               192 KiB (6 instances)
+L2 cache:                                1.5 MiB (6 instances)
+L3 cache:                                9 MiB (1 instance)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-5
+Vulnerability Gather data sampling:      Mitigation; Microcode
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Mitigation; Aligned branch/return thunks
+Vulnerability Itlb multihit:             KVM: Mitigation: Split huge pages
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Mitigation; Clear CPU buffers; SMT disabled
+Vulnerability Old microcode:             Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Mitigation; Enhanced IBRS
+Vulnerability Spec rstack overflow:      Not affected
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS SW sequence; BHI SW loop, KVM SW loop
+Vulnerability Srbds:                     Mitigation; Microcode
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Mitigation; IBPB before exit to userspace
+
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:            11Gi       7.2Gi       1.5Gi       2.9Gi       6.4Gi       4.3Gi
+Swap:           23Gi       1.1Gi        21Gi
+
+$ lspci -nn -d ::0300
+00:02.0 VGA compatible controller [0300]: Intel Corporation CoffeeLake-S GT2 [UHD Graphics 630] [8086:3e98] (rev 02)
+
+$ ls /usr/share/vulkan/icd.d
+intel_hasvk_icd.json
+intel_icd.json
+
+$ pacman -Q mesa vulkan-intel vulkan-icd-loader neovim less btop fzf lazygit bash zsh ttf-jetbrains-mono sysstat fcitx5
+mesa 1:26.2.5-1
+vulkan-intel 1:26.2.5-1
+vulkan-icd-loader 1.4.363.0-1
+neovim 0.12.6-1
+less 1:710-1
+btop 1.4.7-1
+fzf 0.74.5-1
+lazygit 0.66.2-1
+bash 5.3.20-1
+zsh 5.9.2-1
+ttf-jetbrains-mono 2.304-2
+sysstat 12.8.0-1
+fcitx5 5.1.23-1
+
+$ sh -c command -v vulkaninfo || echo "vulkaninfo not installed (vulkan-tools); adapter selection not captured"
+vulkaninfo not installed (vulkan-tools); adapter selection not captured
+
+$ mise --version
+2026.10.17 linux-x64 (2026-10-21)
+mise WARN  mise version 2026.10.18 available
+mise WARN  self-update is disabled for this install, update mise the same way you installed it
+
+$ mise exec -- zig version
+mise by @jdx – installing 1 tool
+mise rust@1.98.1 info: syncing channel updates for 1.98.1-x86_64-unknown-linux-gnu
+mise rust@1.98.1 info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+mise rust@1.98.1 info: component cargo is up to date
+mise rust@1.98.1 info: component clippy is up to date
+mise rust@1.98.1 info: component rust-std is up to date
+mise rust@1.98.1 info: component rustc is up to date
+mise rust@1.98.1 info: component rustfmt is up to date
+mise rust@1.98.1   1.98.1-x86_64-unknown-linux-gnu unchanged - rustc 1.98.1 (48a229cea 2026-09-01)
+mise rust@1.98.1 info: checking for self-update (current version: 1.29.2)
+mise rust@1.98.1 rustc 1.98.1 (48a229cea 2026-09-01)
+mise ✓ rust@1.98.1  802ms
+mise ████████████████ 1/1 · installed 1 tool in 804ms
+0.17.0
+
+$ rustc +1.98.1 --version
+rustc 1.98.1 (48a229cea 2026-09-01)
+
+$ fc-match JetBrains Mono
+JetBrainsMono-Regular.ttf: "JetBrains Mono" "Regular"
+
+$ pidstat -V
+sysstat version 12.8.0
+(C) Sebastien Godard (sysstat <at> orange.fr)
+
+$ hyprctl getoption decoration:blur:enabled
+bool: false
+set: true
+
+$ hyprctl getoption decoration:active_opacity
+float: 1.000000
+set: false
+
+$ powerprofilesctl get
+performance
+
+$ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference
+powersave
+performance
+
+$ sh -c for p in /sys/class/power_supply/*; do echo "$p type=$(cat $p/type) online=$(cat $p/online 2>/dev/null)"; done
+/sys/class/power_supply/hidpp_battery_0 type=Battery online=1
+
+Session IM variables: XMODIFIERS=unset GTK_IM_MODULE=unset QT_IM_MODULE=unset WAYLAND_DISPLAY=wayland-1

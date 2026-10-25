@@ -4,6 +4,7 @@
 python3 spike/measure.py frames   [--out DIR] [--bin PATH] [--frames N] [--verify]
 python3 spike/measure.py cat-idle [--out DIR] [--bin PATH] [--verify]
 python3 spike/measure.py summary  [--out DIR]
+frames and cat-idle also take --scale N (monitor scale, default 2).
 Requires the measured Hyprland 0.56 Lua dispatcher API. Changes only its own window.
 """
 import argparse
@@ -267,7 +268,9 @@ if __name__ == "__main__":
     parser.add_argument("--frames", type=int, default=FRAMES, help="reported frames per mode")
     parser.add_argument("--verify", action="store_true", help="set SPIKE_VERIFY_ROWS=1 (not for timing)")
     parser.add_argument("--flood-frame-ms", type=int, help="set SPIKE_FLOOD_FRAME_MS")
+    parser.add_argument("--scale", type=int, default=SCALE, help="monitor scale the GUI must report (default 2)")
     args = parser.parse_args()
+    SCALE = args.scale
     if args.out:
         OUT = args.out.resolve()
     if args.bin:
