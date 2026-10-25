@@ -178,6 +178,14 @@ Ideas borrowed from Tern, recorded so the milestone that owns each one specs it:
 - **M3 · Queue until ready.** An agent pane accepts prompts once its ACP session exists (`session/new`, or `session/load` when resuming). Until then the daemon queues prompts in order and the composer shows the agent as starting, so nothing sent during startup or a reboot resume is dropped.
 - **M7 · More verbs.** Add `interrupt`, `stop` and `transcript` to list, spawn, send, read and wait. `interrupt` sends Ctrl+C to a shell pane and ACP `session/cancel` to an agent; it is how "stoppably" in M7's gate is met. `stop` ends the pane or agent. `transcript` returns an agent's structured history, where `read` returns screen text. `wait` can use M2's command-finished event for shell panes.
 
+From Tern's surfaces (its in-band protocol for programs to draw native UI inside a pane):
+
+- **Not adopted: an in-band UI protocol.** Programs sending UI trees, stylesheets and assets over the PTY is a plugin SDK and a UI protocol under another name, both on the never-build list. ACP already gives agent panes structured data (M3), and the Markdown pane covers documents (M6).
+- **Already the plan:** the daemon keeps each pane's state and a reattaching window gets a snapshot, then numbered updates (M1 §5.5); a slow window gets a fresh snapshot rather than slowing the program. Tern's credit-based flow control isn't needed on a local socket; revisit it in M4 if SSH links lag.
+- **M2 · Standard status sequences.** libghostty-vt already parses desktop notifications (OSC 9, OSC 777), progress (OSC 9;4) and program status records (OSC 7501: working, blocked, idle, done, error). M2 feeds them into notifications and tab badges. This is the light version of programs telling the terminal what they're doing, with no new protocol. The text is untrusted: strip invisible formatting and say which pane it came from.
+- **M3 · Agent view updates.** The daemon holds each agent pane's history as items with stable ids (messages, tool calls). A window attaches with a snapshot, then numbered updates over the reserved `pane.event`, such as "append text to item 12" or "set tool call 7 to done". A gap means re-attach, as for terminal panes. Nothing re-sends the whole history.
+- **M3 · The window animates.** Spinners and elapsed timers are drawn by the window from a start timestamp in the state. The daemon never sends ticks, which keeps it idle.
+
 ## Risks and the spike
 
 | Risk | What could go wrong | Mitigation |
