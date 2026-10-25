@@ -98,7 +98,7 @@ impl ConfigFile {
     }
 }
 
-fn line_at(bytes: &[u8], offset: usize) -> usize {
+pub(crate) fn line_at(bytes: &[u8], offset: usize) -> usize {
     1 + bytes[..offset.min(bytes.len())]
         .iter()
         .filter(|&&byte| byte == b'\n')

@@ -6,14 +6,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{ConfigFile, LoadedConfig};
+use crate::{ConfigFile, LoadedConfig, LoadedTheme, ThemeSource};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 #[derive(Debug, thiserror::Error)]
 pub enum WatchError {
-    #[error("config watcher: {0}")]
+    #[error("file watcher: {0}")]
     Notify(#[from] notify::Error),
-    #[error("config watcher: {0}")]
+    #[error("file watcher: {0}")]
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Config(#[from] crate::ConfigError),
@@ -26,9 +26,28 @@ pub struct ConfigUpdate {
     pub error: Option<WatchError>,
 }
 
+/// A theme reread. Unusable theme files are warnings inside `theme`; `error`
+/// only reports a problem with watching itself.
+#[derive(Debug)]
+pub struct ThemeUpdate {
+    pub theme: LoadedTheme,
+    pub error: Option<WatchError>,
+}
+
 /// Native config watching. Callbacks run on the worker thread and should forward
 /// updates promptly. Dropping the watcher stops and joins that worker.
 pub struct ConfigWatcher {
+    _worker: Worker,
+}
+
+/// Native watching of the active theme, including Omarchy's theme-folder swaps,
+/// on the same terms as [`ConfigWatcher`]. A changed `theme.source` needs a new
+/// watcher; a changed `[theme.colors]` needs only [`LoadedTheme::colors`].
+pub struct ThemeWatcher {
+    _worker: Worker,
+}
+
+struct Worker {
     control: Sender<Control>,
     worker: Option<JoinHandle<()>>,
 }
@@ -49,24 +68,67 @@ impl ConfigWatcher {
         path: &Path,
         on_change: impl FnMut(ConfigUpdate) + Send + 'static,
     ) -> Result<(Self, ConfigUpdate), WatchError> {
+        let mut file = ConfigFile::new(std::path::absolute(path)?);
+        let (worker, initial) = Worker::spawn(
+            "shoal-config",
+            vec![path.to_path_buf()],
+            move |watch_error| {
+                let error = file.reload().err().map(WatchError::from).or(watch_error);
+                ConfigUpdate {
+                    loaded: file.current().clone(),
+                    error,
+                }
+            },
+            on_change,
+        )?;
+        Ok((Self { _worker: worker }, initial))
+    }
+}
+
+impl ThemeWatcher {
+    /// Install watches before the initial read; nothing gets created.
+    pub fn new(
+        source: ThemeSource,
+        on_change: impl FnMut(ThemeUpdate) + Send + 'static,
+    ) -> Result<(Self, ThemeUpdate), WatchError> {
+        let (worker, initial) = Worker::spawn(
+            "shoal-theme",
+            source.watched_files(),
+            move |error| ThemeUpdate {
+                theme: source.load(),
+                error,
+            },
+            on_change,
+        )?;
+        Ok((Self { _worker: worker }, initial))
+    }
+}
+
+impl Worker {
+    fn spawn<U>(
+        name: &str,
+        files: Vec<PathBuf>,
+        mut load: impl FnMut(Option<WatchError>) -> U + Send + 'static,
+        on_change: impl FnMut(U) + Send + 'static,
+    ) -> Result<(Self, U), WatchError> {
         let (control, receiver) = mpsc::channel();
         let events = control.clone();
         let mut watcher = notify::recommended_watcher(move |event| {
             let _ = events.send(Control::Event(event));
         })?;
         let mut paths = WatchPaths {
-            file: std::path::absolute(path)?,
-            target: None,
+            files: files
+                .iter()
+                .map(std::path::absolute)
+                .collect::<Result<_, _>>()?,
+            targets: Vec::new(),
             active: BTreeSet::new(),
         };
         paths.refresh(&mut watcher)?;
-        let mut file = ConfigFile::new(&paths.file);
-        let initial = reload(&mut file, None);
-        let worker = thread::Builder::new()
-            .name("shoal-config".into())
-            .spawn(move || {
-                run(watcher, paths, file, receiver, on_change);
-            })?;
+        let initial = load(None);
+        let worker = thread::Builder::new().name(name.into()).spawn(move || {
+            run(watcher, paths, receiver, load, on_change);
+        })?;
         Ok((
             Self {
                 control,
@@ -77,7 +139,7 @@ impl ConfigWatcher {
     }
 }
 
-impl Drop for ConfigWatcher {
+impl Drop for Worker {
     fn drop(&mut self) {
         let _ = self.control.send(Control::Stop);
         if let Some(worker) = self.worker.take() {
@@ -87,12 +149,14 @@ impl Drop for ConfigWatcher {
 }
 
 struct WatchPaths {
-    file: PathBuf,
-    target: Option<PathBuf>,
+    files: Vec<PathBuf>,
+    targets: Vec<PathBuf>,
     active: BTreeSet<PathBuf>,
 }
 
 impl WatchPaths {
+    /// An event touches a watched file, its symlink target or an ancestor of
+    /// either; siblings such as Omarchy's `next-theme` staging folder do not count.
     fn relevant(&self, event: &Event) -> bool {
         if event.need_rescan() {
             return true;
@@ -104,29 +168,22 @@ impl WatchPaths {
             return false;
         }
         event.paths.iter().any(|path| {
-            self.file.starts_with(path)
-                || self
-                    .target
-                    .as_ref()
-                    .is_some_and(|target| target.starts_with(path))
+            self.files
+                .iter()
+                .chain(&self.targets)
+                .any(|file| file.starts_with(path))
         })
     }
 
     fn refresh(&mut self, watcher: &mut RecommendedWatcher) -> Result<(), WatchError> {
-        self.target = self.file.canonicalize().ok().or_else(|| {
-            std::fs::read_link(&self.file).ok().map(|target| {
-                if target.is_absolute() {
-                    target
-                } else {
-                    self.file.parent().unwrap_or(Path::new("/")).join(target)
-                }
-            })
-        });
+        self.targets = self.files.iter().filter_map(|file| target(file)).collect();
         // Nonrecursive ancestor watches catch future directories and replacements
         // without recursively watching the user's home. Rearm even identical
         // paths: an atomic directory replacement may have invalidated the inode.
-        let desired: BTreeSet<_> = std::iter::once(&self.file)
-            .chain(self.target.iter())
+        let desired: BTreeSet<_> = self
+            .files
+            .iter()
+            .chain(&self.targets)
             .filter_map(|file| file.parent())
             .flat_map(Path::ancestors)
             .filter(|path| path.is_dir())
@@ -154,29 +211,41 @@ impl WatchPaths {
     }
 }
 
-fn run(
+/// Where a watched file really lives. inotify follows symlinked directories, and
+/// a directory watched under two names reports events under only one of them,
+/// so even a missing file needs its canonical spelling.
+fn target(file: &Path) -> Option<PathBuf> {
+    let parent = file.parent().unwrap_or(Path::new("/"));
+    if let Ok(path) = file.canonicalize() {
+        Some(path)
+    } else if let Ok(link) = std::fs::read_link(file) {
+        Some(if link.is_absolute() {
+            link
+        } else {
+            parent.join(link)
+        })
+    } else {
+        Some(parent.canonicalize().ok()?.join(file.file_name()?))
+    }
+}
+
+fn run<U>(
     mut watcher: RecommendedWatcher,
     mut paths: WatchPaths,
-    mut file: ConfigFile,
     receiver: Receiver<Control>,
-    mut on_change: impl FnMut(ConfigUpdate),
+    mut load: impl FnMut(Option<WatchError>) -> U,
+    mut on_change: impl FnMut(U),
 ) {
     loop {
-        match receiver.recv() {
+        // A watch error may mean missed events, so it rereads like a change.
+        let mut error = match receiver.recv() {
             Ok(Control::Stop) | Err(_) => return,
-            Ok(Control::Event(Err(error))) => {
-                on_change(ConfigUpdate {
-                    loaded: file.current().clone(),
-                    error: Some(error.into()),
-                });
-                continue;
-            }
-            Ok(Control::Event(Ok(event))) if !paths.relevant(&event) => continue,
-            Ok(Control::Event(Ok(_))) => {}
-        }
+            Ok(Control::Event(Err(source))) => Some(source.into()),
+            Ok(Control::Event(Ok(event))) if paths.relevant(&event) => None,
+            Ok(Control::Event(Ok(_))) => continue,
+        };
         let limit = Instant::now() + MAX_BURST;
         let mut quiet_at = Instant::now() + DEBOUNCE;
-        let mut error = None;
         loop {
             if Instant::now() >= quiet_at {
                 break;
@@ -194,14 +263,6 @@ fn run(
             }
         }
         error = paths.refresh(&mut watcher).err().or(error);
-        on_change(reload(&mut file, error));
-    }
-}
-
-fn reload(file: &mut ConfigFile, watch_error: Option<WatchError>) -> ConfigUpdate {
-    let error = file.reload().err().map(WatchError::from).or(watch_error);
-    ConfigUpdate {
-        loaded: file.current().clone(),
-        error,
+        on_change(load(error));
     }
 }

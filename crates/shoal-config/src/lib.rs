@@ -1,21 +1,28 @@
-//! Configuration, keybindings and user-specific paths for Shoal.
+//! Configuration, keybindings, themes and user-specific paths for Shoal.
 //!
 //! [`Config::parse`] returns an entire validated edit plus unknown-key warnings.
 //! [`ConfigFile`] keeps the last good edit across synchronous reload failures.
-//! [`ConfigWatcher::new`] installs native watches and returns the initial update;
-//! subsequent updates go to its callback on a worker thread. Forward them to the
-//! daemon actor or GUI's foreground channel without blocking that callback. Drop
-//! the watcher to stop and join its worker. Theme-file lookup belongs to T06.
+//! [`ThemeSource::load`] reads the active Omarchy theme (or a theme file) with
+//! warnings instead of errors; [`LoadedTheme::palette`] layers `[theme.colors]`
+//! on top and maps the result onto what Shoal draws (M1 spec §9.2).
+//! [`ConfigWatcher::new`] and [`ThemeWatcher::new`] install native watches and
+//! return the initial update; subsequent updates go to their callback on a worker
+//! thread. Forward them to the daemon actor or GUI's foreground channel without
+//! blocking that callback. Drop a watcher to stop and join its worker.
 
 mod chord;
 mod keymap;
 mod load;
+mod palette;
 mod paths;
 pub mod schema;
+mod theme;
 mod watch;
 pub use chord::{Chord, ChordError, Key, Modifiers};
 pub use keymap::{Action, ActionError, Keymap};
 pub use load::{ConfigError, ConfigFile, ConfigWarning, LoadedConfig};
+pub use palette::{Palette, ThemeColors};
 pub use paths::{PathError, XdgPaths};
 pub use schema::Config;
-pub use watch::{ConfigUpdate, ConfigWatcher, WatchError};
+pub use theme::{LoadedTheme, ThemeSource, ThemeWarning};
+pub use watch::{ConfigUpdate, ConfigWatcher, ThemeUpdate, ThemeWatcher, WatchError};
