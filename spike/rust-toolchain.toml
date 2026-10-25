@@ -1,0 +1,5 @@
+# Same Rust as Zed v1.25.3, which GPUI is built and tested with.
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

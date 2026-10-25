@@ -1,0 +1,21 @@
+$ pacman -Q neovim less btop fzf lazygit bash zsh vulkan-radeon mesa ttf-jetbrains-mono
+neovim 0.12.6-1
+less 1:710-1
+btop 1.4.7-1
+fzf 0.74.5-1
+lazygit 0.66.2-1
+bash 5.3.20-1
+zsh 5.9.2-1
+vulkan-radeon 1:26.2.5-1
+mesa 1:26.2.5-1
+ttf-jetbrains-mono 2.304-2
+
+$ hyprctl getoption decoration:blur:enabled
+bool: false
+set: true
+
+$ hyprctl getoption decoration:active_opacity
+float: 1.000000
+set: false
+
+Session IM variables: {'WAYLAND_DISPLAY': None, 'XDG_SESSION_TYPE': 'wayland', 'XMODIFIERS': None, 'GTK_IM_MODULE': None, 'QT_IM_MODULE': None}

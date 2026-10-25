@@ -1,0 +1,280 @@
+UTC start: 2026-10-25T07:57:21+00:00
+Command: ./spike/target/release/snapcheck --programs --verbose
+| Scenario | Formatter: restore | Formatter: after more output | Formatter + continuation: after | Binary snapshot: restore | Binary snapshot: after | Dump bytes (fmt / bin) |
+| --- | --- | --- | --- | --- | --- | --- |
+| text, styles, wide chars, 300 lines scrollback | **160 cells differ** | **160 cells differ** | **160 cells differ** | match | match | 97640 / 190557 |
+| cursor position, hidden, pen style | match | match | match | match | match | 5680 / 1178 |
+| cursor shape (DECSCUSR bar) | match | match | match | match | match | 5656 / 1160 |
+| pending wrap at last column | match | match | match | match | match | 5729 / 1237 |
+| input modes (DECCKM, keypad, paste, focus, mouse) | match | match | match | match | match | 5698 / 1157 |
+| X10 and any-event mouse with UTF-8 encoding | match | match | match | match | match | 5663 / 1157 |
+| screen modes (insert, no wrap, reverse video, LNM) | match | match | match | match | match | 5671 / 1162 |
+| misc DEC modes (2026, 2027, 2031, 2048, 12, 45) | match | match | match | match | match | 5691 / 1157 |
+| scroll region + origin mode | match | match | match | match | match | 5824 / 1322 |
+| left/right margins (DECSLRM) | match | match | match | match | match | 5662 / 1157 |
+| custom tab stops | match | match | match | match | match | 5605 / 1157 |
+| DEC special graphics in G0 | match | match | match | match | match | 5650 / 1157 |
+| G1 graphics shifted in (SO) | match | match | match | match | match | 5651 / 1157 |
+| kitty keyboard flags | match | match | match | match | match | 5654 / 1157 |
+| modifyOtherKeys | match | match | match | match | match | 5654 / 1157 |
+| hyperlinks (closed and still open) | match | match | match | match | match | 5747 / 1350 |
+| palette and dynamic colors (OSC 4/10/11/12) | **state: fg color (OSC 10), bg color (OSC 11), cursor color (OSC 12)** | **state: fg color (OSC 10), bg color (OSC 11), cursor color (OSC 12)** | **state: fg color (OSC 10), bg color (OSC 11), cursor color (OSC 12)** | match | match | 5676 / 1190 |
+| title and pwd (OSC 2, OSC 7) | **state: title** | **state: title** | **state: title** | match | match | 5682 / 1193 |
+| saved cursor (DECSC) | match | **2 cells differ; cursor: x, y, pen style** | **2 cells differ; cursor: x, y, pen style** | match | match | 5653 / 1185 |
+| alternate screen 1049 over scrollback | match | **252 cells differ; cursor: x, y; state: total rows, scrollback rows** | **252 cells differ; cursor: x, y; state: total rows, scrollback rows** | match | match | 5692 / 2668 |
+| alternate screen 47 | match | **8 cells differ** | **8 cells differ** | match | match | 5661 / 1363 |
+| shell prompt marks (OSC 133) | **160 cells differ; cursor: at prompt** | **160 cells differ; cursor: at prompt** | **160 cells differ; cursor: at prompt** | match | match | 5664 / 1216 |
+| protected characters (DECSCA) | **4 cells differ** | **4 cells differ** | **4 cells differ** | match | match | 5659 / 1245 |
+| split mid-escape (dump taken inside CSI) | match | **5 cells differ; cursor: x** | match | match | match | 5653 / 1166 |
+| split mid-UTF-8 | match | **1 cells differ** | match | match | match | 5650 / 1161 |
+| nvim --clean, syntax on, then quit | match | **117 cells differ; cursor: y; state: total rows, scrollback rows** | **117 cells differ; cursor: y; state: total rows, scrollback rows** | match | match | 7507 / 7850 |
+| less -R, then quit | match | match | match | match | match | 8234 / 10331 |
+| btop, then quit | match | **94 cells differ; cursor: y; state: total rows, scrollback rows** | **94 cells differ; cursor: y; state: total rows, scrollback rows** | match | match | 41921 / 26551 |
+| fzf (inline, --height 40%), then cancel | match | match | match | match | match | 9187 / 9364 |
+| lazygit, then quit | match | **100 cells differ; cursor: y; state: total rows, scrollback rows** | **100 cells differ; cursor: y; state: total rows, scrollback rows** | match | match | 10614 / 15565 |
+| interactive bash with prompt marks | **3000 cells differ; cursor: at prompt** | **3120 cells differ** | **3120 cells differ** | match | match | 7402 / 10340 |
+
+## text, styles, wide chars, 300 lines scrollback / formatter restore
+- cell row 300 col 0 (of 305 rows): row wrapped true -> false
+- cell row 300 col 1 (of 305 rows): row wrapped true -> false
+- cell row 300 col 2 (of 305 rows): row wrapped true -> false
+- cell row 300 col 3 (of 305 rows): row wrapped true -> false
+
+
+## text, styles, wide chars, 300 lines scrollback / formatter after
+- cell row 300 col 0 (of 335 rows): row wrapped true -> false
+- cell row 300 col 1 (of 335 rows): row wrapped true -> false
+- cell row 300 col 2 (of 335 rows): row wrapped true -> false
+- cell row 300 col 3 (of 335 rows): row wrapped true -> false
+
+
+## text, styles, wide chars, 300 lines scrollback / formatter + continuation after
+- cell row 300 col 0 (of 335 rows): row wrapped true -> false
+- cell row 300 col 1 (of 335 rows): row wrapped true -> false
+- cell row 300 col 2 (of 335 rows): row wrapped true -> false
+- cell row 300 col 3 (of 335 rows): row wrapped true -> false
+
+
+## palette and dynamic colors (OSC 4/10/11/12) / formatter restore
+- fg color (OSC 10): original Some(Some(RgbColor { r: 170, g: 187, b: 204 })), restored Some(None)
+- bg color (OSC 11): original Some(Some(RgbColor { r: 1, g: 2, b: 3 })), restored Some(None)
+- cursor color (OSC 12): original Some(Some(RgbColor { r: 255, g: 0, b: 255 })), restored Some(None)
+
+
+## palette and dynamic colors (OSC 4/10/11/12) / formatter after
+- fg color (OSC 10): original Some(Some(RgbColor { r: 170, g: 187, b: 204 })), restored Some(None)
+- bg color (OSC 11): original Some(Some(RgbColor { r: 1, g: 2, b: 3 })), restored Some(None)
+- cursor color (OSC 12): original Some(Some(RgbColor { r: 255, g: 0, b: 255 })), restored Some(None)
+
+
+## palette and dynamic colors (OSC 4/10/11/12) / formatter + continuation after
+- fg color (OSC 10): original Some(Some(RgbColor { r: 170, g: 187, b: 204 })), restored Some(None)
+- bg color (OSC 11): original Some(Some(RgbColor { r: 1, g: 2, b: 3 })), restored Some(None)
+- cursor color (OSC 12): original Some(Some(RgbColor { r: 255, g: 0, b: 255 })), restored Some(None)
+
+
+## title and pwd (OSC 2, OSC 7) / formatter restore
+- title: original Some([109, 121, 32, 116, 105, 116, 108, 101]), restored Some([])
+
+
+## title and pwd (OSC 2, OSC 7) / formatter after
+- title: original Some([109, 121, 32, 116, 105, 116, 108, 101]), restored Some([])
+
+
+## title and pwd (OSC 2, OSC 7) / formatter + continuation after
+- title: original Some([109, 121, 32, 116, 105, 116, 108, 101]), restored Some([])
+
+
+## saved cursor (DECSC) / formatter after
+- cell row 0 col 0 (of 24 rows): text "" -> "X"
+- cell row 2 col 6 (of 24 rows): text "X" -> ""; style Some(Style { fg_color: Palette(PaletteIndex(2)), bg_color: None, underline_color: None, bold: true, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+- x: original Some(7), restored Some(1)
+- y: original Some(2), restored Some(0)
+- pen style: original Some(Style { fg_color: Palette(PaletteIndex(2)), bg_color: None, underline_color: None, bold: true, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }), restored Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+
+
+## saved cursor (DECSC) / formatter + continuation after
+- cell row 0 col 0 (of 24 rows): text "" -> "X"
+- cell row 2 col 6 (of 24 rows): text "X" -> ""; style Some(Style { fg_color: Palette(PaletteIndex(2)), bg_color: None, underline_color: None, bold: true, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+- x: original Some(7), restored Some(1)
+- y: original Some(2), restored Some(0)
+- pen style: original Some(Style { fg_color: Palette(PaletteIndex(2)), bg_color: None, underline_color: None, bold: true, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }), restored Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+
+
+## alternate screen 1049 over scrollback / formatter after
+- cell row 77 col 0 (of 101 rows): text "p" -> "a"
+- cell row 77 col 1 (of 101 rows): text "r" -> "f"
+- cell row 77 col 2 (of 101 rows): text "i" -> "t"
+- cell row 77 col 3 (of 101 rows): text "m" -> "e"
+- x: original Some(22), restored Some(5)
+- y: original Some(23), restored Some(0)
+- total rows: original Some(101), restored Some(24)
+- scrollback rows: original Some(77), restored Some(0)
+
+
+## alternate screen 1049 over scrollback / formatter + continuation after
+- cell row 77 col 0 (of 101 rows): text "p" -> "a"
+- cell row 77 col 1 (of 101 rows): text "r" -> "f"
+- cell row 77 col 2 (of 101 rows): text "i" -> "t"
+- cell row 77 col 3 (of 101 rows): text "m" -> "e"
+- x: original Some(22), restored Some(5)
+- y: original Some(23), restored Some(0)
+- total rows: original Some(101), restored Some(24)
+- scrollback rows: original Some(77), restored Some(0)
+
+
+## alternate screen 47 / formatter after
+- cell row 0 col 0 (of 24 rows): text "p" -> ""
+- cell row 0 col 1 (of 24 rows): text "r" -> ""
+- cell row 0 col 2 (of 24 rows): text "i" -> ""
+- cell row 0 col 3 (of 24 rows): text "m" -> ""
+
+
+## alternate screen 47 / formatter + continuation after
+- cell row 0 col 0 (of 24 rows): text "p" -> ""
+- cell row 0 col 1 (of 24 rows): text "r" -> ""
+- cell row 0 col 2 (of 24 rows): text "i" -> ""
+- cell row 0 col 3 (of 24 rows): text "m" -> ""
+
+
+## shell prompt marks (OSC 133) / formatter restore
+- cell row 0 col 0 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 1 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 2 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 3 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- at prompt: original Some(true), restored Some(false)
+
+
+## shell prompt marks (OSC 133) / formatter after
+- cell row 0 col 0 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 1 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 2 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 3 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- at prompt: original Some(true), restored Some(false)
+
+
+## shell prompt marks (OSC 133) / formatter + continuation after
+- cell row 0 col 0 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 1 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 2 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 0 col 3 (of 24 rows): row prompt Some(Prompt) -> Some(None)
+- at prompt: original Some(true), restored Some(false)
+
+
+## protected characters (DECSCA) / formatter restore
+- cell row 0 col 0 (of 24 rows): protected true -> false
+- cell row 0 col 1 (of 24 rows): protected true -> false
+- cell row 0 col 2 (of 24 rows): protected true -> false
+- cell row 0 col 3 (of 24 rows): protected true -> false
+
+
+## protected characters (DECSCA) / formatter after
+- cell row 0 col 0 (of 24 rows): text "P" -> ""; protected true -> false
+- cell row 0 col 1 (of 24 rows): text "R" -> ""; protected true -> false
+- cell row 0 col 2 (of 24 rows): text "O" -> ""; protected true -> false
+- cell row 0 col 3 (of 24 rows): text "T" -> ""; protected true -> false
+
+
+## protected characters (DECSCA) / formatter + continuation after
+- cell row 0 col 0 (of 24 rows): text "P" -> ""; protected true -> false
+- cell row 0 col 1 (of 24 rows): text "R" -> ""; protected true -> false
+- cell row 0 col 2 (of 24 rows): text "O" -> ""; protected true -> false
+- cell row 0 col 3 (of 24 rows): text "T" -> ""; protected true -> false
+
+
+## split mid-escape (dump taken inside CSI) / formatter after
+- cell row 0 col 6 (of 24 rows): text "R" -> "1"; style Some(Style { fg_color: Palette(PaletteIndex(1)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+- cell row 0 col 7 (of 24 rows): text "E" -> "m"; style Some(Style { fg_color: Palette(PaletteIndex(1)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+- cell row 0 col 8 (of 24 rows): text "D" -> "R"; style Some(Style { fg_color: Palette(PaletteIndex(1)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+- cell row 0 col 9 (of 24 rows): text "" -> "E"
+- x: original Some(9), restored Some(11)
+
+
+## split mid-UTF-8 / formatter after
+- cell row 0 col 3 (of 24 rows): text "é" -> "�"
+
+
+## nvim --clean, syntax on, then quit / formatter after
+- cell row 161 col 0 (of 201 rows): text "1" -> ""
+- cell row 161 col 1 (of 201 rows): text "6" -> ""
+- cell row 161 col 2 (of 201 rows): text "2" -> ""
+- cell row 162 col 0 (of 201 rows): text "1" -> ""
+- y: original Some(39), restored Some(0)
+- total rows: original Some(201), restored Some(40)
+- scrollback rows: original Some(161), restored Some(0)
+
+
+## nvim --clean, syntax on, then quit / formatter + continuation after
+- cell row 161 col 0 (of 201 rows): text "1" -> ""
+- cell row 161 col 1 (of 201 rows): text "6" -> ""
+- cell row 161 col 2 (of 201 rows): text "2" -> ""
+- cell row 162 col 0 (of 201 rows): text "1" -> ""
+- y: original Some(39), restored Some(0)
+- total rows: original Some(201), restored Some(40)
+- scrollback rows: original Some(161), restored Some(0)
+
+
+## btop, then quit / formatter after
+- cell row 12 col 0 (of 52 rows): text "1" -> "a"
+- cell row 12 col 1 (of 52 rows): text "3" -> "f"
+- cell row 12 col 2 (of 52 rows): text "" -> "t"
+- cell row 12 col 3 (of 52 rows): text "" -> "e"
+- y: original Some(39), restored Some(1)
+- total rows: original Some(52), restored Some(40)
+- scrollback rows: original Some(12), restored Some(0)
+
+
+## btop, then quit / formatter + continuation after
+- cell row 12 col 0 (of 52 rows): text "1" -> "a"
+- cell row 12 col 1 (of 52 rows): text "3" -> "f"
+- cell row 12 col 2 (of 52 rows): text "" -> "t"
+- cell row 12 col 3 (of 52 rows): text "" -> "e"
+- y: original Some(39), restored Some(1)
+- total rows: original Some(52), restored Some(40)
+- scrollback rows: original Some(12), restored Some(0)
+
+
+## lazygit, then quit / formatter after
+- cell row 12 col 0 (of 52 rows): text "1" -> "a"
+- cell row 12 col 1 (of 52 rows): text "3" -> "f"
+- cell row 12 col 2 (of 52 rows): text "" -> "t"
+- cell row 12 col 3 (of 52 rows): text "" -> "e"
+- y: original Some(39), restored Some(1)
+- total rows: original Some(52), restored Some(40)
+- scrollback rows: original Some(12), restored Some(0)
+
+
+## lazygit, then quit / formatter + continuation after
+- cell row 12 col 0 (of 52 rows): text "1" -> "a"
+- cell row 12 col 1 (of 52 rows): text "3" -> "f"
+- cell row 12 col 2 (of 52 rows): text "" -> "t"
+- cell row 12 col 3 (of 52 rows): text "" -> "e"
+- y: original Some(39), restored Some(1)
+- total rows: original Some(52), restored Some(40)
+- scrollback rows: original Some(12), restored Some(0)
+
+
+## interactive bash with prompt marks / formatter restore
+- cell row 1 col 0 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 1 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 2 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 3 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- at prompt: original Some(true), restored Some(false)
+
+
+## interactive bash with prompt marks / formatter after
+- cell row 1 col 0 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 1 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 2 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 3 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+
+
+## interactive bash with prompt marks / formatter + continuation after
+- cell row 1 col 0 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 1 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 2 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+- cell row 1 col 3 (of 40 rows): row prompt Some(Prompt) -> Some(None)
+
+
+Exit status: 0
+UTC end: 2026-10-25T07:57:34+00:00

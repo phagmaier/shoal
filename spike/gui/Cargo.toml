@@ -1,0 +1,12 @@
+[package]
+name = "spike-gui"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+gpui.workspace = true
+gpui_platform.workspace = true
+libghostty-vt.workspace = true
+portable-pty.workspace = true
+futures = "0.3"

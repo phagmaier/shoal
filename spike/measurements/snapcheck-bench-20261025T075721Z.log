@@ -1,0 +1,12 @@
+UTC start: 2026-10-25T07:57:34+00:00
+Command: ./spike/target/release/snapcheck --bench
+defaults: scrollback max bytes Ok(None), max lines Ok(Some(10000))
+fed 1043 KiB in 41.9 ms; terminal: 200 x 60, 10001 total rows
+restore with tracking=false: 37.4 ms
+restore with tracking=true: 33.7 ms
+formatter: dump 26.5 ms + restore 33.1 ms (1224 KiB) | binary: encode 7.9 ms + decode 19.6 ms (2801 KiB) | rows 10001 / 10001
+formatter: dump 21.1 ms + restore 28.2 ms (1224 KiB) | binary: encode 8.4 ms + decode 19.3 ms (2801 KiB) | rows 10001 / 10001
+formatter: dump 20.2 ms + restore 23.0 ms (1224 KiB) | binary: encode 8.0 ms + decode 15.7 ms (2801 KiB) | rows 10001 / 10001
+
+Exit status: 0
+UTC end: 2026-10-25T07:57:35+00:00

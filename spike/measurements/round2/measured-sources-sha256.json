@@ -1,0 +1,22 @@
+{
+  "mise.toml": "550fe379bf8381e7a07d2557fa87055b6ccfea709835fa713edf5acad5851be9",
+  "spike/Cargo.toml": "ef53a2dd5dd353e8b4f892e9cab4d8006e7896371f1f0c806a236f48c859a139",
+  "spike/Cargo.lock": "6ce3665fd6eb50396ac4f3f1eefa0987b858e749e358bd3148e794cba166b2d8",
+  "spike/rust-toolchain.toml": "d191b3795b5b91352accb01ae7810421894703feb47aa0fd5d4ccaa6522d63c2",
+  "spike/.cargo/config.toml": "93d763c0cc1b0b13055c44eeb9638fdeae3bcaad9a2cbb1a954a52e3a6520f4b",
+  "spike/measure.py": "8f93750c2fb2db899a7d933f2c66339d21189724db6c1acc64d3489401be26cc",
+  "spike/gui/src/bench.rs": "7d6c74e0cd584b315e828a679b2ac661bd1af0ad390a775b7025ce99529bee81",
+  "spike/gui/src/bin/rowbench.rs": "b4ae54a5137b2400e5e3d503d5686246b4eaf6c8aa5cfe2672ba55cef2b00837",
+  "spike/gui/src/draw.rs": "9a3836f4c0a2b36e17cbd28c71edd3b146065a94dd685ad1e5e33ccfb76819a0",
+  "spike/gui/src/draw_ref.rs": "15ebfbff738999655f507bdb698d92278205486f241bd4e2a99adec1a092762d",
+  "spike/gui/src/keys.rs": "5e213b7b1e812fcf39456f25d6a240656631bb34b478cd9999180711dfc75441",
+  "spike/gui/src/main.rs": "ef6c180457076b5ad91fe43f15f18d2f403b6c6251ac27a9dfe26f1fee466876",
+  "spike/gui/src/paint.rs": "aa1073c8ab915a95045b6cdbddbf59922e5b7439cfc1e07c69ff628f581aabee",
+  "spike/gui/src/pty.rs": "3327eefc8fbe538a2a8d824c532b92cc606d78caa7479f3a3ff8fcd389090af6",
+  "spike/gui/src/stats.rs": "9e7fbce64dfd86c19262df1f5ab1be561ca9eea172dacd92ed56cc3a504d8a00",
+  "spike/gui/src/theme.rs": "759b5f478af5b1c6127d063068b032adad28541659e9c208abb55e06290a9acd",
+  "spike/gui/src/view.rs": "aa46a1c8efaf8131bd3f9ca865465173c2999b40e5cd09e0df285a916e900ccd",
+  "spike/target/release/spike-gui": "06a3be28d41f081d032a71d65a6cf870521b1ce91fe7fb55b5536263d4579a2e",
+  "spike/target/round1/spike-gui": "6420ba98e44deb3422d521e63c778bc3b2a6dbbf203b0be47e84b2f4c1e5a83e",
+  "_note": "Hashed 2026-10-25 after the round-2 timed runs. Edits after those runs were comments only (gui/src/main.rs, gui/src/bin/rowbench.rs), so spike-gui was rebuilt; its line tables differ from the measured binary, its code does not. target/round1/spike-gui is the round-1 measured binary (matches measured-sources-sha256.json)."
+}

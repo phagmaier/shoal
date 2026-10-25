@@ -1,0 +1,219 @@
+{
+  "frames-glyph-scroll": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 5.629815,
+    "gpui_p95_ms": 6.026741,
+    "gpui_p99_ms": 6.55848,
+    "gpui_max_ms": 7.855055,
+    "internal": [
+      "build draw list (render)           n=600   p50=  3.16 ms  p95=  3.39 ms  p99=  3.53 ms  max=  4.53 ms",
+      "shape + paint (canvas)             n=600   p50=  1.38 ms  p95=  1.60 ms  p99=  1.97 ms  max=  2.30 ms",
+      "render start -> paint end          n=600   p50=  4.61 ms  p95=  4.94 ms  p99=  5.32 ms  max=  6.43 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-static": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 6.566374,
+    "gpui_p95_ms": 6.84099,
+    "gpui_p99_ms": 7.222908,
+    "gpui_max_ms": 8.964188,
+    "internal": [
+      "build draw list (render)           n=600   p50=  2.59 ms  p95=  2.76 ms  p99=  2.90 ms  max=  3.75 ms",
+      "shape + paint (canvas)             n=600   p50=  2.61 ms  p95=  2.71 ms  p99=  2.90 ms  max=  3.48 ms",
+      "render start -> paint end          n=600   p50=  5.27 ms  p95=  5.46 ms  p99=  5.74 ms  max=  7.30 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-styled": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 7.706315,
+    "gpui_p95_ms": 8.002472,
+    "gpui_p99_ms": 8.476363,
+    "gpui_max_ms": 10.889175,
+    "internal": [
+      "build draw list (render)           n=600   p50=  2.25 ms  p95=  2.34 ms  p99=  2.50 ms  max=  3.47 ms",
+      "shape + paint (canvas)             n=600   p50=  2.61 ms  p95=  2.75 ms  p99=  3.08 ms  max=  3.45 ms",
+      "render start -> paint end          n=600   p50=  4.92 ms  p95=  5.11 ms  p99=  5.45 ms  max=  6.96 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-typing": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 6.780207,
+    "gpui_p95_ms": 7.028542,
+    "gpui_p99_ms": 7.246893,
+    "gpui_max_ms": 7.636034,
+    "internal": [
+      "build draw list (render)           n=600   p50=  2.67 ms  p95=  2.80 ms  p99=  2.87 ms  max=  3.15 ms",
+      "shape + paint (canvas)             n=600   p50=  2.69 ms  p95=  2.82 ms  p99=  2.99 ms  max=  3.40 ms",
+      "render start -> paint end          n=600   p50=  5.43 ms  p95=  5.61 ms  p99=  5.79 ms  max=  6.22 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ]
+  },
+  "frames-shape-styled": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 8.375333,
+    "gpui_p95_ms": 8.645059,
+    "gpui_p99_ms": 9.142694,
+    "gpui_max_ms": 9.567552,
+    "internal": [
+      "build draw list (render)           n=600   p50=  2.25 ms  p95=  2.35 ms  p99=  2.52 ms  max=  2.79 ms",
+      "shape + paint (canvas)             n=600   p50=  3.25 ms  p95=  3.40 ms  p99=  3.85 ms  max=  4.38 ms",
+      "render start -> paint end          n=600   p50=  5.57 ms  p95=  5.77 ms  p99=  6.36 ms  max=  6.68 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ]
+  },
+  "cat-1": {
+    "gpui_n": 4,
+    "gpui_p50_ms": 14.412262,
+    "gpui_p95_ms": 41.7901,
+    "gpui_p99_ms": 41.7901,
+    "gpui_max_ms": 41.7901,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "build draw list (render)           n=1     p50=  3.26 ms  p95=  3.26 ms  p99=  3.26 ms  max=  3.26 ms",
+      "shape + paint (canvas)             n=1     p50= 32.63 ms  p95= 32.63 ms  p99= 32.63 ms  max= 32.63 ms",
+      "render start -> paint end          n=1     p50= 35.95 ms  p95= 35.95 ms  p99= 35.95 ms  max= 35.95 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "1.303431",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792918473935741,
+        "feed_bytes": 52798016,
+        "paint_ms": 32.633,
+        "total_ms": 35.947
+      }
+    ],
+    "paints_ending_while_cat_writes": 0,
+    "while_cat_writes": []
+  },
+  "cat-2": {
+    "gpui_n": 7,
+    "gpui_p50_ms": 10.192886,
+    "gpui_p95_ms": 33.508484,
+    "gpui_p99_ms": 33.508484,
+    "gpui_max_ms": 33.508484,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "build draw list (render)           n=4     p50=  1.81 ms  p95=  3.28 ms  p99=  3.28 ms  max=  3.28 ms",
+      "shape + paint (canvas)             n=4     p50=  8.23 ms  p95= 26.13 ms  p99= 26.13 ms  max= 26.13 ms",
+      "render start -> paint end          n=4     p50= 10.06 ms  p95= 27.97 ms  p99= 27.97 ms  max= 27.97 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "1.337116",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792918504473234,
+        "feed_bytes": 8118253,
+        "paint_ms": 26.132,
+        "total_ms": 27.974
+      },
+      {
+        "unix_us": 1792918504629656,
+        "feed_bytes": 13811941,
+        "paint_ms": 8.228,
+        "total_ms": 10.055
+      },
+      {
+        "unix_us": 1792918504690755,
+        "feed_bytes": 16010421,
+        "paint_ms": 4.86,
+        "total_ms": 6.725
+      },
+      {
+        "unix_us": 1792918505591718,
+        "feed_bytes": 52798016,
+        "paint_ms": 4.942,
+        "total_ms": 8.277
+      }
+    ],
+    "paints_ending_while_cat_writes": 3,
+    "while_cat_writes": [
+      {
+        "unix_us": 1792918504473234,
+        "feed_bytes": 8118253,
+        "paint_ms": 26.132,
+        "total_ms": 27.974
+      },
+      {
+        "unix_us": 1792918504629656,
+        "feed_bytes": 13811941,
+        "paint_ms": 8.228,
+        "total_ms": 10.055
+      },
+      {
+        "unix_us": 1792918504690755,
+        "feed_bytes": 16010421,
+        "paint_ms": 4.86,
+        "total_ms": 6.725
+      }
+    ]
+  },
+  "cat-3": {
+    "gpui_n": 4,
+    "gpui_p50_ms": 13.3251,
+    "gpui_p95_ms": 42.4073,
+    "gpui_p99_ms": 42.4073,
+    "gpui_max_ms": 42.4073,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "build draw list (render)           n=1     p50=  3.25 ms  p95=  3.25 ms  p99=  3.25 ms  max=  3.25 ms",
+      "shape + paint (canvas)             n=1     p50= 32.58 ms  p95= 32.58 ms  p99= 32.58 ms  max= 32.58 ms",
+      "render start -> paint end          n=1     p50= 35.89 ms  p95= 35.89 ms  p99= 35.89 ms  max= 35.89 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "1.300305",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792918508261725,
+        "feed_bytes": 52798016,
+        "paint_ms": 32.575,
+        "total_ms": 35.888
+      }
+    ],
+    "paints_ending_while_cat_writes": 0,
+    "while_cat_writes": []
+  }
+}

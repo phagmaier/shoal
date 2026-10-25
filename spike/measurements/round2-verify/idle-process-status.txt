@@ -1,0 +1,61 @@
+Name:	spike-gui
+Umask:	0022
+State:	S (sleeping)
+Tgid:	288326
+Ngid:	0
+Pid:	288326
+PPid:	288323
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	128
+Groups:	961 998 1000 
+NStgid:	288326
+NSpid:	288326
+NSpgid:	288311
+NSsid:	287956
+Kthread:	0
+VmPeak:	 1528220 kB
+VmSize:	 1521704 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	  107100 kB
+VmRSS:	  107100 kB
+RssAnon:	   39896 kB
+RssFile:	   67196 kB
+RssShmem:	       8 kB
+VmData:	  165688 kB
+VmStk:	     184 kB
+VmExe:	   19724 kB
+VmLib:	  150520 kB
+VmPTE:	     772 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+untag_mask:	0xffffffffffffffff
+Threads:	34
+SigQ:	1/60354
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000001000
+SigCgt:	0000000100000440
+CapInh:	0000000800000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	thread vulnerable
+SpeculationIndirectBranch:	conditional enabled
+Cpus_allowed:	ffff
+Cpus_allowed_list:	0-15
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	194
+nonvoluntary_ctxt_switches:	77
+x86_Thread_features:	
+x86_Thread_features_locked:	

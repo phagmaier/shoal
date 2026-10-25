@@ -1,0 +1,5 @@
+# Tool versions pinned for this repository. Install with `mise install`.
+[tools]
+# libghostty-vt is built from source by the libghostty-vt-sys build script.
+# Ghostty 521cf2c5 (pinned by libghostty-rs 9ede35b) needs Zig 0.17.0.
+zig = "0.17.0"

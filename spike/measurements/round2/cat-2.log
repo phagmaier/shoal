@@ -1,0 +1,181 @@
+UTC start: 2026-10-25T09:04:21Z
+Environment: {"SPIKE_CMD": "read -r -t 30 < /tmp/shoal-t00-ha6kkxx1/start; s=$EPOCHREALTIME; cat /tmp/shoal-t00-50mb.log; status=$?; e=$EPOCHREALTIME; printf '%s %s %s\\n' \"$s\" \"$e\" \"$status\" > /tmp/shoal-t00-ha6kkxx1/done; read -r -t 60 < /tmp/shoal-t00-ha6kkxx1/stop", "SPIKE_FONT_PX": "14", "SPIKE_GRID": "200x60", "SPIKE_STATS": "1", "SPIKE_WINDOW": "1800x1400", "WAYLAND_DISPLAY": "wayland-1", "ZED_MEASUREMENTS": "1"}
+Command: /home/phagmaier/Code/shoal/spike/target/release/spike-gui
+hyprctl eval 'hl.dispatch(hl.dsp.window.float({window='"'"'address:0x55da884c2970'"'"',action='"'"'set'"'"'})); hl.dispatch(hl.dsp.window.set_prop({window='"'"'address:0x55da884c2970'"'"',prop='"'"'no_anim'"'"',value='"'"'true'"'"'})); hl.dispatch(hl.dsp.window.resize({window='"'"'address:0x55da884c2970'"'"',x=1800,y=1400,relative=false})); hl.dispatch(hl.dsp.window.move({window='"'"'address:0x55da884c2970'"'"',x=12,y=38,relative=false}))'
+ok
+SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792919061919196 feed_bytes=0 paint_us=2 total_us=502
+SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792919061927439 feed_bytes=0 paint_us=2 total_us=38
+frame duration: 2.85859ms
+SPIKE_FRAME unix_us=1792919061936478 feed_bytes=0 paint_us=3 total_us=53
+SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792919061938711 feed_bytes=0 paint_us=3 total_us=37
+frame duration: 3.212414ms
+SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792919061966022 feed_bytes=0 paint_us=13 total_us=190
+frame duration: 9.058836ms
+SPIKE_FRAME unix_us=1792919062004064 feed_bytes=6006 paint_us=7283 total_us=22584
+frame duration: 27.134972ms
+SPIKE_FRAME unix_us=1792919062019026 feed_bytes=338767 paint_us=3562 total_us=4752
+frame duration: 7.261431ms
+SPIKE_FRAME unix_us=1792919062036185 feed_bytes=1018444 paint_us=2402 total_us=3339
+frame duration: 5.75469ms
+SPIKE_FRAME unix_us=1792919062050453 feed_bytes=1539109 paint_us=1669 total_us=2766
+frame duration: 4.145958ms
+SPIKE_FRAME unix_us=1792919062067213 feed_bytes=2230800 paint_us=1616 total_us=2678
+frame duration: 3.865962ms
+SPIKE_FRAME unix_us=1792919062083713 feed_bytes=2932501 paint_us=1661 total_us=2811
+frame duration: 3.982221ms
+SPIKE_FRAME unix_us=1792919062100270 feed_bytes=3616899 paint_us=1637 total_us=2632
+frame duration: 3.776163ms
+SPIKE_FRAME unix_us=1792919062117025 feed_bytes=4321603 paint_us=1655 total_us=2622
+frame duration: 3.724897ms
+SPIKE_FRAME unix_us=1792919062133760 feed_bytes=5046468 paint_us=1661 total_us=2595
+frame duration: 3.936615ms
+SPIKE_FRAME unix_us=1792919062150215 feed_bytes=5746884 paint_us=1746 total_us=2705
+frame duration: 3.815186ms
+SPIKE_FRAME unix_us=1792919062166726 feed_bytes=6469034 paint_us=1778 total_us=2665
+frame duration: 3.779239ms
+SPIKE_FRAME unix_us=1792919062183248 feed_bytes=7200908 paint_us=1625 total_us=2502
+frame duration: 3.675985ms
+SPIKE_FRAME unix_us=1792919062199752 feed_bytes=7921199 paint_us=1629 total_us=2457
+frame duration: 3.554086ms
+SPIKE_FRAME unix_us=1792919062216971 feed_bytes=8691111 paint_us=1595 total_us=2393
+frame duration: 3.515063ms
+SPIKE_FRAME unix_us=1792919062233508 feed_bytes=9401392 paint_us=1775 total_us=2751
+frame duration: 3.923721ms
+SPIKE_FRAME unix_us=1792919062249958 feed_bytes=10114676 paint_us=1605 total_us=2497
+frame duration: 3.632523ms
+SPIKE_FRAME unix_us=1792919062266897 feed_bytes=10838685 paint_us=1642 total_us=2539
+frame duration: 3.697396ms
+SPIKE_FRAME unix_us=1792919062283087 feed_bytes=11541244 paint_us=1611 total_us=2495
+frame duration: 3.625951ms
+SPIKE_FRAME unix_us=1792919062300130 feed_bytes=12301289 paint_us=1615 total_us=2473
+frame duration: 3.579233ms
+SPIKE_FRAME unix_us=1792919062316477 feed_bytes=12997270 paint_us=1636 total_us=2509
+frame duration: 3.627914ms
+SPIKE_FRAME unix_us=1792919062333448 feed_bytes=13727484 paint_us=1786 total_us=2731
+frame duration: 3.871122ms
+SPIKE_FRAME unix_us=1792919062350502 feed_bytes=14475318 paint_us=1624 total_us=2342
+frame duration: 3.422088ms
+SPIKE_FRAME unix_us=1792919062367031 feed_bytes=15185313 paint_us=1636 total_us=2590
+frame duration: 3.679762ms
+SPIKE_FRAME unix_us=1792919062383456 feed_bytes=15884726 paint_us=1688 total_us=2577
+frame duration: 3.694069ms
+SPIKE_FRAME unix_us=1792919062400330 feed_bytes=16610751 paint_us=1601 total_us=2448
+frame duration: 3.570317ms
+SPIKE_FRAME unix_us=1792919062416950 feed_bytes=17332458 paint_us=1643 total_us=2456
+frame duration: 3.514863ms
+SPIKE_FRAME unix_us=1792919062434062 feed_bytes=18039450 paint_us=2203 total_us=3096
+frame duration: 4.279178ms
+SPIKE_FRAME unix_us=1792919062450423 feed_bytes=18734144 paint_us=1616 total_us=2481
+frame duration: 3.56673ms
+SPIKE_FRAME unix_us=1792919062467021 feed_bytes=19451575 paint_us=1637 total_us=2605
+frame duration: 3.708927ms
+SPIKE_FRAME unix_us=1792919062483806 feed_bytes=20172009 paint_us=1671 total_us=2673
+frame duration: 3.887943ms
+SPIKE_FRAME unix_us=1792919062500487 feed_bytes=20892872 paint_us=1638 total_us=2623
+frame duration: 3.877053ms
+SPIKE_FRAME unix_us=1792919062517499 feed_bytes=21644194 paint_us=1603 total_us=2442
+frame duration: 3.86476ms
+SPIKE_FRAME unix_us=1792919062534004 feed_bytes=22310002 paint_us=1648 total_us=2749
+frame duration: 4.060317ms
+SPIKE_FRAME unix_us=1792919062550556 feed_bytes=22999546 paint_us=1700 total_us=2823
+frame duration: 4.263068ms
+SPIKE_FRAME unix_us=1792919062567176 feed_bytes=23668645 paint_us=1622 total_us=2693
+frame duration: 4.13654ms
+SPIKE_FRAME unix_us=1792919062583706 feed_bytes=24343176 paint_us=1644 total_us=2853
+frame duration: 4.133334ms
+SPIKE_FRAME unix_us=1792919062600902 feed_bytes=25067900 paint_us=1592 total_us=2474
+frame duration: 3.892602ms
+SPIKE_FRAME unix_us=1792919062617237 feed_bytes=25722983 paint_us=1590 total_us=2682
+frame duration: 3.991858ms
+SPIKE_FRAME unix_us=1792919062633749 feed_bytes=26417534 paint_us=1643 total_us=2729
+frame duration: 4.005865ms
+SPIKE_FRAME unix_us=1792919062650582 feed_bytes=27134107 paint_us=1600 total_us=2575
+frame duration: 3.821318ms
+SPIKE_FRAME unix_us=1792919062667335 feed_bytes=27848891 paint_us=1644 total_us=2504
+frame duration: 3.744924ms
+SPIKE_FRAME unix_us=1792919062683360 feed_bytes=28503189 paint_us=1374 total_us=2488
+frame duration: 3.642883ms
+SPIKE_FRAME unix_us=1792919062700478 feed_bytes=29252793 paint_us=1645 total_us=2599
+frame duration: 3.775643ms
+SPIKE_FRAME unix_us=1792919062716937 feed_bytes=29945342 paint_us=1646 total_us=2741
+frame duration: 3.921747ms
+SPIKE_FRAME unix_us=1792919062732905 feed_bytes=30642183 paint_us=1713 total_us=2395
+frame duration: 3.516105ms
+SPIKE_FRAME unix_us=1792919062750661 feed_bytes=31374629 paint_us=1634 total_us=2498
+frame duration: 3.712544ms
+SPIKE_FRAME unix_us=1792919062766943 feed_bytes=32068179 paint_us=1608 total_us=2606
+frame duration: 3.751958ms
+SPIKE_FRAME unix_us=1792919062783602 feed_bytes=32793046 paint_us=1627 total_us=2494
+frame duration: 3.624498ms
+SPIKE_FRAME unix_us=1792919062799662 feed_bytes=33497178 paint_us=1641 total_us=2525
+frame duration: 3.608228ms
+SPIKE_FRAME unix_us=1792919062816845 feed_bytes=34265803 paint_us=1645 total_us=2549
+frame duration: 3.663773ms
+SPIKE_FRAME unix_us=1792919062833926 feed_bytes=34958781 paint_us=1626 total_us=2854
+frame duration: 4.080826ms
+SPIKE_FRAME unix_us=1792919062850102 feed_bytes=35652617 paint_us=1669 total_us=2602
+frame duration: 3.70522ms
+SPIKE_FRAME unix_us=1792919062866939 feed_bytes=36374622 paint_us=1646 total_us=2655
+frame duration: 3.789909ms
+SPIKE_FRAME unix_us=1792919062883168 feed_bytes=37085906 paint_us=1619 total_us=2509
+frame duration: 3.661328ms
+SPIKE_FRAME unix_us=1792919062900142 feed_bytes=37846237 paint_us=1614 total_us=2477
+frame duration: 3.556371ms
+SPIKE_FRAME unix_us=1792919062917037 feed_bytes=38591982 paint_us=1634 total_us=2539
+frame duration: 3.656699ms
+SPIKE_FRAME unix_us=1792919062933593 feed_bytes=39320085 paint_us=1679 total_us=2581
+frame duration: 3.71572ms
+SPIKE_FRAME unix_us=1792919062949866 feed_bytes=40020123 paint_us=1777 total_us=2663
+frame duration: 3.697295ms
+SPIKE_FRAME unix_us=1792919062967072 feed_bytes=40794611 paint_us=1628 total_us=2478
+frame duration: 3.578482ms
+SPIKE_FRAME unix_us=1792919062983619 feed_bytes=41519335 paint_us=1723 total_us=2635
+frame duration: 3.764852ms
+SPIKE_FRAME unix_us=1792919063000303 feed_bytes=42248633 paint_us=1824 total_us=2765
+frame duration: 3.91287ms
+SPIKE_FRAME unix_us=1792919063016973 feed_bytes=42968068 paint_us=1654 total_us=2690
+frame duration: 4.027876ms
+SPIKE_FRAME unix_us=1792919063033493 feed_bytes=43662905 paint_us=1762 total_us=2736
+frame duration: 3.954808ms
+SPIKE_FRAME unix_us=1792919063050230 feed_bytes=44373329 paint_us=1748 total_us=2656
+frame duration: 3.763599ms
+SPIKE_FRAME unix_us=1792919063066943 feed_bytes=45120647 paint_us=1620 total_us=2507
+frame duration: 3.617065ms
+SPIKE_FRAME unix_us=1792919063083871 feed_bytes=45868535 paint_us=1669 total_us=2560
+frame duration: 3.730197ms
+SPIKE_FRAME unix_us=1792919063100389 feed_bytes=46589541 paint_us=1669 total_us=2591
+frame duration: 3.739284ms
+SPIKE_FRAME unix_us=1792919063117200 feed_bytes=47322561 paint_us=1639 total_us=2464
+frame duration: 3.662449ms
+SPIKE_FRAME unix_us=1792919063133949 feed_bytes=48047714 paint_us=1621 total_us=2669
+frame duration: 3.817831ms
+SPIKE_FRAME unix_us=1792919063150226 feed_bytes=48772724 paint_us=1682 total_us=2558
+frame duration: 3.684961ms
+SPIKE_FRAME unix_us=1792919063167043 feed_bytes=49504169 paint_us=1649 total_us=2611
+frame duration: 3.686054ms
+SPIKE_FRAME unix_us=1792919063183641 feed_bytes=50189995 paint_us=1782 total_us=2729
+frame duration: 3.895638ms
+SPIKE_FRAME unix_us=1792919063200522 feed_bytes=50920298 paint_us=1631 total_us=2465
+frame duration: 3.626682ms
+SPIKE_FRAME unix_us=1792919063217068 feed_bytes=51648168 paint_us=1606 total_us=2432
+frame duration: 3.564967ms
+SPIKE_FRAME unix_us=1792919063233013 feed_bytes=52366743 paint_us=1632 total_us=2250
+frame duration: 3.765012ms
+SPIKE_FRAME unix_us=1792919063250428 feed_bytes=52798016 paint_us=1513 total_us=2662
+frame duration: 3.716852ms
+PTY bytes consumed: 52798016
+feed: 2386 chunks, 2386 slices, 897.7 ms in vt_write
+build draw list (render)           n=76    p50=  0.60 ms  p95=  0.71 ms  p99=  0.74 ms  max=  0.83 ms
+  of which render-state update     n=76    p50=  0.06 ms  p95=  0.07 ms  p99=  0.08 ms  max=  0.11 ms
+resolve rows (render)              n=76    p50=  0.24 ms  p95=  0.43 ms  p99=  0.59 ms  max= 14.95 ms
+paint (canvas)                     n=76    p50=  1.64 ms  p95=  1.82 ms  p99=  3.56 ms  max=  7.28 ms
+render start -> paint end          n=76    p50=  2.60 ms  p95=  2.85 ms  p99=  4.75 ms  max= 22.58 ms
+rows rebuilt / frame               n=76    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   
+rows re-resolved / frame           n=76    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   
+glyphs painted / frame             n=76    p50=7965.00     p95=8100.00     p99=8100.00     max=8100.00   
+
+Exit status: 0

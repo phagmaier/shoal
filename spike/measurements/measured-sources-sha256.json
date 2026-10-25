@@ -1,0 +1,19 @@
+{
+  "mise.toml": "550fe379bf8381e7a07d2557fa87055b6ccfea709835fa713edf5acad5851be9",
+  "spike/Cargo.toml": "ef53a2dd5dd353e8b4f892e9cab4d8006e7896371f1f0c806a236f48c859a139",
+  "spike/Cargo.lock": "6ce3665fd6eb50396ac4f3f1eefa0987b858e749e358bd3148e794cba166b2d8",
+  "spike/rust-toolchain.toml": "d191b3795b5b91352accb01ae7810421894703feb47aa0fd5d4ccaa6522d63c2",
+  "spike/.cargo/config.toml": "93d763c0cc1b0b13055c44eeb9638fdeae3bcaad9a2cbb1a954a52e3a6520f4b",
+  "spike/measure.py": "e1992eaf7e952c3cb0bac969ede351be8666b43a8dff338ea18e1a4830498133",
+  "spike/gui/src/main.rs": "5974dce02f2fef56d039d5e03424255739158ea2d842c86407c6762eae3bb172",
+  "spike/gui/src/view.rs": "d2e51240ebce0694d42061b0b802ca2ae54d8a45f3875e1a7c3e7de074fb3208",
+  "spike/gui/src/bench.rs": "113a804bcf1913d47591f16c6ef89a3e7539e3fd7f480a718e6769e47e70090e",
+  "spike/gui/src/stats.rs": "a7d51f6ca71210b3086762f8a2c84df43e4ff9a1c8e9fb7f972977dd4052ecbd",
+  "spike/gui/src/draw.rs": "16aa66af71c46330fcc2da6d4368998fc644268991b012b40b10f86842c06687",
+  "spike/snapcheck/src/main.rs": "01279a88c284a6a94d32099a2e5045b60f7aa04046cc6a31c681f6dbb3b009c9",
+  "spike/snapcheck/src/compare.rs": "a0e6c663d6d4fe310710424cfc2ea8cd9b982bfa1d0380ec5ed99a9ffbab9434",
+  "spike/snapcheck/src/scenarios.rs": "121126ef05d25fe2a31d11e3d206d62983a4d2d429d02dacf65b4df2b2ea2896",
+  "spike/snapcheck/src/programs.rs": "5edf53b5a8d8bee95e15d9b93f44862b5fc178be77fcc334f42371fadd597e90",
+  "spike/target/release/spike-gui": "6420ba98e44deb3422d521e63c778bc3b2a6dbbf203b0be47e84b2f4c1e5a83e",
+  "spike/target/release/snapcheck": "784439cf27d320917314b9dd5815b87170375bac06437c29f8d8f6ee2953bf80"
+}

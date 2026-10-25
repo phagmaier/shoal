@@ -1,0 +1,36 @@
+UTC start: 2026-10-25T08:15:47Z
+Environment: {"SPIKE_CMD": "read -r -t 30 < /tmp/shoal-t00-anfakt7n/start; s=$EPOCHREALTIME; cat /tmp/shoal-t00-50mb.log; status=$?; e=$EPOCHREALTIME; printf '%s %s %s\\n' \"$s\" \"$e\" \"$status\" > /tmp/shoal-t00-anfakt7n/done; read -r -t 60 < /tmp/shoal-t00-anfakt7n/stop", "SPIKE_FONT_PX": "14", "SPIKE_GRID": "200x60", "SPIKE_STATS": "1", "SPIKE_WINDOW": "1800x1400", "WAYLAND_DISPLAY": "wayland-1", "ZED_MEASUREMENTS": "1"}
+Command: /home/phagmaier/Code/shoal/spike/target/release/spike-gui
+hyprctl eval 'hl.dispatch(hl.dsp.window.float({window='"'"'address:0x55da88155660'"'"',action='"'"'set'"'"'})); hl.dispatch(hl.dsp.window.set_prop({window='"'"'address:0x55da88155660'"'"',prop='"'"'no_anim'"'"',value='"'"'true'"'"'})); hl.dispatch(hl.dsp.window.resize({window='"'"'address:0x55da88155660'"'"',x=1800,y=1400,relative=false})); hl.dispatch(hl.dsp.window.move({window='"'"'address:0x55da88155660'"'"',x=12,y=38,relative=false}))'
+ok
+SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792916147676932 feed_bytes=0 paint_us=8 total_us=817
+SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792916147685050 feed_bytes=0 paint_us=3 total_us=729
+frame duration: 3.292722ms
+SPIKE_FRAME unix_us=1792916147692797 feed_bytes=0 paint_us=3 total_us=744
+SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792916147695714 feed_bytes=0 paint_us=3 total_us=759
+frame duration: 3.360178ms
+SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792916147719056 feed_bytes=0 paint_us=5 total_us=1338
+frame duration: 10.970086ms
+SPIKE_FRAME unix_us=1792916147759888 feed_bytes=487292 paint_us=21120 total_us=23040
+frame duration: 27.708331ms
+SPIKE_FRAME unix_us=1792916148047321 feed_bytes=16550248 paint_us=4309 total_us=5991
+frame duration: 7.536179ms
+SPIKE_FRAME unix_us=1792916148088935 feed_bytes=19250946 paint_us=2434 total_us=4040
+frame duration: 5.009244ms
+SPIKE_FRAME unix_us=1792916148382016 feed_bytes=43079179 paint_us=2042 total_us=3396
+frame duration: 5.146773ms
+SPIKE_FRAME unix_us=1792916148478189 feed_bytes=50537773 paint_us=2062 total_us=3431
+frame duration: 4.381747ms
+SPIKE_FRAME unix_us=1792916148509768 feed_bytes=52798016 paint_us=2085 total_us=3473
+frame duration: 4.39933ms
+PTY bytes consumed: 52798016
+build draw list (render)           n=6     p50=  1.57 ms  p95=  1.87 ms  p99=  1.87 ms  max=  1.87 ms
+shape + paint (canvas)             n=6     p50=  2.43 ms  p95= 21.12 ms  p99= 21.12 ms  max= 21.12 ms
+render start -> paint end          n=6     p50=  4.04 ms  p95= 23.04 ms  p99= 23.04 ms  max= 23.04 ms
+glyph path totals: 47997 glyphs, lookup 294 ns/glyph, paint_glyph 332 ns/glyph
+
+Exit status: 0

@@ -1,0 +1,12 @@
+balanced
+200x60 full-damage styled screen, 300 iterations; per frame and per cell:
+Builder::build (update + all dirty rows)        0.649 ms/frame    54.1 ns/cell
+RenderState::update                             0.054 ms/frame     4.5 ns/cell
+cell iteration only                             0.059 ms/frame     4.9 ns/cell
+iteration + raw_cell + codepoint                0.201 ms/frame    16.8 ns/cell
+iteration + 4 raw getters                       0.518 ms/frame    43.1 ns/cell
+cells_raw bulk + 4 raw getters                  0.336 ms/frame    28.0 ns/cell
+iteration + style() every cell                  0.222 ms/frame    18.5 ns/cell
+iteration + fg_color + bg_color every cell      0.261 ms/frame    21.7 ns/cell
+iteration + graphemes_utf8 every cell           0.170 ms/frame    14.2 ns/cell
+B: build_row's FFI calls + style cache only     0.699 ms/frame    58.2 ns/cell

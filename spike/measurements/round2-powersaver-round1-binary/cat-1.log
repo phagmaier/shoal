@@ -1,0 +1,26 @@
+UTC start: 2026-10-25T08:54:32Z
+Environment: {"SPIKE_CMD": "read -r -t 30 < /tmp/shoal-t00-m_j1sfxq/start; s=$EPOCHREALTIME; cat /tmp/shoal-t00-50mb.log; status=$?; e=$EPOCHREALTIME; printf '%s %s %s\\n' \"$s\" \"$e\" \"$status\" > /tmp/shoal-t00-m_j1sfxq/done; read -r -t 60 < /tmp/shoal-t00-m_j1sfxq/stop", "SPIKE_FONT_PX": "14", "SPIKE_GRID": "200x60", "SPIKE_STATS": "1", "SPIKE_WINDOW": "1800x1400", "WAYLAND_DISPLAY": "wayland-1", "ZED_MEASUREMENTS": "1"}
+Command: /home/phagmaier/Code/shoal/spike/target/round1/spike-gui
+hyprctl eval 'hl.dispatch(hl.dsp.window.float({window='"'"'address:0x55da88428de0'"'"',action='"'"'set'"'"'})); hl.dispatch(hl.dsp.window.set_prop({window='"'"'address:0x55da88428de0'"'"',prop='"'"'no_anim'"'"',value='"'"'true'"'"'})); hl.dispatch(hl.dsp.window.resize({window='"'"'address:0x55da88428de0'"'"',x=1800,y=1400,relative=false})); hl.dispatch(hl.dsp.window.move({window='"'"'address:0x55da88428de0'"'"',x=12,y=38,relative=false}))'
+ok
+SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792918472529836 feed_bytes=0 paint_us=13 total_us=1431
+SPIKE_GEOMETRY viewport=554x706 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792918472539282 feed_bytes=0 paint_us=3 total_us=742
+frame duration: 3.270063ms
+SPIKE_FRAME unix_us=1792918472549958 feed_bytes=0 paint_us=2 total_us=743
+SPIKE_GEOMETRY viewport=545x702 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=false
+SPIKE_FRAME unix_us=1792918472552859 feed_bytes=0 paint_us=2 total_us=759
+frame duration: 3.927908ms
+SPIKE_GEOMETRY viewport=1800x1400 scale=2 font_px=14.00 cell_px=8.400x21.500 grid=200x60 fits=true
+SPIKE_FRAME unix_us=1792918472580968 feed_bytes=0 paint_us=6 total_us=1330
+frame duration: 14.412262ms
+SPIKE_FRAME unix_us=1792918473935741 feed_bytes=52798016 paint_us=32633 total_us=35947
+frame duration: 41.7901ms
+PTY bytes consumed: 52798016
+build draw list (render)           n=1     p50=  3.26 ms  p95=  3.26 ms  p99=  3.26 ms  max=  3.26 ms
+shape + paint (canvas)             n=1     p50= 32.63 ms  p95= 32.63 ms  p99= 32.63 ms  max= 32.63 ms
+render start -> paint end          n=1     p50= 35.95 ms  p95= 35.95 ms  p99= 35.95 ms  max= 35.95 ms
+glyph path totals: 8087 glyphs, lookup 2426 ns/glyph, paint_glyph 1449 ns/glyph
+
+Exit status: 0

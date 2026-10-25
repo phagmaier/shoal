@@ -1,0 +1,25 @@
+# T00 spike. Throwaway code: lives only on the spike/t00 branch.
+[workspace]
+resolver = "3"
+members = ["snapcheck", "gui"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+# libghostty-rs main, Oct 24 2026. Pins Ghostty 521cf2c5 (needs Zig 0.17.0).
+libghostty-vt = { git = "https://github.com/uzaaft/libghostty-rs", rev = "9ede35b8ea94a55ed3608408d67e102883129f1e" }
+# Zed v1.25.3 (stable), Oct 23 2026.
+gpui = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93", features = ["wayland", "font-kit"] }
+portable-pty = "0.9.0"
+
+# Zed's [patch] section does not apply to crates that depend on Zed from git,
+# so repeat the entries GPUI's dependency tree needs.
+[patch.crates-io]
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+calloop = { git = "https://github.com/zed-industries/calloop", rev = "3759371fee14c40066d64777e2a36b6ffcc22590" }
+
+[profile.release]
+debug = "line-tables-only"

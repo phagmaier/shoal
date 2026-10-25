@@ -1,0 +1,4 @@
+[env]
+# libghostty-vt-sys builds Zig in Debug mode whenever Cargo sets DEBUG=true,
+# which any profile with debug info does. Debug libghostty parses ~40 KiB/s.
+LIBGHOSTTY_VT_SYS_OPTIMIZE = "ReleaseFast"
