@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/shoal-model",
+    "crates/shoal-proto",
+    "crates/shoal-config",
+    "crates/shoal-term",
+    "crates/shoal-daemon",
+    "crates/shoal-client",
+    "crates/shoal-cli",
+    "crates/shoal-gui",
+    "crates/shoal-testkit",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+gpui = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "8dd255c3eafb5231056fe4e6f601cedd011f1c93", features = ["wayland", "font-kit"] }
+libghostty-vt = { git = "https://github.com/uzaaft/libghostty-rs", rev = "9ede35b8ea94a55ed3608408d67e102883129f1e" }
+
+# Dependency workspaces do not propagate their patches to Shoal.
+[patch.crates-io]
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+calloop = { git = "https://github.com/zed-industries/calloop", rev = "3759371fee14c40066d64777e2a36b6ffcc22590" }

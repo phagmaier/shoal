@@ -1,0 +1,12 @@
+[package]
+name = "shoal-gui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Wayland graphical terminal window for Shoal"
+
+[[bin]]
+name = "shoal-gui"
+path = "src/main.rs"

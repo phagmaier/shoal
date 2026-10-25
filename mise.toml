@@ -3,3 +3,9 @@
 # libghostty-vt is built from source by the libghostty-vt-sys build script.
 # Ghostty 521cf2c5 (pinned by libghostty-rs 9ede35b) needs Zig 0.17.0.
 zig = "0.17.0"
+# Match rust-toolchain.toml; override any inherited mise Rust selection.
+rust = { version = "1.98.1", profile = "minimal", components = "rustfmt,clippy" }
+just = "1.59.0"
+"cargo:cargo-deny" = "0.20.2"
+"cargo:cargo-insta" = "1.49.0"
+"cargo:cargo-fuzz" = "0.13.2"

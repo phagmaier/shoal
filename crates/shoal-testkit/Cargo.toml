@@ -1,0 +1,8 @@
+[package]
+name = "shoal-testkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Test-only environment and daemon fixtures for Shoal"

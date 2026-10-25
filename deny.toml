@@ -1,0 +1,35 @@
+# M1 spec §2: wrappers are the only permitted direct dependents.
+# A self-only wrapper on a binary allows it as a workspace root, but forbids
+# other crates from depending on it (Cargo cannot form a self-dependency).
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+deny = [
+    { name = "shoal-model", wrappers = ["shoal-proto", "shoal-daemon", "shoal-client", "shoal-gui"] },
+    { name = "shoal-proto", wrappers = ["shoal-daemon", "shoal-client", "shoal-testkit"] },
+    { name = "shoal-config", wrappers = ["shoal-daemon", "shoal-cli", "shoal-gui"] },
+    { name = "shoal-term", wrappers = ["shoal-daemon", "shoal-gui"] },
+    { name = "shoal-client", wrappers = ["shoal-cli", "shoal-gui", "shoal-testkit"] },
+    { name = "shoal-daemon", wrappers = ["shoal-daemon"] },
+    { name = "shoal-cli", wrappers = ["shoal-cli"] },
+    { name = "shoal-gui", wrappers = ["shoal-gui"] },
+    { name = "libghostty-vt", wrappers = ["shoal-term"] },
+    { name = "libghostty-vt-sys", wrappers = ["libghostty-vt"] },
+    # cargo-deny sees the upstream platform graph, including non-Linux targets.
+    { name = "gpui", wrappers = ["shoal-gui", "gpui_platform", "gpui_linux", "gpui_wgpu", "gpui_web", "gpui_apple", "gpui_macos", "gpui_windows"] },
+    { name = "gpui_platform", wrappers = ["shoal-gui"] },
+    { name = "gpui_linux", wrappers = ["shoal-gui", "gpui_platform"] },
+    { name = "gpui_wgpu", wrappers = ["shoal-gui", "gpui_linux", "gpui_web"] },
+    { name = "gpui_web", wrappers = ["shoal-gui", "gpui_platform"] },
+    { name = "gpui_apple", wrappers = ["shoal-gui", "gpui_macos"] },
+    { name = "gpui_macos", wrappers = ["shoal-gui", "gpui_platform"] },
+    { name = "gpui_windows", wrappers = ["shoal-gui", "gpui_platform"] },
+    { name = "gpui_macros", wrappers = ["shoal-gui", "gpui"] },
+    { name = "gpui_shared_string", wrappers = ["shoal-gui", "gpui"] },
+    { name = "gpui_util", wrappers = ["shoal-gui", "gpui", "collections", "gpui_apple", "gpui_linux", "gpui_macos", "gpui_wgpu", "gpui_windows"] },
+]
+
+[bans.workspace-dependencies]
+# T01 records the T00 pins without linking them into empty skeletons.
+unused = "allow"

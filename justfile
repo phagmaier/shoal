@@ -1,0 +1,28 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# List available commands.
+default:
+    @just --list
+
+# Required pre-commit checks, including the M1 dependency boundaries.
+check:
+    mise exec -- cargo fmt --all -- --check
+    mise exec -- cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+    mise exec -- cargo test --locked --workspace --all-features
+    mise exec -- cargo deny --locked --all-features check bans
+    mise exec -- scripts/check-boundaries.sh
+
+# Run the workspace tests.
+test:
+    mise exec -- cargo test --locked --workspace --all-features
+
+# The two development commands share a checkout-local, disposable XDG sandbox.
+dev-daemon:
+    mise exec -- scripts/dev-run.sh shoal-daemon shoald
+
+dev-gui:
+    mise exec -- scripts/dev-run.sh shoal-gui shoal-gui
+
+# T04 supplies fuzz/Cargo.toml and the frame_decoder target; only fuzz uses nightly.
+fuzz-proto *args:
+    mise exec -- cargo +nightly fuzz run frame_decoder {{args}}

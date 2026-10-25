@@ -7,10 +7,6 @@ mirror it. The `shoal` CLI scripts it and draws the native prompt.
 Nearly all of this code is written by agents. The rules below are strict on purpose:
 they are what lets one agent change one crate without breaking another.
 
-> **Bootstrap note:** until task T01 is merged, the crates, `justfile`, `third_party/`
-> and the test kit described below do not exist yet. T00 (the spike) adds `mise.toml`;
-> creating the rest is T01's job.
-
 ## Read first
 
 - `docs/spec/` is the spec:
@@ -53,6 +49,10 @@ both into its own terminal copy.
 5. `shoal-cli` never depends on `shoal-term` or GPUI, so the prompt starts fast.
 6. The daemon never depends on the GUI.
 
+`scripts/check-boundaries.sh` additionally rejects tokio in `shoal-proto` and
+non-dev dependencies on `shoal-testkit`; cargo-deny's wrappers cannot express
+dependency kind. `just check` runs both gates.
+
 ### Concurrency rules
 
 - Workspace state lives only in the workspace actor. Change it by sending messages.
@@ -66,7 +66,7 @@ both into its own terminal copy.
 
 ```sh
 scripts/setup-machine.sh --check   # report what this machine is missing (agents: --check only)
-mise install          # pinned Zig (libghostty-vt builds with it)
+mise install          # pinned Rust, Zig and development tools
 just check            # fmt, clippy -D warnings, tests, cargo-deny; must pass before a commit
 just test             # tests only
 just dev-daemon       # shoald in a temp XDG sandbox, logging to stderr

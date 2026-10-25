@@ -1,0 +1,8 @@
+[package]
+name = "shoal-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Daemon connection and client transport for Shoal"

@@ -1,0 +1,12 @@
+[package]
+name = "shoal-daemon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Session daemon for Shoal"
+
+[[bin]]
+name = "shoald"
+path = "src/main.rs"

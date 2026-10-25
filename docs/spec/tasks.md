@@ -2,6 +2,8 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
+**Current status:** T01 done and committed on `t01-scaffold`; the user confirmed the fresh-clone install-mode setup and `just check` succeeded on 2026-10-25. Next: T02 (model types) on `t02-model-types`, stacked on the T01 commit. Pushes and merging into `main` still need approval.
+
 **How to use this list**
 
 - Hand an agent one task id plus `AGENTS.md`. Everything in the task's **Needs** must be done first.
@@ -36,12 +38,16 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T01 · Repository scaffold
 
+- **Status:** done 2026-10-25 on `t01-scaffold`. Implementation, direct review and automated verification complete; the user reported success for install-mode setup plus `just check` in the prepared fresh clone. Committed on `t01-scaffold`; not pushed or merged.
+- **Verified:** `just check` passes locally and in a fresh candidate clone after `mise install`, source fetching and setup `--check`. All 178 isolated dependency-policy probes pass. The actual pinned GPUI/platform graph is accepted in the GUI and rejected in the daemon; adding CLI→term makes `just check` fail at the deny gate. Shell syntax, repeated fetch, fetch integrity/failure paths, setup trust/missing-source failures and all three empty binary launches were exercised.
+- **Review:** fixed symlink read-only validation, accounted for upstream GPUI platform imports without permitting other Shoal crates to import them, and kept the deny policy scoped to dependency boundaries. No unresolved in-scope findings.
 - **Needs:** T00.
 - **Build:** the Cargo workspace with all nine crates as empty skeletons (M1 spec §2); `rust-toolchain.toml` pinning a stable Rust with rustfmt and clippy; extend T00's `mise.toml` to also pin `just`, `cargo-deny`, `cargo-insta` and `cargo-fuzz`; a `justfile` with `check` (fmt, clippy with warnings as errors, tests, cargo-deny), `test`, `dev-daemon`, `dev-gui`, `fuzz-proto` (cargo-fuzz needs nightly, so this recipe alone uses `cargo +nightly fuzz`); `deny.toml` encoding the crate dependency rules; `third_party/fetch.sh`, a script that fetches read-only copies of the pinned GPUI source and Ghostty headers (fetched files gitignored), which `scripts/setup-machine.sh` runs; update `scripts/setup-machine.sh` for anything new the build needs; remove the bootstrap note from `AGENTS.md`.
 - **Done when:** `just check` passes on a fresh clone after `scripts/setup-machine.sh`, and adding a forbidden dependency (e.g. gpui in `shoal-daemon`) makes it fail.
 
 ### T02 · Model types
 
+- **Status:** ready; recommended next task, not started.
 - **Needs:** T01.
 - **Build:** `shoal-model` types from M1 spec §3 with serde, prefixed-string ids, and `validate`.
 - **Done when:** insta JSON snapshot tests cover a workspace with two sessions, nested splits and a zoomed pane; `validate` rejects each broken invariant in its own test.

@@ -9,11 +9,11 @@
 set -euo pipefail
 
 usage() {
-    sed -n '4,5p' "${BASH_SOURCE[0]}" | sed 's/^#   //'
+    printf 'Usage: %s [--check]\n' "$0"
 }
 
 check_only=false
-case "${1:-}" in
+case "$*" in
     "") ;;
     --check) check_only=true ;;
     -h | --help) usage; exit 0 ;;
@@ -29,9 +29,8 @@ packages=(
     wayland libxkbcommon libxkbcommon-x11 libxcb fontconfig freetype2
     vulkan-icd-loader vulkan-headers alsa-lib openssl zstd
     ttf-jetbrains-mono noto-fonts-emoji
-    sysstat hyperfine socat
+    sysstat hyperfine socat jq
 )
-cargo_tools=(cargo-deny cargo-insta cargo-fuzz)
 
 problems=()
 ok() { printf '  ok    %s\n' "$1"; }
@@ -67,46 +66,21 @@ else
     missing "no hardware Vulkan driver (vulkan-radeon, vulkan-intel or nvidia-utils)"
 fi
 
-step "Rust toolchains"
-if ! command -v rustup >/dev/null; then
-    missing "rustup (install the packages above first)"
-else
-    # Present toolchains are left alone, so re-running never upgrades Rust.
-    # nightly is only for cargo-fuzz.
-    for tc in stable nightly; do
-        if rustup toolchain list | grep -q "^$tc-"; then
-            ok "$tc"
-        elif $check_only; then
-            missing "rust $tc toolchain (run: rustup toolchain install $tc)"
-        else
-            rustup toolchain install "$tc" --profile minimal
-            ok "installed $tc"
-        fi
-    done
-    if ! $check_only; then
-        rustup component add --toolchain stable rustfmt clippy
-        rustup default >/dev/null 2>&1 || rustup default stable
-    fi
-    if [[ -f $repo/rust-toolchain.toml ]]; then
-        if $check_only; then
-            (cd "$repo" && rustup show active-toolchain >/dev/null 2>&1) \
-                && ok "rust-toolchain.toml toolchain" \
-                || missing "toolchain from rust-toolchain.toml (run: rustup toolchain install, in the repo)"
-        else
-            (cd "$repo" && rustup toolchain install)
-            ok "rust-toolchain.toml toolchain"
-        fi
-    fi
-fi
-
 step "Pinned tools (mise.toml)"
 if [[ ! -f $repo/mise.toml ]]; then
-    warn "no mise.toml yet (task T00 adds it)"
+    missing "mise.toml"
 elif ! command -v mise >/dev/null; then
     missing "mise (install the packages above first)"
 elif $check_only; then
-    if (cd "$repo" && mise ls --current 2>/dev/null | grep -q missing); then
-        missing "mise tools (run: mise install, in the repo)"
+    # An untrusted config or failed inspection is not evidence of readiness.
+    if ! trust=$(cd "$repo" && MISE_OFFLINE=true MISE_COLOR=0 mise trust --show 2>&1 </dev/null); then
+        missing "cannot inspect mise config trust: $trust"
+    elif [[ -z $trust || $trust == *': untrusted'* ]]; then
+        missing "mise config is not trusted (run scripts/setup-machine.sh): $trust"
+    elif ! inspection=$(cd "$repo" && MISE_OFFLINE=true mise ls --current --missing 2>&1 </dev/null); then
+        missing "cannot inspect mise tools: $inspection"
+    elif [[ -n $inspection ]]; then
+        missing "mise tools: $inspection (run scripts/setup-machine.sh)"
     else
         ok "mise tools installed"
     fi
@@ -116,28 +90,94 @@ else
     ok "mise tools installed"
 fi
 
-step "Cargo tools"
-for tool in "${cargo_tools[@]}"; do
-    if command -v "$tool" >/dev/null || (cd "$repo" && mise which "$tool" >/dev/null 2>&1); then
-        ok "$tool"
+step "Rust toolchains"
+if ! command -v rustup >/dev/null; then
+    missing "rustup (install the packages above first)"
+elif [[ ! -f $repo/rust-toolchain.toml ]]; then
+    missing "rust-toolchain.toml"
+else
+    # This repository uses a literal channel and string-array components, not
+    # arbitrary TOML. Read both so a pin/component change updates this check too.
+    channel=''
+    components=()
+    in_components=false
+    while IFS= read -r line; do
+        if [[ $line =~ ^[[:space:]]*channel[[:space:]]*=[[:space:]]*\"([^\"]+)\" ]]; then
+            channel=${BASH_REMATCH[1]}
+        fi
+        if [[ $line =~ ^[[:space:]]*components[[:space:]]*= ]]; then
+            in_components=true
+        fi
+        if $in_components; then
+            values=$line
+            while [[ $values =~ \"([^\"]+)\" ]]; do
+                components+=("${BASH_REMATCH[1]}")
+                values=${values#*"${BASH_REMATCH[0]}"}
+            done
+            [[ $line != *']'* ]] || in_components=false
+        fi
+    done < "$repo/rust-toolchain.toml"
+    if [[ -z $channel ]]; then
+        missing "cannot read channel from rust-toolchain.toml"
     elif $check_only; then
-        missing "$tool (run: cargo install --locked $tool)"
+        # Disable rustup's implicit installation and mise's inherited override.
+        if active=$(cd "$repo" && env -u RUSTUP_TOOLCHAIN RUSTUP_AUTO_INSTALL=0 rustup show active-toolchain 2>&1) &&
+            [[ $active == "$channel-"* || $active == "$channel "* ]]; then
+            if installed=$(env -u RUSTUP_TOOLCHAIN RUSTUP_AUTO_INSTALL=0 rustup component list --toolchain "$channel" --installed 2>&1); then
+                ok "Rust $channel selected by rust-toolchain.toml"
+                for component in "${components[@]}"; do
+                    found=false
+                    while IFS= read -r entry; do
+                        if [[ $entry == "$component" || $entry == "$component-"* ]]; then
+                            found=true
+                        fi
+                    done <<< "$installed"
+                    $found && ok "$component" || missing "Rust $channel component $component"
+                done
+            else
+                missing "cannot inspect Rust $channel components: $installed"
+            fi
+        else
+            missing "Rust $channel from rust-toolchain.toml: $active"
+        fi
     else
-        cargo install --locked "$tool"
-        ok "$tool"
+        (cd "$repo" && env -u RUSTUP_TOOLCHAIN rustup toolchain install "$channel" --profile minimal)
+        if ((${#components[@]})); then
+            env -u RUSTUP_TOOLCHAIN rustup component add --toolchain "$channel" "${components[@]}"
+        fi
+        ok "Rust $channel and requested components"
     fi
-done
+    # cargo-fuzz requires nightly, independently of the workspace compiler.
+    if toolchains=$(rustup toolchain list 2>&1); then
+        nightly_present=false
+        while IFS= read -r entry; do
+            [[ $entry != nightly-* ]] || nightly_present=true
+        done <<< "$toolchains"
+        if $nightly_present; then
+            ok "nightly (cargo-fuzz)"
+        elif $check_only; then
+            missing "Rust nightly (cargo-fuzz)"
+        else
+            rustup toolchain install nightly --profile minimal
+            ok "installed nightly (cargo-fuzz)"
+        fi
+    else
+        missing "cannot inspect Rust toolchains: $toolchains"
+    fi
+fi
 
 step "Vendored sources (third_party/)"
-if [[ -x $repo/third_party/fetch.sh ]]; then
-    if $check_only; then
-        warn "run third_party/fetch.sh to refresh the read-only copies"
+if [[ ! -x $repo/third_party/fetch.sh ]]; then
+    missing "third_party/fetch.sh"
+elif $check_only; then
+    if "$repo/third_party/fetch.sh" --check; then
+        ok "pinned reference sources"
     else
-        "$repo/third_party/fetch.sh"
-        ok "fetched"
+        missing "pinned reference sources (run third_party/fetch.sh)"
     fi
 else
-    warn "no third_party/fetch.sh yet (task T01 adds it)"
+    "$repo/third_party/fetch.sh"
+    ok "fetched pinned reference sources"
 fi
 
 step "Session (checked, not changed)"
