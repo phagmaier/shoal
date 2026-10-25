@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01–T08 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T08 (terminal wrapper: rendering and input) was merged and pushed with the user's approval after `just check` (138 tests) passed on the merged `main`. T31 (native prompt) is done and merged into `main` with the user's approval (a fast-forward of the commit on which `just check` passed, 171 tests). T10 (daemon skeleton and test kit) is done on branch `t10-daemon-skeleton` (186 tests pass in `just check`) and awaits the user's merge decision. Open planning gap: no task yet loads config and theme in the daemon (see T10's follow-ups). Next in the safe order: T11 (pane runtime).
+**Current status:** T01–T08 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T08 (terminal wrapper: rendering and input) was merged and pushed with the user's approval after `just check` (138 tests) passed on the merged `main`. T31 (native prompt) is done and merged into `main` with the user's approval (a fast-forward of the commit on which `just check` passed, 171 tests). T10 (daemon skeleton and test kit) is done and merged into `main` with the user's approval (a fast-forward; `just check` passed on the merged `main`, 186 tests). Settled with the user: the daemon loads config and theme at startup in T11 and watches them, with `daemon.notice`, in T12. Next in the safe order: T11 (pane runtime).
 
 **How to use this list**
 
@@ -120,7 +120,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 ### T10 · Daemon skeleton and test kit
 
 - **Needs:** T04, T05.
-- **Status:** done 2026-10-25 on `t10-daemon-skeleton`, starting from `main` at `9d7651b`; not merged yet. M1 spec §4.1, §4.6 and §5.3 record the settled details.
+- **Status:** done 2026-10-25 on `t10-daemon-skeleton`, starting from `main` at `9d7651b`; merged into `main` (fast-forward) and pushed with the user's approval. M1 spec §4.1, §4.6 and §5.3 record the settled details.
 - **Verified:** `mise exec -- just check` passes (186 tests, 15 new). Integration tests run the real `shoald` in a `TempEnv`:
   - **Handshake:** `hello` returns protocol 1, the version, `shoal_term::core_id()` and the child's pid. A request, a notification, an invalid envelope or an INPUT frame sent first gets 1002 and the connection closes. A protocol-2 `hello` gets 1003 with `daemon_protocol` and `pid`, a `hello` with bad parameters gets 1004, and both close.
   - **After `hello`:** requests are answered in order (-32601 unknown, 1004 bad parameters, 1002 second `hello`, -32600 with a null id for an invalid envelope, a client notification ignored). An unknown frame kind or a daemon-only frame closes just that connection, and INPUT is accepted quietly.
@@ -136,7 +136,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
   - Known methods that aren't built yet answer -32601 `<method> is not implemented yet` until T12 and T13.
   - New dependencies: `tokio` 1.54 (rt, net, signal, io-util, time; the async runtime the actor and connections need), `tracing` 0.1 and `tracing-subscriber` 0.3 (fmt and registry only; §4.6 names tracing), and for the test kit `rustix` 1.1 with `process` (already in the lockfile through `tempfile`; sends signals without `unsafe`). Rotation is our own small writer because `tracing-appender` always puts the date in the live file's name, while §4.6 names it `shoald.log`.
 - **Follow-ups:**
-  1. *Planning gap, needs placing:* no task loads config and theme in the daemon. That covers §4.1 step 4, the daemon's theme and config watch (§9.1–9.2), `daemon.notice` for config problems, and handing the palette, `shell.program` and `scrollback.lines` to panes. Suggestion: startup loading in T11, which needs those values; watching and notices in T12.
+  1. *Planning gap, placed with the user:* the daemon's config and theme. Startup loading (§4.1 step 4) and handing the palette, `shell.program` and `scrollback.lines` to panes went into T11; the config and theme watch (§9.1–9.2) and `daemon.notice` went into T12.
   2. T20 needs a way to find `shoald` from other crates' tests: `TempEnv::spawn_daemon` takes the binary path, and only `shoal-daemon`'s own tests have `CARGO_BIN_EXE_shoald`.
   3. Socket paths must fit `sockaddr_un` (108 bytes). A very long `XDG_RUNTIME_DIR` fails at bind with a clear message.
 - **Build:** `shoald` startup from M1 spec §4.1 (runtime folder, lock, socket permissions, peer uid check), the `hello` handshake, unknown-method errors, logging (§4.6), clean exit on `SIGTERM`. `shoal-testkit`: a `TempEnv` that points every XDG folder and `HOME` at temp folders, spawns the built daemon, gives tests a raw connection, and provides `eventually`.
@@ -145,14 +145,14 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 ### T11 · Pane runtime
 
 - **Needs:** T07, T10.
-- **Build:** the pane thread from §4.2: PTY spawn, environment rules, the terminal setup (continuation tracking, grapheme clustering on, reply and metadata callbacks), the `poll` loop, output batching, sequence numbers, the reply sink, the command channel, kill, exit detection, the early-exit guard. Internal API only.
-- **Done when:** tests cover an echo round trip; `stty size` matching after a resize; `exit 3` giving `Exited { code: 3 }`; kill ending `sleep 100` within 2.5 s; a cursor-position query answered; mode 2027 on in a new pane's terminal; the required environment variables present; the thread sleeping (state `S` in `/proc`) when the shell is idle.
+- **Build:** the pane thread from §4.2: PTY spawn, environment rules, the terminal setup (continuation tracking, grapheme clustering on, reply and metadata callbacks), the `poll` loop, output batching, sequence numbers, the reply sink, the command channel, kill, exit detection, the early-exit guard. Internal API only. Also the daemon's startup config and theme loading (§4.1 step 4, §9.1–9.2), handing the palette, `shell.program` and `scrollback.lines` to panes; problems are logged (notices come in T12).
+- **Done when:** tests cover an echo round trip; `stty size` matching after a resize; `exit 3` giving `Exited { code: 3 }`; kill ending `sleep 100` within 2.5 s; a cursor-position query answered; mode 2027 on in a new pane's terminal; the required environment variables present; the thread sleeping (state `S` in `/proc`) when the shell is idle; a color query answered with the theme's color; `shell.program` used when the pane has no `argv`.
 
 ### T12 · Workspace actor and methods
 
 - **Needs:** T03, T11.
-- **Build:** the single actor that owns the workspace; every §5.4 method except `pane.attach`, `pane.detach` and `pane.set_size`; `workspace.changed` notifications coalesced to 16 ms; close cascades; smart open (§4.4).
-- **Done when:** integration tests cover each method's success path plus its not-found and invalid-state errors, and two simultaneous `session.open_smart` calls get different sessions.
+- **Build:** the single actor that owns the workspace; every §5.4 method except `pane.attach`, `pane.detach` and `pane.set_size`; `workspace.changed` notifications coalesced to 16 ms; close cascades; smart open (§4.4). Also the daemon's config and theme watch (§9.1–9.2), applying new colors and settings to running panes, and `daemon.notice` for config and theme problems.
+- **Done when:** integration tests cover each method's success path plus its not-found and invalid-state errors, and two simultaneous `session.open_smart` calls get different sessions; swapping the Omarchy theme changes the color a pane reports within 1 s; an invalid `config.toml` sends `daemon.notice` and keeps the last good config.
 
 ### T13 · Attach and streaming
 
