@@ -48,15 +48,30 @@ pub enum CaptureFormat {
 #[derive(Debug)]
 pub struct Terminal {
     pub(crate) inner: libghostty_vt::Terminal<'static, 'static>,
+    pub(crate) view: View,
+}
+
+/// What only a drawn terminal needs, made on first use: its single render
+/// state and its input encoders.
+#[derive(Debug, Default)]
+pub(crate) struct View {
+    pub(crate) render: Option<crate::render::Renderer>,
+    pub(crate) keys: Option<crate::input::KeyEncoder>,
+    pub(crate) mouse: Option<crate::mouse::MouseEncoder>,
 }
 
 impl Terminal {
+    pub(crate) fn from_inner(inner: libghostty_vt::Terminal<'static, 'static>) -> Self {
+        Self {
+            inner,
+            view: View::default(),
+        }
+    }
+
     /// A terminal that answers nothing, keeping up to `scrollback` lines of
     /// history and tracking up to [`CONTINUATION_BYTES`] of unfinished input.
     pub fn new(cols: u16, rows: u16, scrollback: u32) -> Result<Self, TermError> {
-        let mut terminal = Self {
-            inner: libghostty_vt::Terminal::new(cols, rows)?,
-        };
+        let mut terminal = Self::from_inner(libghostty_vt::Terminal::new(cols, rows)?);
         terminal.set_scrollback(scrollback)?;
         terminal
             .inner

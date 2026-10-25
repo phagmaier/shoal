@@ -171,7 +171,7 @@ pub(crate) fn restore_within(
             len,
         });
     }
-    let mut terminal = Terminal { inner };
+    let mut terminal = Terminal::from_inner(inner);
     let (got_cols, got_rows) = (terminal.cols()?, terminal.rows()?);
     if (got_cols, got_rows) != (cols, rows) {
         return Err(RestoreError::SizeMismatch {
