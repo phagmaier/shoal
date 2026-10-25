@@ -128,7 +128,7 @@ pub enum PaneStatus {
 
 | Function | What it does |
 | --- | --- |
-| `split(tab, pane, Right \| Down, new)` | Replaces the pane with a 50/50 split of old and new; focuses the new pane. |
+| `split(tab, pane, Right \| Down, new, split_id)` | Replaces the pane with a 50/50 split of old and new; focuses the new pane and clears zoom. The caller supplies both fresh ids, allocated from `next_id`. |
 | `close(tab, pane)` | Replaces the parent split with the sibling; returns the pane to focus, or `None` if it was the last pane (the caller then closes the tab). Clears `zoomed` if needed. |
 | `rects(layout, area, gap)` | Turns the tree into pixel rectangles. Rectangles never overlap and, with the gaps, exactly fill the area. |
 | `neighbor(rects, pane, Left \| Right \| Up \| Down)` | The closest pane in that direction that overlaps on the other axis; ties go to the larger overlap, then the top-left one. |
@@ -136,6 +136,43 @@ pub enum PaneStatus {
 | `set_ratio(layout, split_id, ratio)` | Used by mouse drags on a divider. |
 | `toggle_zoom(tab, pane)` | Zoomed pane fills the tab; the others keep running at their old size. |
 | `validate(workspace)` | Every pane in `panes` is stored under its own id, appears in exactly one tab's layout, and every layout pane is in `panes`; ids are unique across all four kinds (they share one counter) and all below `next_id`; `active_tab` points inside its session; `focused` and `zoomed` point inside their tab; every session has a tab; session names are unique; every split `ratio` is within 0.1..=0.9 (NaN fails). Runs after every change in debug builds. |
+
+**Layout operation details (T03, settled 2026-10-25)**
+
+- The caller owns workspace bookkeeping: allocating globally fresh ids, inserting or
+  removing pane records, close cascades and revision changes. The operations mutate
+  only the supplied tab or layout. Mutating operations return an error for missing
+  targets or invalid arguments without changing it; `neighbor` returns `None` for
+  a missing pane or absent neighbor. New pane and split ids are checked for numeric
+  collisions within the supplied tab; freshness across the workspace is the caller's
+  contract.
+- Rectangles use nonnegative integer pixel coordinates and extents (`u32`); an area
+  whose right or bottom coordinate overflows is rejected. At each split, subtract
+  the gap, floor the first child's share, and give the remainder to the second.
+  Clamp the gap to that split's available extent, so tiny or zero areas still tile
+  exactly (some panes can have zero extent). `rects` always computes the underlying
+  layout. For zoom, the caller displays only the zoomed pane at the full tab area;
+  hidden panes keep their previous terminal sizes.
+- Neighbor distance is the separation between facing edges in the requested
+  direction. Candidates must lie beyond that edge and have positive overlap on the
+  other axis. Ties use greater overlap, then topmost and leftmost position. Empty
+  rectangles have no neighbor and are not candidates. There is no wraparound.
+- Resize `step` is a nonnegative fraction of the selected split's usable extent,
+  after its gap, not a cell count. Walk toward the root to find the nearest ancestor
+  on the requested axis with the pane on the side that can grow toward the requested
+  direction. Increase the ratio for right/down growth of `first`, decrease it for
+  left/up growth of `second`, and clamp using `Layout::RATIO_RANGE`. No eligible
+  ancestor, a zero step, or an already clamped ratio means no change; a clamped
+  ancestor does not cause a more distant divider to move. Callers convert protocol
+  `cells` to this fraction using geometry and cell dimensions. Negative or nonfinite
+  steps and nonfinite `set_ratio` values are errors; finite ratios are clamped.
+- Zoom focuses its target. Toggling the same zoomed pane clears zoom; toggling a
+  different pane switches zoom. A single-pane tab can be zoomed and unzoomed.
+- Close preserves surviving focus and zoom. When the focused pane closes, focus
+  moves to the first leaf of its sibling subtree (first child before second).
+  Closing a zoomed pane clears zoom. Closing the last pane clears zoom and returns
+  `None`; the caller must remove that tab immediately, since `Layout` has no empty
+  variant. An unknown pane is an error, distinct from closing the last pane.
 
 ## 4. Daemon behaviour
 

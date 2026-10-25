@@ -1,0 +1,147 @@
+//! Integer pixel geometry and directional pane navigation (M1 spec §3).
+
+use std::cmp::Reverse;
+use std::collections::BTreeMap;
+
+use crate::{Axis, Direction, Layout, LayoutError, PaneId};
+
+/// A half-open rectangle in tab-local pixels. Zero extents are allowed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Rect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl Rect {
+    fn right(self) -> u64 {
+        u64::from(self.x) + u64::from(self.width)
+    }
+
+    fn bottom(self) -> u64 {
+        u64::from(self.y) + u64::from(self.height)
+    }
+
+    fn is_empty(self) -> bool {
+        self.width == 0 || self.height == 0
+    }
+}
+
+/// Computes the underlying layout even when the caller displays a zoomed pane.
+/// Gaps are capped to each split's extent; the second child receives rounding
+/// remainders. Rejects areas whose right or bottom coordinate overflows `u32`.
+/// Requires a valid layout, as checked by [`crate::validate`].
+pub fn rects(layout: &Layout, area: Rect, gap: u32) -> Result<BTreeMap<PaneId, Rect>, LayoutError> {
+    if area.x.checked_add(area.width).is_none() || area.y.checked_add(area.height).is_none() {
+        return Err(LayoutError::AreaOverflow);
+    }
+    let mut result = BTreeMap::new();
+    collect_rects(layout, area, gap, &mut result);
+    Ok(result)
+}
+
+fn collect_rects(layout: &Layout, area: Rect, gap: u32, result: &mut BTreeMap<PaneId, Rect>) {
+    match layout {
+        Layout::Pane(pane) => {
+            result.insert(*pane, area);
+        }
+        Layout::Split {
+            axis,
+            ratio,
+            first,
+            second,
+            ..
+        } => {
+            let extent = match axis {
+                Axis::Row => area.width,
+                Axis::Column => area.height,
+            };
+            let local_gap = gap.min(extent);
+            let usable = extent - local_gap;
+            // f64 exactly represents every u32, avoiding f32's loss of pixel
+            // precision for large areas before rounding down.
+            let first_extent = (f64::from(usable) * f64::from(*ratio)).floor() as u32;
+            let second_extent = usable - first_extent;
+            let (first_area, second_area) = match axis {
+                Axis::Row => (
+                    Rect {
+                        width: first_extent,
+                        ..area
+                    },
+                    Rect {
+                        x: area.x + first_extent + local_gap,
+                        width: second_extent,
+                        ..area
+                    },
+                ),
+                Axis::Column => (
+                    Rect {
+                        height: first_extent,
+                        ..area
+                    },
+                    Rect {
+                        y: area.y + first_extent + local_gap,
+                        height: second_extent,
+                        ..area
+                    },
+                ),
+            };
+            collect_rects(first, first_area, gap, result);
+            collect_rects(second, second_area, gap, result);
+        }
+    }
+}
+
+/// Finds the closest facing edge with positive perpendicular overlap. Ties favor
+/// greater overlap, then the topmost, leftmost pane. No wraparound.
+pub fn neighbor(
+    rects: &BTreeMap<PaneId, Rect>,
+    pane: PaneId,
+    direction: Direction,
+) -> Option<PaneId> {
+    let source = *rects.get(&pane)?;
+    if source.is_empty() {
+        return None;
+    }
+    rects
+        .iter()
+        .filter(|(id, _)| **id != pane)
+        .filter_map(|(&id, &candidate)| {
+            candidate_score(source, candidate, direction).map(|score| ((score, id), id))
+        })
+        .min_by_key(|(key, _)| *key)
+        .map(|(_, id)| id)
+}
+
+fn candidate_score(
+    source: Rect,
+    candidate: Rect,
+    direction: Direction,
+) -> Option<(u64, Reverse<u64>, u32, u32)> {
+    if candidate.is_empty() {
+        return None;
+    }
+    let distance = match direction {
+        Direction::Left => u64::from(source.x).checked_sub(candidate.right())?,
+        Direction::Right => u64::from(candidate.x).checked_sub(source.right())?,
+        Direction::Up => u64::from(source.y).checked_sub(candidate.bottom())?,
+        Direction::Down => u64::from(candidate.y).checked_sub(source.bottom())?,
+    };
+    let (start, end) = match direction {
+        Direction::Left | Direction::Right => (
+            u64::from(source.y.max(candidate.y)),
+            source.bottom().min(candidate.bottom()),
+        ),
+        Direction::Up | Direction::Down => (
+            u64::from(source.x.max(candidate.x)),
+            source.right().min(candidate.right()),
+        ),
+    };
+    let overlap = end.checked_sub(start)?;
+    (overlap > 0).then_some((distance, Reverse(overlap), candidate.y, candidate.x))
+}
+
+#[cfg(test)]
+#[path = "geometry_tests.rs"]
+mod tests;
