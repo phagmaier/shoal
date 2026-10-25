@@ -64,7 +64,14 @@ impl Stats {
         PaintSink(self.paint.clone())
     }
 
-    pub fn push_build(&mut self, build: Duration, update: Duration, prepare: Duration, rebuilt: u16, resolved: u16) {
+    pub fn push_build(
+        &mut self,
+        build: Duration,
+        update: Duration,
+        prepare: Duration,
+        rebuilt: u16,
+        resolved: u16,
+    ) {
         self.build.push(build);
         self.update.push(update);
         self.prepare.push(prepare);
@@ -84,17 +91,53 @@ impl Stats {
         let ms = |d: &Duration| d.as_secs_f64() * 1e3;
         let paint = self.paint.borrow();
         let mut out = vec![
-            line("build draw list (render)", "ms", self.build.iter().map(ms).collect()),
-            line("  of which render-state update", "ms", self.update.iter().map(ms).collect()),
-            line("resolve rows (render)", "ms", self.prepare.iter().map(ms).collect()),
-            line("paint (canvas)", "ms", paint.iter().map(|p| ms(&p.0)).collect()),
-            line("render start -> paint end", "ms", paint.iter().map(|p| ms(&p.1)).collect()),
-            line("rows rebuilt / frame", "  ", self.rows.iter().map(|r| r.0 as f64).collect()),
-            line("rows re-resolved / frame", "  ", self.rows.iter().map(|r| r.1 as f64).collect()),
-            line("glyphs painted / frame", "  ", paint.iter().map(|p| p.2 as f64).collect()),
+            line(
+                "build draw list (render)",
+                "ms",
+                self.build.iter().map(ms).collect(),
+            ),
+            line(
+                "  of which render-state update",
+                "ms",
+                self.update.iter().map(ms).collect(),
+            ),
+            line(
+                "resolve rows (render)",
+                "ms",
+                self.prepare.iter().map(ms).collect(),
+            ),
+            line(
+                "paint (canvas)",
+                "ms",
+                paint.iter().map(|p| ms(&p.0)).collect(),
+            ),
+            line(
+                "render start -> paint end",
+                "ms",
+                paint.iter().map(|p| ms(&p.1)).collect(),
+            ),
+            line(
+                "rows rebuilt / frame",
+                "  ",
+                self.rows.iter().map(|r| r.0 as f64).collect(),
+            ),
+            line(
+                "rows re-resolved / frame",
+                "  ",
+                self.rows.iter().map(|r| r.1 as f64).collect(),
+            ),
+            line(
+                "glyphs painted / frame",
+                "  ",
+                paint.iter().map(|p| p.2 as f64).collect(),
+            ),
         ];
         if !self.fixture.is_empty() {
-            out.push(line("bench output + VT parse (untimed)", "ms", self.fixture.iter().map(ms).collect()));
+            out.push(line(
+                "bench output + VT parse (untimed)",
+                "ms",
+                self.fixture.iter().map(ms).collect(),
+            ));
         }
         out.join("\n")
     }

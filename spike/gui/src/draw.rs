@@ -141,14 +141,18 @@ impl Builder {
         }
         frame.cols = cols;
         frame.cursor = snapshot.cursor_viewport().ok().flatten().and_then(|c| {
-            snapshot.cursor_visible().ok().filter(|v| *v).map(|_| Cursor {
-                col: c.x,
-                row: c.y,
-                wide: c.at_wide_tail,
-                style: snapshot
-                    .cursor_visual_style()
-                    .unwrap_or(CursorVisualStyle::Block),
-            })
+            snapshot
+                .cursor_visible()
+                .ok()
+                .filter(|v| *v)
+                .map(|_| Cursor {
+                    col: c.x,
+                    row: c.y,
+                    wide: c.at_wide_tail,
+                    style: snapshot
+                        .cursor_visual_style()
+                        .unwrap_or(CursorVisualStyle::Block),
+                })
         });
         if let Ok(mut iter) = self.rows.update(&snapshot) {
             while let Some((y, row)) = iter.next_dirty() {
@@ -248,7 +252,11 @@ fn build_row(
             tag,
             CellContentTag::Codepoint | CellContentTag::CodepointGrapheme
         );
-        let id = if styled || !text_cell { raw.style_id().ok() } else { None };
+        let id = if styled || !text_cell {
+            raw.style_id().ok()
+        } else {
+            None
+        };
         let (rs, bg) = match (cached, id) {
             _ if !styled && text_cell => (plain, None),
             (Some((cid, rs, bg)), Some(id)) if text_cell && cid == id => (rs, bg),
@@ -309,8 +317,15 @@ fn build_row(
                 tail = (x + 1, first as u32 >= 0x1100);
             }
         } else if has_text || bg.is_some() || rs.underline || rs.strike {
-            let run_text = if complex { text.clone() } else { first.to_string() };
-            tail = (x + run_text.chars().count(), run_text.chars().any(|c| c as u32 >= 0x1100));
+            let run_text = if complex {
+                text.clone()
+            } else {
+                first.to_string()
+            };
+            tail = (
+                x + run_text.chars().count(),
+                run_text.chars().any(|c| c as u32 >= 0x1100),
+            );
             out.runs.push(Run {
                 col,
                 text: run_text,

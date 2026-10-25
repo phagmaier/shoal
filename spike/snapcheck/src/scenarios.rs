@@ -60,7 +60,11 @@ pub fn all() -> Vec<Scenario> {
             "\x1b[?1h\x1b=\x1b[?2004h\x1b[?1004h\x1b[?1002h\x1b[?1006h\x1b[?1007h\x1b[?1036h\x1b[?1039h",
             "text",
         ),
-        s("X10 and any-event mouse with UTF-8 encoding", "\x1b[?1003h\x1b[?1005h", "text"),
+        s(
+            "X10 and any-event mouse with UTF-8 encoding",
+            "\x1b[?1003h\x1b[?1005h",
+            "text",
+        ),
         s(
             "screen modes (insert, no wrap, reverse video, LNM)",
             "\x1b[4h\x1b[?7l\x1b[?5h\x1b[20hhello\x1b[1;1H",
@@ -73,7 +77,10 @@ pub fn all() -> Vec<Scenario> {
         ),
         s(
             "scroll region + origin mode",
-            format!("{}\x1b[5;15r\x1b[?6h\x1b[1;1Hregion top", many_lines("base", 24)),
+            format!(
+                "{}\x1b[5;15r\x1b[?6h\x1b[1;1Hregion top",
+                many_lines("base", 24)
+            ),
             format!("{}\x1b[1;1HTOP", many_lines("\r\nin region", 20)),
         ),
         s(
@@ -86,7 +93,11 @@ pub fn all() -> Vec<Scenario> {
             "\x1b[3g\x1b[1;5H\x1bH\x1b[1;13H\x1bH\x1b[1;30H\x1bH\x1b[2;1H",
             "a\tb\tc\td\r\n",
         ),
-        s("DEC special graphics in G0", "\x1b(0", "lqqk\r\nx  x\r\nmqqj"),
+        s(
+            "DEC special graphics in G0",
+            "\x1b(0",
+            "lqqk\r\nx  x\r\nmqqj",
+        ),
         s("G1 graphics shifted in (SO)", "\x1b)0\x0e", "lqqk\r\nmqqj"),
         s("kitty keyboard flags", "\x1b[>5u", "text"),
         s("modifyOtherKeys", "\x1b[>4;2m", "text"),
@@ -133,7 +144,11 @@ pub fn all() -> Vec<Scenario> {
             "\x1b[1\"qPROT\x1b[0\"q unprot",
             "\x1b[1;1H\x1b[?2K",
         ),
-        s("split mid-escape (dump taken inside CSI)", "hello \x1b[3", "1mRED\x1b[0m"),
+        s(
+            "split mid-escape (dump taken inside CSI)",
+            "hello \x1b[3",
+            "1mRED\x1b[0m",
+        ),
         s("split mid-UTF-8", b"caf\xc3".to_vec(), b"\xa9 ok".to_vec()),
     ]
 }

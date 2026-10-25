@@ -151,7 +151,15 @@ fn fixtures() -> std::path::PathBuf {
             .current_dir(&dir)
             .status();
         let _ = std::process::Command::new("git")
-            .args(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"])
+            .args([
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-qm",
+                "init",
+            ])
             .current_dir(&dir)
             .status();
     }
@@ -167,15 +175,30 @@ pub fn run_all() -> Vec<Outcome> {
             b"",
             b"jjjjwwiTYPED\x1b\0:qa!\r",
         ),
-        sh("less -R, then quit", "seq 1 50; less -R colored.txt; echo after-less", b"", b"jjjj q"),
-        sh("btop, then quit", "seq 1 50; btop; echo after-btop", b"", b"\x1b[B\x1b[B\0q"),
+        sh(
+            "less -R, then quit",
+            "seq 1 50; less -R colored.txt; echo after-less",
+            b"",
+            b"jjjj q",
+        ),
+        sh(
+            "btop, then quit",
+            "seq 1 50; btop; echo after-btop",
+            b"",
+            b"\x1b[B\x1b[B\0q",
+        ),
         sh(
             "fzf (inline, --height 40%), then cancel",
             "seq 1 100; seq 1 1000 | fzf --height 40%; echo after-fzf",
             b"",
             b"12\x1b",
         ),
-        sh("lazygit, then quit", "seq 1 50; lazygit; echo after-lazygit", b"", b"jq"),
+        sh(
+            "lazygit, then quit",
+            "seq 1 50; lazygit; echo after-lazygit",
+            b"",
+            b"jq",
+        ),
         sh(
             "interactive bash with prompt marks",
             "exec bash --norc --noprofile -i",

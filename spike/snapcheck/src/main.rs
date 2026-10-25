@@ -38,8 +38,12 @@ pub fn new_terminal(cols: u16, rows: u16) -> Terminal<'static, 'static> {
         .expect("scrollback limit");
     // The default byte limit is 10,000 bytes, which keeps almost no history
     // and makes writing very slow. Let the line limit govern instead.
-    t.set_scrollback_max_bytes(std::env::var("SNAPCHECK_MAX_BYTES").ok().and_then(|v| v.parse().ok()))
-        .expect("scrollback byte limit");
+    t.set_scrollback_max_bytes(
+        std::env::var("SNAPCHECK_MAX_BYTES")
+            .ok()
+            .and_then(|v| v.parse().ok()),
+    )
+    .expect("scrollback byte limit");
     // Keep the bytes of an unfinished escape sequence, so a snapshot taken
     // mid-sequence can be completed (binary snapshot, formatter + continuation).
     t.set_continuation_max_bytes(4096)
@@ -168,7 +172,10 @@ fn bench() {
             }
             let t = Instant::now();
             b.vt_write(&dump);
-            println!("restore with tracking={tracking}: {:.1} ms", t.elapsed().as_secs_f64() * 1e3);
+            println!(
+                "restore with tracking={tracking}: {:.1} ms",
+                t.elapsed().as_secs_f64() * 1e3
+            );
         }
         std::fs::write("/tmp/shoal-research/dump.vt", &dump).ok();
     }
@@ -179,9 +186,15 @@ fn bench() {
         let mut b = new_terminal(200, 60);
         b.vt_write(&dump);
         let t2 = Instant::now();
-        let snap = a.encode_snapshot_alloc(None).expect("encode").map(|b| b.to_vec()).unwrap_or_default();
+        let snap = a
+            .encode_snapshot_alloc(None)
+            .expect("encode")
+            .map(|b| b.to_vec())
+            .unwrap_or_default();
         let t3 = Instant::now();
-        let c = Decoder::new_buf(&snap).and_then(|d| d.decode()).expect("decode");
+        let c = Decoder::new_buf(&snap)
+            .and_then(|d| d.decode())
+            .expect("decode");
         let t4 = Instant::now();
         println!(
             "formatter: dump {:.1} ms + restore {:.1} ms ({} KiB) | binary: encode {:.1} ms + decode {:.1} ms ({} KiB) | rows {} / {}",
@@ -217,7 +230,9 @@ fn main() {
         outcomes.extend(programs::run_all());
     }
 
-    println!("| Scenario | Formatter: restore | Formatter: after more output | Formatter + continuation: after | Binary snapshot: restore | Binary snapshot: after | Dump bytes (fmt / bin) |");
+    println!(
+        "| Scenario | Formatter: restore | Formatter: after more output | Formatter + continuation: after | Binary snapshot: restore | Binary snapshot: after | Dump bytes (fmt / bin) |"
+    );
     println!("| --- | --- | --- | --- | --- | --- | --- |");
     for o in &outcomes {
         println!(

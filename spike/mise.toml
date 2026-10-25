@@ -1,0 +1,4 @@
+# Spike-only Rust pin. A global mise `rust` entry exports RUSTUP_TOOLCHAIN,
+# which overrides rust-toolchain.toml; this keeps `mise exec` on 1.98.1.
+[tools]
+rust = { version = "1.98.1", profile = "minimal", components = "rustfmt,clippy" }

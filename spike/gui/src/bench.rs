@@ -57,7 +57,9 @@ impl Bench {
                 }
             }
             _ => {
-                let words = ["src/", "main.rs", "error", "warn", "Cargo", "build", "→", "漢字", "", "ok"];
+                let words = [
+                    "src/", "main.rs", "error", "warn", "Cargo", "build", "→", "漢字", "", "ok",
+                ];
                 for r in 0..rows {
                     out.push_str("\r\n");
                     let mut col = 0;

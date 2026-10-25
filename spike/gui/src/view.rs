@@ -181,9 +181,14 @@ impl TermView {
         }
         eprintln!(
             "SPIKE_GEOMETRY viewport={:.0}x{:.0} scale={} font_px={:.2} cell_px={:.3}x{:.3} grid={}x{} fits={}",
-            f32::from(viewport.width), f32::from(viewport.height), scale,
-            f32::from(metrics.font_size), f32::from(metrics.cell_w), f32::from(metrics.line_h),
-            cols, rows,
+            f32::from(viewport.width),
+            f32::from(viewport.height),
+            scale,
+            f32::from(metrics.font_size),
+            f32::from(metrics.cell_w),
+            f32::from(metrics.line_h),
+            cols,
+            rows,
             f32::from(metrics.cell_w) * cols as f32 <= avail_w
                 && f32::from(metrics.line_h) * rows as f32 <= avail_h,
         );
@@ -207,7 +212,11 @@ impl TermView {
             },
         };
         let mods = keys::mods(ks);
-        let text = if m.control { None } else { ks.key_char.as_deref() };
+        let text = if m.control {
+            None
+        } else {
+            ks.key_char.as_deref()
+        };
         let mut consumed = key::Mods::empty();
         if text.is_some() && m.shift {
             consumed |= key::Mods::SHIFT;
@@ -284,8 +293,11 @@ impl Render for TermView {
         };
         self.metrics = metrics;
         let t1 = Instant::now();
-        let (rows, resolved) = self.painter.prepare(&frame.rows, &self.font, &m, self.opacity, window);
-        self.stats.push_build(build, frame.update, t1.elapsed(), frame.rebuilt, resolved);
+        let (rows, resolved) =
+            self.painter
+                .prepare(&frame.rows, &self.font, &m, self.opacity, window);
+        self.stats
+            .push_build(build, frame.update, t1.elapsed(), frame.rebuilt, resolved);
         let cursor = frame.cursor;
         let bg = self.theme.background;
         let accent = self.theme.accent;
@@ -381,7 +393,11 @@ impl EntityInputHandler for TermView {
         })
     }
 
-    fn marked_text_range(&self, _window: &mut Window, _cx: &mut Context<Self>) -> Option<Range<usize>> {
+    fn marked_text_range(
+        &self,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<Range<usize>> {
         (!self.preedit.is_empty()).then(|| 0..self.preedit.encode_utf16().count())
     }
 

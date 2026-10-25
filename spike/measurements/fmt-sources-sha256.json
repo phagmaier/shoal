@@ -1,0 +1,49 @@
+{
+  "_note": "rustfmt (Rust 1.98.1, rustfmt 1.9.0) applied 2026-10-25 after all recorded runs. 'before' is commit d499ff2, identical to the hashes recorded in measured-sources-sha256.json (snapcheck) and round2/measured-sources-sha256.json (gui). Changes are whitespace, trailing commas and one single-expression match arm losing its braces (gui/src/paint.rs); with whitespace removed, no other character differs. Recorded binaries were built from the 'before' sources. Archived round1-sources/ are untouched.",
+  "files": {
+    "spike/gui/src/bench.rs": {
+      "before": "7d6c74e0cd584b315e828a679b2ac661bd1af0ad390a775b7025ce99529bee81",
+      "after": "5e4761935006c9facf64430b6272d9056c7f69b1e4b89dfea211192a6f6a7e81"
+    },
+    "spike/gui/src/bin/rowbench.rs": {
+      "before": "b4ae54a5137b2400e5e3d503d5686246b4eaf6c8aa5cfe2672ba55cef2b00837",
+      "after": "f2a412e1b2537b6a4f166da72cca0b265050ea5a2b450e59ab4732191dffd4cb"
+    },
+    "spike/gui/src/draw.rs": {
+      "before": "9a3836f4c0a2b36e17cbd28c71edd3b146065a94dd685ad1e5e33ccfb76819a0",
+      "after": "13efa025acdbc1e1ebcff1306d0168878ea55394f9f11627fb60f0e57d727bd6"
+    },
+    "spike/gui/src/main.rs": {
+      "before": "ef6c180457076b5ad91fe43f15f18d2f403b6c6251ac27a9dfe26f1fee466876",
+      "after": "8874b1202461b647ad8066a7501c19493e0a089a94583aa96a23166002df2577"
+    },
+    "spike/gui/src/paint.rs": {
+      "before": "aa1073c8ab915a95045b6cdbddbf59922e5b7439cfc1e07c69ff628f581aabee",
+      "after": "5ea957846b9c7f4a097e5bca6f96d8808745c2a2c13773960021991e21532e8a"
+    },
+    "spike/gui/src/stats.rs": {
+      "before": "9e7fbce64dfd86c19262df1f5ab1be561ca9eea172dacd92ed56cc3a504d8a00",
+      "after": "e9b69911f9bab971ca910f916b8055f688beff83f39daef0d84bbf64b937a6e8"
+    },
+    "spike/gui/src/view.rs": {
+      "before": "aa46a1c8efaf8131bd3f9ca865465173c2999b40e5cd09e0df285a916e900ccd",
+      "after": "4e3f379e4a276fd02ebf60ac148b765ca377b09c2c58f5fdd099a421c552a0cf"
+    },
+    "spike/snapcheck/src/compare.rs": {
+      "before": "a0e6c663d6d4fe310710424cfc2ea8cd9b982bfa1d0380ec5ed99a9ffbab9434",
+      "after": "64d01ecd7bd41bb8c1719717d1d354a8e4201aa1e34fbc120c9ed48c1e860b1b"
+    },
+    "spike/snapcheck/src/main.rs": {
+      "before": "01279a88c284a6a94d32099a2e5045b60f7aa04046cc6a31c681f6dbb3b009c9",
+      "after": "7d37110a10c84a9503c84260a38d25d2766101d4e54540cb4b8ffafee7ef9c3e"
+    },
+    "spike/snapcheck/src/programs.rs": {
+      "before": "5edf53b5a8d8bee95e15d9b93f44862b5fc178be77fcc334f42371fadd597e90",
+      "after": "d00eea79007ea1c8ad104ae7302eb54e6a56b4921dc7b05422810a30779b0f67"
+    },
+    "spike/snapcheck/src/scenarios.rs": {
+      "before": "121126ef05d25fe2a31d11e3d206d62983a4d2d429d02dacf65b4df2b2ea2896",
+      "after": "7167d9ffc6b523f7d965ecc811b5da54954c6c29a622452b1c95e9f0bca5f742"
+    }
+  }
+}

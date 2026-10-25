@@ -78,8 +78,16 @@ pub struct Painter {
 
 fn font_for(font: &Font, s: RunStyle) -> Font {
     Font {
-        weight: if s.bold { FontWeight::BOLD } else { FontWeight::NORMAL },
-        style: if s.italic { FontStyle::Italic } else { FontStyle::Normal },
+        weight: if s.bold {
+            FontWeight::BOLD
+        } else {
+            FontWeight::NORMAL
+        },
+        style: if s.italic {
+            FontStyle::Italic
+        } else {
+            FontStyle::Normal
+        },
         ..font.clone()
     }
 }
@@ -153,7 +161,11 @@ impl Painter {
         self.rows.truncate(rows.len());
         let mut redone = 0;
         for (i, r) in rows.iter().enumerate() {
-            if self.rows.get(i).is_some_and(|p| p.version == r.version && r.version != 0) {
+            if self
+                .rows
+                .get(i)
+                .is_some_and(|p| p.version == r.version && r.version != 0)
+            {
                 continue;
             }
             let painted = Rc::new(self.resolve(r, font, m, opacity, window));
@@ -167,11 +179,22 @@ impl Painter {
         (self.rows.clone(), redone)
     }
 
-    fn resolve(&mut self, r: &RowDraw, font: &Font, m: &Metrics, opacity: f32, window: &Window) -> PaintedRow {
+    fn resolve(
+        &mut self,
+        r: &RowDraw,
+        font: &Font,
+        m: &Metrics,
+        opacity: f32,
+        window: &Window,
+    ) -> PaintedRow {
         let mut out = PaintedRow {
             version: r.version,
             row: r.row,
-            bgs: r.bgs.iter().map(|&(c, n, bg)| (c, n, rgba(bg, opacity))).collect(),
+            bgs: r
+                .bgs
+                .iter()
+                .map(|&(c, n, bg)| (c, n, rgba(bg, opacity)))
+                .collect(),
             glyphs: Vec::new(),
             lines: Vec::new(),
             shaped: Vec::new(),
@@ -195,9 +218,12 @@ impl Painter {
                         color: Some(color),
                     }),
                 };
-                let line = window
-                    .text_system()
-                    .shape_line(run.text.clone().into(), m.font_size, &[text_run], None);
+                let line = window.text_system().shape_line(
+                    run.text.clone().into(),
+                    m.font_size,
+                    &[text_run],
+                    None,
+                );
                 out.shaped.push((run.col, line));
                 continue;
             }
@@ -209,12 +235,23 @@ impl Painter {
                     continue;
                 }
                 if let Some((font, id, emoji)) = self.glyphs.get(ch, s, font, m, window) {
-                    out.glyphs.push(Glyph { col, font, id, emoji, color });
+                    out.glyphs.push(Glyph {
+                        col,
+                        font,
+                        id,
+                        emoji,
+                        color,
+                    });
                 }
             }
             for (on, strike) in [(s.underline, false), (s.strike, true)] {
                 if on {
-                    out.lines.push(Line { col: run.col, cells, strike, color });
+                    out.lines.push(Line {
+                        col: run.col,
+                        cells,
+                        strike,
+                        color,
+                    });
                 }
             }
         }
@@ -249,9 +286,11 @@ pub fn paint(
         let at = cell(c.col, c.row);
         let color = rgba(accent, 0.85);
         let quad = match (focused, c.style) {
-            (false, _) | (_, CursorVisualStyle::BlockHollow) => {
-                gpui::outline(Bounds::new(at, size(w, m.line_h)), color, gpui::BorderStyle::Solid)
-            }
+            (false, _) | (_, CursorVisualStyle::BlockHollow) => gpui::outline(
+                Bounds::new(at, size(w, m.line_h)),
+                color,
+                gpui::BorderStyle::Solid,
+            ),
             (true, CursorVisualStyle::Bar) => fill(Bounds::new(at, size(px(2.0), m.line_h)), color),
             (true, CursorVisualStyle::Underline) => fill(
                 Bounds::new(at + point(px(0.0), m.line_h - px(2.0)), size(w, px(2.0))),
@@ -274,14 +313,28 @@ pub fn paint(
         }
         glyphs += r.glyphs.len();
         for l in &r.lines {
-            let y = if l.strike { m.baseline * 0.65 } else { m.baseline + px(1.5) };
+            let y = if l.strike {
+                m.baseline * 0.65
+            } else {
+                m.baseline + px(1.5)
+            };
             window.paint_quad(fill(
-                Bounds::new(cell(l.col, r.row) + point(px(0.0), y), size(m.cell_w * l.cells as f32, px(1.0))),
+                Bounds::new(
+                    cell(l.col, r.row) + point(px(0.0), y),
+                    size(m.cell_w * l.cells as f32, px(1.0)),
+                ),
                 l.color,
             ));
         }
         for (col, line) in &r.shaped {
-            let _ = line.paint(cell(*col, r.row), m.line_h, TextAlign::Left, None, window, cx);
+            let _ = line.paint(
+                cell(*col, r.row),
+                m.line_h,
+                TextAlign::Left,
+                None,
+                window,
+                cx,
+            );
         }
     }
     glyphs

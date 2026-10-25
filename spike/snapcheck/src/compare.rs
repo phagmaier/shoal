@@ -136,9 +136,7 @@ struct CellInfo {
 }
 
 fn cell_info(t: &Term, x: u16, y: u32) -> Option<CellInfo> {
-    let r = t
-        .grid_ref(Point::Screen(PointCoordinate { x, y }))
-        .ok()?;
+    let r = t.grid_ref(Point::Screen(PointCoordinate { x, y })).ok()?;
     let mut buf = ['\0'; 32];
     let n = r.graphemes(&mut buf).unwrap_or(0);
     let mut link = [0u8; 4096];
@@ -170,8 +168,16 @@ fn field_diff(a: Option<&CellInfo>, b: Option<&CellInfo>) -> String {
     f("wide", a.wide.clone(), b.wide.clone());
     f("style", a.style.clone(), b.style.clone());
     f("link", format!("{:?}", a.link), format!("{:?}", b.link));
-    f("protected", a.protected.to_string(), b.protected.to_string());
-    f("row wrapped", a.row_wrapped.to_string(), b.row_wrapped.to_string());
+    f(
+        "protected",
+        a.protected.to_string(),
+        b.protected.to_string(),
+    );
+    f(
+        "row wrapped",
+        a.row_wrapped.to_string(),
+        b.row_wrapped.to_string(),
+    );
     f("row prompt", a.row_prompt.clone(), b.row_prompt.clone());
     out.join("; ")
 }
@@ -182,9 +188,24 @@ pub fn compare(a: &Term, b: &Term) -> Report {
     // Geometry and screen.
     diff(&mut r.state, "cols", a.cols().ok(), b.cols().ok());
     diff(&mut r.state, "rows", a.rows().ok(), b.rows().ok());
-    diff(&mut r.state, "active screen", a.active_screen().ok(), b.active_screen().ok());
-    diff(&mut r.state, "total rows", a.total_rows().ok(), b.total_rows().ok());
-    diff(&mut r.state, "scrollback rows", a.scrollback_rows().ok(), b.scrollback_rows().ok());
+    diff(
+        &mut r.state,
+        "active screen",
+        a.active_screen().ok(),
+        b.active_screen().ok(),
+    );
+    diff(
+        &mut r.state,
+        "total rows",
+        a.total_rows().ok(),
+        b.total_rows().ok(),
+    );
+    diff(
+        &mut r.state,
+        "scrollback rows",
+        a.scrollback_rows().ok(),
+        b.scrollback_rows().ok(),
+    );
 
     // Cells: the whole active screen including scrollback, aligned from the bottom
     // so a scrollback length difference shows up once, not on every row.
@@ -212,10 +233,30 @@ pub fn compare(a: &Term, b: &Term) -> Report {
     // Cursor.
     diff(&mut r.cursor, "x", a.cursor_x().ok(), b.cursor_x().ok());
     diff(&mut r.cursor, "y", a.cursor_y().ok(), b.cursor_y().ok());
-    diff(&mut r.cursor, "pending wrap", a.is_cursor_pending_wrap().ok(), b.is_cursor_pending_wrap().ok());
-    diff(&mut r.cursor, "visible", a.is_cursor_visible().ok(), b.is_cursor_visible().ok());
-    diff(&mut r.cursor, "pen style", a.cursor_style().ok(), b.cursor_style().ok());
-    diff(&mut r.cursor, "at prompt", a.is_cursor_at_prompt().ok(), b.is_cursor_at_prompt().ok());
+    diff(
+        &mut r.cursor,
+        "pending wrap",
+        a.is_cursor_pending_wrap().ok(),
+        b.is_cursor_pending_wrap().ok(),
+    );
+    diff(
+        &mut r.cursor,
+        "visible",
+        a.is_cursor_visible().ok(),
+        b.is_cursor_visible().ok(),
+    );
+    diff(
+        &mut r.cursor,
+        "pen style",
+        a.cursor_style().ok(),
+        b.cursor_style().ok(),
+    );
+    diff(
+        &mut r.cursor,
+        "at prompt",
+        a.is_cursor_at_prompt().ok(),
+        b.is_cursor_at_prompt().ok(),
+    );
 
     // Modes.
     for (name, mode) in MODES {
@@ -225,9 +266,24 @@ pub fn compare(a: &Term, b: &Term) -> Report {
     }
 
     // Other state.
-    diff(&mut r.state, "kitty keyboard flags", a.kitty_keyboard_flags().ok(), b.kitty_keyboard_flags().ok());
-    diff(&mut r.state, "mouse tracking", a.is_mouse_tracking().ok(), b.is_mouse_tracking().ok());
-    diff(&mut r.state, "mouse shape", a.mouse_shape().ok(), b.mouse_shape().ok());
+    diff(
+        &mut r.state,
+        "kitty keyboard flags",
+        a.kitty_keyboard_flags().ok(),
+        b.kitty_keyboard_flags().ok(),
+    );
+    diff(
+        &mut r.state,
+        "mouse tracking",
+        a.is_mouse_tracking().ok(),
+        b.is_mouse_tracking().ok(),
+    );
+    diff(
+        &mut r.state,
+        "mouse shape",
+        a.mouse_shape().ok(),
+        b.mouse_shape().ok(),
+    );
     diff(
         &mut r.state,
         "title",
@@ -240,9 +296,24 @@ pub fn compare(a: &Term, b: &Term) -> Report {
         a.pwd().ok().map(<[u8]>::to_vec),
         b.pwd().ok().map(<[u8]>::to_vec),
     );
-    diff(&mut r.state, "fg color (OSC 10)", a.fg_color().ok(), b.fg_color().ok());
-    diff(&mut r.state, "bg color (OSC 11)", a.bg_color().ok(), b.bg_color().ok());
-    diff(&mut r.state, "cursor color (OSC 12)", a.cursor_color().ok(), b.cursor_color().ok());
+    diff(
+        &mut r.state,
+        "fg color (OSC 10)",
+        a.fg_color().ok(),
+        b.fg_color().ok(),
+    );
+    diff(
+        &mut r.state,
+        "bg color (OSC 11)",
+        a.bg_color().ok(),
+        b.bg_color().ok(),
+    );
+    diff(
+        &mut r.state,
+        "cursor color (OSC 12)",
+        a.cursor_color().ok(),
+        b.cursor_color().ok(),
+    );
     let pa = a.color_palette().ok().map(|p| p.0);
     let pb = b.color_palette().ok().map(|p| p.0);
     if pa != pb {
@@ -250,7 +321,8 @@ pub fn compare(a: &Term, b: &Term) -> Report {
             (Some(pa), Some(pb)) => (0..256).filter(|i| pa[*i] != pb[*i]).count(),
             _ => 256,
         };
-        r.state.push(format!("palette (OSC 4): {changed} entries differ"));
+        r.state
+            .push(format!("palette (OSC 4): {changed} entries differ"));
     }
     r
 }

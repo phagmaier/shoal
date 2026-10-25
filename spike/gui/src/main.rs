@@ -115,7 +115,10 @@ fn main() {
             const MERGE: usize = 1 << 20;
             let mut batch = Vec::with_capacity(MERGE);
             let flood_gap = Duration::from_millis(
-                std::env::var("SPIKE_FLOOD_FRAME_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
+                std::env::var("SPIKE_FLOOD_FRAME_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0),
             );
             let mut last_notify: Option<Instant> = None;
             while let Some(first) = rx.next().await {

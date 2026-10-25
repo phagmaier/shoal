@@ -22,7 +22,8 @@ const ITERS: usize = 300;
 
 fn main() {
     let mut term = Terminal::new(200, 60).expect("terminal");
-    term.set_scrollback_max_lines(Some(10_000)).expect("scrollback");
+    term.set_scrollback_max_lines(Some(10_000))
+        .expect("scrollback");
     // SAFETY: no other thread exists yet to read the environment.
     unsafe { std::env::set_var("SPIKE_BENCH", "100000") };
     let mut fixture = bench::Bench::from_env().expect("bench");
@@ -164,6 +165,9 @@ fn main() {
     println!("200x60 full-damage styled screen, {ITERS} iterations; per frame and per cell:");
     for (name, d) in times {
         let per_frame = d.as_secs_f64() * 1e3 / ITERS as f64;
-        println!("{name:<46} {per_frame:>6.3} ms/frame  {:>6.1} ns/cell", per_frame * 1e6 / cell_count as f64);
+        println!(
+            "{name:<46} {per_frame:>6.3} ms/frame  {:>6.1} ns/cell",
+            per_frame * 1e6 / cell_count as f64
+        );
     }
 }
