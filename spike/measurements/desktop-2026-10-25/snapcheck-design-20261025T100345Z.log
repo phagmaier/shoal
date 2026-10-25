@@ -1,0 +1,161 @@
+UTC start: 2026-10-25T10:03:45Z
+Command: ./target/release/snapcheck --design (fresh clone at 09c6967, snapcheck sha256 49ecfcca676c3b65)
+# Design checks
+libghostty-vt Ok("0.1.0-dev"), optimize Ok(ReleaseFast), simd Ok(true), kitty graphics Ok(true), tmux control Ok(false)
+
+## Unfinished OSC 2 of 4000 bytes, then BEL (control: under the 4096-byte cap)
+  is_vt_ground: Ok(false)
+  continuation size query: Err(OutOfSpace { required: 4004 })
+  encode while unfinished: ok, 5167 bytes
+  vt_write_until_ground("zz"): Ok(None)
+  vt_write_until_ground(next chunk, 10 bytes): Ok(Some(3))
+  is_vt_ground after split: Ok(true)
+  encode at the split: ok, 1163 bytes
+  decoded vs source at the split: match
+  after the rest of the chunk: match
+  title bytes: source 0, decoded 0
+
+## Unfinished OSC 2 of 5000 bytes, then BEL
+  is_vt_ground: Ok(false)
+  continuation size query: Err(InvalidValue)
+  encode while unfinished: error InvalidValue
+  vt_write_until_ground("zz"): Ok(None)
+  vt_write_until_ground(next chunk, 10 bytes): Ok(Some(3))
+  is_vt_ground after split: Ok(true)
+  encode at the split: ok, 1163 bytes
+  decoded vs source at the split: match
+  after the rest of the chunk: match
+  title bytes: source 0, decoded 0
+
+## Unfinished OSC 2 of 5000 bytes, then ST
+  is_vt_ground: Ok(false)
+  continuation size query: Err(InvalidValue)
+  encode while unfinished: error InvalidValue
+  vt_write_until_ground("zz"): Ok(None)
+  vt_write_until_ground(next chunk, 11 bytes): Ok(Some(4))
+  is_vt_ground after split: Ok(true)
+  encode at the split: ok, 1163 bytes
+  decoded vs source at the split: match
+  after the rest of the chunk: match
+  title bytes: source 0, decoded 0
+
+## Save the main screen under alternate screen mode 1049
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen save 1049; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen save 1049
+  snapshot -> scratch -> ESC[?1049l -> formatter (cursor is irrelevant to persistence): match
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Save the main screen under alternate screen mode 1049
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen save 1049; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen save 1049
+  snapshot -> scratch -> ESC[?1049lESC[?1047lESC[?47l -> formatter (cursor is irrelevant to persistence): match
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Save the main screen under alternate screen mode 1047
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen 1047; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 1047
+  snapshot -> scratch -> ESC[?1049l -> formatter (cursor is irrelevant to persistence): **cursor: x, y; modes: alt screen 1047; state: active screen, total rows, scrollback rows**
+    - x: original Some(8), restored Some(0)
+    - y: original Some(23), restored Some(0)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 1047
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Save the main screen under alternate screen mode 1047
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen 1047; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 1047
+  snapshot -> scratch -> ESC[?1049lESC[?1047lESC[?47l -> formatter (cursor is irrelevant to persistence): **cursor: x, y**
+    - x: original Some(8), restored Some(0)
+    - y: original Some(23), restored Some(0)
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Save the main screen under alternate screen mode 47
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen 47; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 47
+  snapshot -> scratch -> ESC[?1049l -> formatter (cursor is irrelevant to persistence): **cursor: x, y; modes: alt screen 47; state: active screen, total rows, scrollback rows**
+    - x: original Some(8), restored Some(0)
+    - y: original Some(23), restored Some(0)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 47
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Save the main screen under alternate screen mode 47
+  formatter on the live terminal (current rule): **357 cells differ; cursor: x, y; modes: alt screen 47; state: active screen, total rows, scrollback rows**
+    - cell row 77 col 0 (of 101 rows): text "p" -> "A"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 1 (of 101 rows): text "r" -> "L"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 2 (of 101 rows): text "i" -> "T"; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - cell row 77 col 3 (of 101 rows): text "m" -> " "; style Some(Style { fg_color: Palette(PaletteIndex(5)), bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None }) -> Some(Style { fg_color: None, bg_color: None, underline_color: None, bold: false, italic: false, faint: false, blink: false, inverse: false, invisible: false, strikethrough: false, overline: false, underline: None })
+    - x: original Some(8), restored Some(19)
+    - y: original Some(23), restored Some(1)
+    - active screen: original Some(Primary), restored Some(Alternate)
+    - total rows: original Some(101), restored Some(24)
+    - scrollback rows: original Some(77), restored Some(0)
+    - modes differ: alt screen 47
+  snapshot -> scratch -> ESC[?1049lESC[?1047lESC[?47l -> formatter (cursor is irrelevant to persistence): **cursor: x, y**
+    - x: original Some(8), restored Some(0)
+    - y: original Some(23), restored Some(0)
+  live terminal screen before / after: Ok(Alternate) / Ok(Alternate)
+
+## Truncated and trailing snapshot bytes, 80x24 with 300 lines written
+  snapshot bytes: 20892
+  one-shot decode, last byte missing: Err("InvalidValue")
+  one-shot decode, 4 trailing bytes: Ok("ok")
+  reader decode with trailing bytes: Ok("ok"), bytes read 20892
+  incremental decode: 0 history pages, source offset after the last page None
+
+## Truncated and trailing snapshot bytes, 200x60 with 10000 lines written
+  snapshot bytes: 714283
+  one-shot decode, last byte missing: Err("InvalidValue")
+  one-shot decode, 4 trailing bytes: Ok("ok")
+  reader decode with trailing bytes: Ok("ok"), bytes read 714283
+  incremental decode: 42 history pages, source offset after the last page Some(714273)
+Exit status: 0

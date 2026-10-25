@@ -1,12 +1,12 @@
 # T00 — GPUI + libghostty spike
 
-Measured 2026-10-25 in two rounds. **T00 is not complete.** Round 1 was no-go. After the user's decisions (below), round 2 changed only the spike renderer and feed loop:
+**T00 is complete (2026-10-25).** GPUI is kept, and the spec now records the user's decisions (section "Decisions recorded in the spec"). Evidence comes from two machines, kept apart: the original **laptop** (rounds 1 and 2) and a **desktop** that took over development the same day (section "Second machine"). Never pool the two machines' performance numbers.
 
-- **Redraw gate: passes in round 2** on this laptop, on battery with the `balanced` power profile. Full-damage styled 200 × 60: GPUI frame p50 **2.64 ms**, p95 **3.19 ms**. Not measured under `power-saver`.
-- **Snapshot gate: still fails for the formatter.** The tested binary snapshot is proposed for live attach in a spec draft that **awaits the user's review** (section "Proposed spec change"). No `docs/spec/` file has been edited.
-- **Clean-checkout build: still unverified.** It needs the spike committed to `spike/t00` first.
+- **Redraw:** the 4 ms target is unchanged. Laptop, round 2, full-damage styled 200 × 60 on battery under `balanced`: GPUI frame p50 2.64, p95 3.19, p99 3.44 ms, max 4.11 ms. **599 of 600 frames came in under 4 ms; one took 4.11 ms.** The spike's own render-to-paint time never exceeded 3.31 ms. Desktop: **all 600 frames under 4 ms**, GPUI p50 2.24, p95 2.48, p99 2.82, max 3.13 ms, at scale 1 (a quarter of the laptop's device pixels). Neither machine was measured under `power-saver`. These are measurements against the target, not a percentile replacement for it.
+- **Snapshot:** the formatter fails the fidelity gate. Live attach uses libghostty's binary snapshot at an exact build: it matched 31/31 checked cases at restore and after follow-up output, on both machines.
+- **Clean checkout:** passed on the desktop. A fresh clone of `spike/t00` (94f8d92) built with `cargo build --release --locked` through mise, with empty Cargo, Zig and target caches (section "Fresh-clone build").
 
-`decisions.md`, `m1-spec.md`, `tasks.md`, `AGENTS.md` and the setup script are unchanged. T01 has not started. No commits were made.
+T00 commits on `spike/t00` (never merged): d499ff2 (spike sources, measurements, this report), 94f8d92 (formatting, font attribution, Rust pin), 09c6967 (design checks, `--scale`, desktop environment and build log), plus the commit that adds the desktop measurements. `main` carries only this report, `mise.toml`, and the `docs/spec/` edits. T01 has not started; it needs a fresh session.
 
 ## Go/no-go checklist
 
@@ -14,16 +14,16 @@ These are the six gates in [decisions.md, Risks and the spike](spec/decisions.md
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| Transparent GPUI window, Hyprland blur, crisp text at the user's scale | PASS | User confirms translucency, crisp text, and wallpaper blur. The later by-eye confirmation is recorded independently of the earlier measurement-time global blur setting. |
-| 200 × 60 fed by bash through libghostty, redraw under 4 ms | **Round 2: PASS** on this laptop (battery, `balanced`); round 1: FAIL | Round 2, full-damage styled, cached glyph placement: GPUI frame p50 **2.64** / p95 **3.19** / p99 **3.44** / max 4.11 ms; internal p50 **1.84** / p95 **2.34** ms. Round 1: internal p50 5.02 ms, GPUI 7.42 ms, probably under `power-saver` (see round 2). Per-run shaping still misses: GPUI p50 4.32 ms. |
-| `cat` 50 MB finishes; idle CPU near zero | PASS, limited to this spike | Round 2: **1.079 / 1.262 / 1.249 s**, exit 0, all bytes consumed, 64–75 paints while `cat` writes; **0.00% CPU** over 30 s after run 1, 34 threads, sleeping. Round 1: 0.729 / 0.771 / 0.778 s with 5–14 paints, 0.03% CPU. Power states differ, so compare only within a round. Not the future daemon + ten-pane M1 budget. |
-| Formatter restore equals original screen, scrollback and modes | FAIL for the formatter; binary snapshot proposed, **awaiting spec review** | Formatter: **25/31** immediate matches, **17/31** after follow-up; plus parser continuation: **19/31** after follow-up. Binary snapshot: **31/31** immediate and **31/31** after follow-up, within the comparison's limits below. Not rerun in round 2 (snapshot code unchanged). |
-| Input method reaches the terminal, if used | SKIPPED (no input method) | User confirms no input method is used: “i type only in english and don't plan to type in anything else.” This optional test is skipped, not an IME functionality pass. |
-| Pins documented and build steps work from a clean checkout | UNMEASURED for clean-checkout gate | Full pins and recipe below; the existing checkout's locked release build passed. No fresh clone/empty-cache build was performed. Spike sources and `mise.toml` remain uncommitted, so the current branch ref alone does not yet reproduce this work. |
+| Transparent GPUI window, Hyprland blur, crisp text at the user's scale | PASS (laptop, by eye) | On the laptop at scale 2, the user confirmed translucency, crisp text and wallpaper blur. The desktop (scale 1, blur turned off in its Hyprland config) has not been checked by eye; that check is optional (see "By-eye checks"). |
+| 200 × 60 fed by bash through libghostty, redraw under 4 ms | PASS with the qualification above; round 1 FAIL | Laptop round 2, cached glyph placement: GPUI p50 **2.64** / p95 **3.19** / p99 **3.44** / max **4.11** ms, one of 600 frames over 4 ms; internal p50 1.84 / p95 2.34 / max 3.31 ms. Desktop: GPUI p50 **2.24** / p95 **2.48** / p99 **2.82** / max **3.13** ms, none over 4 ms. Per-run shaping misses on both: laptop GPUI p50 4.32 ms; desktop p50 3.70 ms, 55 of 600 frames over 4 ms. Round 1 (laptop, probably `power-saver`): GPUI p50 7.42 ms. |
+| `cat` 50 MB finishes; idle CPU near zero | PASS, limited to this spike | Laptop round 2: 1.079 / 1.262 / 1.249 s, 64–75 paints while `cat` writes, 0.00% idle CPU over 30 s. Desktop: **0.493 / 0.480 / 0.496 s**, 26–28 paints, **0.00%** idle CPU over 30 s, 21 threads, sleeping. All runs exit 0 and consume all 52,798,016 PTY bytes. Not the future daemon + ten-pane M1 budget. |
+| Formatter restore equals original screen, scrollback and modes | Formatter FAIL; binary snapshot adopted for live attach | Laptop: formatter 25/31 at restore, 17/31 after follow-up, 19/31 with continuation; binary 31/31 and 31/31. Desktop rerun: formatter 25/31, **16/31**, **18/31** (the `less -R` row failed after follow-up here, as it did in an earlier laptop session); binary **31/31** and **31/31**. The user approved the exact-build binary snapshot. The spec now uses it, with the review's corrections. |
+| Input method reaches the terminal, if used | SKIPPED (no input method) | User confirms no input method is used: “i type only in english and don't plan to type in anything else.” This optional test is skipped, not an IME functionality pass. fcitx5 is installed on the desktop but not used. |
+| Pins documented and build steps work from a clean checkout | PASS (desktop) | Full pins and recipe below. A fresh clone of 94f8d92 built in 8 min 53 s with empty `CARGO_HOME`, Zig cache and target; the toolchains were pre-installed. The laptop's builds reused existing artifacts and are not clean-checkout evidence. |
 
 ## Environment and pins
 
-Raw host evidence: `spike/measurements/environment.txt` and `environment-extra.txt` on the spike worktree. CPU/GPU values are host queries, not an isolated performance lab. No governor, temperature, competing-workload, or GPU-completion measurements were taken.
+This table is the **laptop** used for rounds 1 and 2; the desktop is described in "Second machine". Raw host evidence: `spike/measurements/environment.txt` and `environment-extra.txt` on `spike/t00`. CPU/GPU values are host queries, not an isolated performance lab. No governor, temperature, competing-workload, or GPU-completion measurements were taken.
 
 | Item | Observed value |
 | --- | --- |
@@ -42,7 +42,7 @@ Raw host evidence: `spike/measurements/environment.txt` and `environment-extra.t
 | Theme | Omarchy 4 `~/.local/state/omarchy/current/theme/colors.toml` |
 | Power | Round 1: not recorded. Round 2 timed runs: battery, `balanced` profile, governor `powersave`, EPP `balance_power`, recorded per command in each folder's `power.jsonl` |
 
-`scripts/setup-machine.sh --check` was run **once**: all 25 packages, Vulkan driver, Rust toolchains, pinned mise tools, cargo tools, Wayland, Hyprland, theme and git identity ready. It notes that `third_party/fetch.sh` awaits T01 and no input method was found. No sudo or package installation was used; no setup-script gap was found for the work actually performed.
+On the laptop, `scripts/setup-machine.sh --check` was run **once**: all 25 packages, Vulkan driver, Rust toolchains, pinned mise tools, cargo tools, Wayland, Hyprland, theme and git identity ready. It notes that `third_party/fetch.sh` awaits T01 and no input method was found. No sudo or package installation was used; no setup-script gap was found for the work actually performed. On the desktop it reported `Ready.` with the same results, except that it found fcitx5 and the Intel Vulkan driver. One gap the script doesn't check: a global mise `rust` entry exports `RUSTUP_TOOLCHAIN`, which overrides `rust-toolchain.toml` (see the recipe).
 
 The agent shell lacked both `WAYLAND_DISPLAY` and `HYPRLAND_INSTANCE_SIGNATURE`; the driver discovers the unique Wayland socket and live instance under `$XDG_RUNTIME_DIR/hypr/`. A normal interactive desktop shell may already export them.
 
@@ -56,30 +56,47 @@ The agent shell lacked both `WAYLAND_DISPLAY` and `HYPRLAND_INSTANCE_SIGNATURE`;
 
 The Zed tag is not the GPUI crate version: its `crates/gpui/Cargo.toml` still says **0.2.2**. Linux Wayland uses `gpui_linux` and `gpui_wgpu`; `gpui_platform` enables `wayland,font-kit`. Transitive versions are fixed by `spike/Cargo.lock`; portable-pty is 0.9.0. The two patches repeat the upstream workspace patches that do not propagate to an external git consumer.
 
-Font provenance: the bundled 2.5 MB file matches Nerd Fonts **v3.5.1**, `NerdFontsSymbolsOnly.zip`, SHA-256 `fe471e538392f51910faab985fa8e192a39dd3426125edd15b71b3680df0e749`. The archive LICENSE is MIT; its [upstream icon-source table](https://github.com/ryanoasis/nerd-fonts/blob/v3.5.1/patched-fonts/NerdFontsSymbolsOnly/README.md) also lists OFL 1.1, CC BY 4.0, Apache 2.0 and an “unlicensed” icon set. Do not describe the entire font as uniformly MIT or OFL. No font was committed; before a later font commit, retain upstream source/license attribution on the spike branch and resolve the mixed-license provenance.
+### Font provenance
+
+The bundled `SymbolsNerdFontMono-Regular.ttf` (2,610,012 bytes) is the unmodified file from Nerd Fonts **v3.5.1** `NerdFontsSymbolsOnly.zip`. Font SHA-256 `fe471e538392f51910faab985fa8e192a39dd3426125edd15b71b3680df0e749`; archive SHA-256 `fdca3682534f6f65e1ccb2345b0362ccf67d9b8eca7c8025330946e93e2473bc`. An earlier version of this paragraph attached the font hash to the archive name. On 2026-10-25 the archive was downloaded again and the font compared byte for byte with the committed copy.
+
+The archive LICENSE is MIT, and Nerd Fonts lists Symbols Only as MIT. Its [icon-source table](https://github.com/ryanoasis/nerd-fonts/blob/v3.5.1/patched-fonts/NerdFontsSymbolsOnly/README.md) shows the glyphs come from sets under MIT, CC BY 4.0 (Codicons, Font Awesome icons), OFL 1.1 (Pomicons with RFN, Weather Icons; Font Awesome's font files), Apache 2.0 (MaterialDesign), plus one "unlicensed" set (Font Logos). **The font is not uniformly MIT or OFL.**
+
+On `spike/t00`, the font was committed in d499ff2. Attribution was added in 94f8d92: `spike/assets/README.md` records provenance, hashes and the per-set table, and `spike/assets/licenses/` holds the upstream LICENSE, README and license audit, every per-set license file nerd-fonts ships at v3.5.1, and the full Apache 2.0 text. Gaps: five MIT sets have no license file upstream, the Weather Icons OFL copy still has template placeholders, and Font Logos has no license. That is acceptable for a throwaway branch that is never shipped. Before Shoal ships the font, T50 must install the license texts and the user must decide whether to subset out the Font Logos glyphs or obtain terms (M1 spec §7.3, `tasks.md` T50).
 
 ## Build and reproduction
 
 All commands below are from the repository root unless stated otherwise. T00 is an independent workspace; there is no root Cargo workspace, `justfile`, vendored tree, daemon, or test kit yet.
 
-### Clean-checkout recipe and its current limitation
-
-**Distribution prerequisite:** the complete T00 working tree must first be archived on `spike/t00` after the user's decision. At the time of this report, that branch still points at `81d5bb9` and its spike files are untracked; running `git switch spike/t00` in another clone will not retrieve them. The commands below are the exact recipe for a checkout containing these files, not a claim that this distribution or a cold build has already been verified.
+### Clean-checkout recipe
 
 ```sh
-git switch spike/t00
+git clone --branch spike/t00 https://github.com/phagmaier/shoal.git && cd shoal
 scripts/setup-machine.sh --check
-mise install
-rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+mise trust mise.toml && mise trust spike/mise.toml
+mise install          # Zig 0.17.0 (root), Rust 1.98.1 with rustfmt and clippy (spike/mise.toml)
 cd spike
 mise exec -- cargo build --release --locked
 ```
 
 Run on a machine with the setup script's prerequisites already installed. If `--check` reports missing system packages, the user runs the package command it prints; an agent must not sudo. A first build needs network access to the pinned Cargo git dependencies, crates and Ghostty/Zig dependencies, or pre-populated caches. No `/tmp/shoal-research` checkout is required: the bindings fetch their exact Ghostty pin themselves. Avoid unpinned `GHOSTTY_SOURCE_DIR` overrides.
 
-`spike/.cargo/config.toml` sets **`LIBGHOSTTY_VT_SYS_OPTIMIZE=ReleaseFast`**. This matters: the bindings otherwise select Debug when Cargo supplies DEBUG=true, including profiles with debug information. The release profile retains line-table debug information. On an OOM kill, retry with `CARGO_BUILD_JOBS=8 mise exec -- cargo build --release --locked`; do not clean/rebuild GPUI unnecessarily.
+**Why `spike/mise.toml`:** on the desktop the user's global mise config pins `rust = "1.97.1"`, and mise exports that as `RUSTUP_TOOLCHAIN`, which overrides `spike/rust-toolchain.toml`. The original recipe, `rustup toolchain install 1.98.1` plus `mise exec -- cargo build`, would quietly have built with 1.97.1 there. `spike/mise.toml` (94f8d92) pins Rust 1.98.1 for the spike folder only, and the recipe checks it: inside `spike/`, `mise exec` reports `RUSTUP_TOOLCHAIN=1.98.1` and `rustc 1.98.1`. A fresh clone at a new path also needs `mise trust` for both files. T01 will hit the same override when it adds the workspace `rust-toolchain.toml`.
 
-Observed here: the initial locked release build succeeded in **1.33 s Cargo time**, using existing artifacts. The final GUI instrumentation build succeeded in **2.26 s Cargo time**, without rebuilding GPUI. These are incremental build times, not cold-build benchmarks.
+`spike/.cargo/config.toml` sets **`LIBGHOSTTY_VT_SYS_OPTIMIZE=ReleaseFast`**. This matters: the bindings otherwise select Debug when Cargo supplies DEBUG=true, including profiles with debug information. The release profile retains line-table debug information. The bindings build libghostty-vt for the `baseline` CPU model unless `LIBGHOSTTY_VT_SYS_CPU` says otherwise. On an OOM kill, retry with a lower `CARGO_BUILD_JOBS` (8 or fewer; the desktop has 6 cores and needed no retry); don't clean and rebuild GPUI unnecessarily.
+
+### Fresh-clone build
+
+Verified on the desktop, 2026-10-25, with `spike/measurements/desktop-2026-10-25/fresh-build.sh <empty folder>`. Its full output is `fresh-clone-build.log` in the same folder on `spike/t00`.
+
+- `git clone --branch spike/t00` from GitHub at **94f8d92**, into a new folder.
+- **Empty caches, checked by the script before building:** a new, empty `CARGO_HOME` (so no registry, git checkouts or `~/.cargo/config.toml`), a new, empty `ZIG_GLOBAL_CACHE_DIR`, no `target/`, and no `~/.cache/zig` on the machine. No rustc wrapper was set. Every crate (442 downloads), every git dependency (Zed, wgpu, libghostty-rs, …) and Ghostty itself were fetched over the network during the build.
+- **Pre-installed, not part of the claim:** the system packages, mise, the Rust 1.98.1 toolchain under `~/.rustup`, and Zig 0.17.0 under mise.
+- Recipe exactly as above, plus `CARGO_HOME` and `ZIG_GLOBAL_CACHE_DIR` pointed at the empty folders. `--check`: `Ready.`; `mise exec` reported rustc 1.98.1, cargo 1.98.1, Zig 0.17.0.
+- `cargo build --release --locked`: **exit 0, 8 min 53 s**, 432 crates compiled, default job count (6), no OOM. Cargo time includes the downloads.
+- SHA-256: `spike-gui` `be9e9697…a349f2`, `snapcheck` `83844a2a…a61c0`, `rowbench` `e4674df4…ce8`. Rebuilding the same commit later in that clone gave identical hashes.
+
+The laptop's builds (1.33 s and 2.26 s Cargo time) reused existing artifacts and are not clean-checkout evidence.
 
 ### Measurements
 
@@ -97,11 +114,18 @@ python3 spike/measure.py summary --out spike/measurements/round2
 
 ./spike/target/release/snapcheck --programs --verbose
 ./spike/target/release/snapcheck --bench
+./spike/target/release/snapcheck --design   # added after the recorded runs (09c6967)
+
+# Desktop (scale 1), from a fresh-clone build:
+python3 spike/measure.py frames   --scale 1 --bin <clone>/spike/target/release/spike-gui --out spike/measurements/desktop-2026-10-25/frames
+python3 spike/measure.py cat-idle --scale 1 --bin <clone>/spike/target/release/spike-gui --out spike/measurements/desktop-2026-10-25/cat-idle
 ```
+
+snapcheck always exits 0, even when comparisons fail; read its table. Pass its flags as separate words: a zsh variable holding `--programs --verbose` arrives as one argument, which matches neither flag. That silently drops the six program rows and the details. It happened once on the desktop and the run was redone.
 
 The driver saves raw stdout/stderr, timestamps, effective benchmark environment, exact per-window `hyprctl eval` calls and window metadata under **`spike/measurements/`**, outside `/tmp`. `summary` reproduces GPUI percentiles and cat durations in `summary.json`; raw internal percentile summaries are emitted by the executable. Snapshot logs are `snapcheck-programs-20261025T075721Z.log` and `snapcheck-bench-20261025T075721Z.log`. The requested binaries were actually run; no permanent test suite was added for this investigation.
 
-The measurement driver assumes the measured **scale 2** and Hyprland **Lua dispatcher API**, and refuses to start the workload until GPUI reports the requested full-size geometry with `fits=true`. It changes only its own window: floating, no animation, size 1800×1400, position (12,38). It creates no persistent compositor rules and closes each window. It synchronizes with the Hyprland event socket, observed geometry and FIFOs with deadlines, not sleeps. The live session rejected legacy `hyprctl keyword`/dispatcher syntax; use the recorded Lua API rather than old `windowrulev2` recipes.
+The measurement driver assumes **scale 2** unless given `--scale` (added in 09c6967; the default keeps the recorded commands' meaning) and the Hyprland **Lua dispatcher API**, and refuses to start the workload until GPUI reports the requested full-size geometry with `fits=true`. It changes only its own window: floating, no animation, size 1800×1400, position (12,38). It creates no persistent compositor rules and closes each window. It synchronizes with the Hyprland event socket, observed geometry and FIFOs with deadlines, not sleeps. The live session rejected legacy `hyprctl keyword`/dispatcher syntax; use the recorded Lua API rather than old `windowrulev2` recipes.
 
 Equivalent frame environment, for each mode `static`, `styled`, `typing`, `scroll`:
 
@@ -241,12 +265,12 @@ Same driver, regenerated file, gated start, `SPIKE_STATS=1`; battery, `balanced`
 - One serial run per mode, no load isolation. Battery state of charge falls during the session.
 - The oversized surface extends off-screen, as in round 1.
 - No GPU-completion or presentation-latency timers.
-- For the final build, `power-saver`, AC power and the user's other machine are unmeasured. The user plans to move development and daily use to another machine soon, so these numbers are evidence for this laptop only. The M1 budgets need re-measuring there.
-- Edits after the timed runs were comments only; `round2/measured-sources-sha256.json` records the sources.
+- For the final build, `power-saver` and AC power are unmeasured on the laptop. These numbers are evidence for the laptop only. Development has since moved to the desktop, which has its own measurements ("Second machine"); the M1 budgets get measured there.
+- Edits after the timed runs were comments only; `round2/measured-sources-sha256.json` records the sources. Later, 94f8d92 ran `cargo fmt` over the active sources. That changed whitespace, trailing commas and one match arm's braces, so their hashes no longer match the recorded ones. `measurements/fmt-sources-sha256.json` maps each recorded hash to its new one. The measured binaries came from the recorded sources, and the archived `round1-sources/` are untouched.
 
 ## Snapshot fidelity
 
-`./spike/target/release/snapcheck --programs --verbose` was rerun unchanged: **25 synthetic scenarios + six real-program rows**, none removed. It prints mismatches but exits 0; exit status alone is **not** a correctness assertion.
+`./spike/target/release/snapcheck --programs --verbose` was rerun unchanged on the laptop: **25 synthetic scenarios + six real-program rows**, none removed. The table below is that laptop run. The desktop rerun is in "Second machine"; it differs only in the `less -R` row. It prints mismatches but exits 0; exit status alone is **not** a correctness assertion.
 
 For each case, A is the original terminal; B replays the formatter dump; C decodes `encode_snapshot_alloc` via `Decoder`; D replays formatter plus the parser's continuation bytes. Each then receives the same follow-up output. Synthetic fixtures are 80×24; real PTYs are 120×40. Scrollback cap is 10,000 lines with no byte cap and 4096-byte continuation tracking on the source.
 
@@ -327,24 +351,78 @@ Formatter output **1,224 KiB**; binary **2,801 KiB**; both restored 10,001 rows 
 
 Binary snapshot is the only tested path that matched all checked scenarios, including subsequent output. However, pinned `snapshot.rs:76–77` explicitly calls **format v1 work in progress with no binary-compatibility guarantee**. It is not a stable cross-version wire format merely because its version number is 1. Encoding partial VT/UTF-8 needs continuation tracking enabled before the relevant input; decoded terminals default to future tracking disabled (`snapshot.rs:101–111,276–289`). A later attach implementation would need exact-pin compatibility rules, bounded/validated decoding, callback rebinding, and a sequenced atomic snapshot/output boundary. None of that integration is implemented or claimed proven here.
 
-## User decisions, 2026-10-25
+## User decisions after round 1, 2026-10-25
+
+**Historical:** these led to round 2 and the draft. The later decisions are in "Decisions recorded in the spec".
 
 1. **Renderer: bounded GPUI experiment approved.** GPUI stays. In the spike only: dirty/shaped-row reuse, removal of repeated full-grid work, and deliberate feed scheduling; then remeasure incremental **and** full-redraw costs with the same method. The 4 ms target is not relaxed. If the full redraw still misses, the renderer decision returns to the user. No spec change.
 2. **Attach snapshot: exact-pin binary snapshot approved in principle.** Live attach would carry libghostty's binary snapshot, with daemon and window required to run the identical libghostty build (a mismatch is handled like a `hello` protocol mismatch), and bounded, validated decoding. Reboot persistence stays on formatter output with its documented losses for now, as a separate later decision. The agent drafts the spec text for the user's review; nothing in `docs/spec/` is changed or committed without that review.
 
 Round 2 above is the renderer experiment; the spec draft below is the snapshot follow-up. The original decision request is kept after the draft.
 
-## Remaining before T00 can close
+## Decisions recorded in the spec, 2026-10-25
 
-1. **The user reviews the attach spec draft.** If approved, the agent applies it to `docs/spec/` in the commit that lands this report.
-2. **The user answers the spec question about §7.3 shaping.** Per-run shaping misses 4 ms on full redraws; cached per-cell glyphs pass.
-3. **Optionally,** the user re-checks scrolling by eye (below), and measures under `power-saver` or AC if the redraw pass should hold there too.
-4. **With the user's approval to commit:** archive the spike on `spike/t00`, including `mise.toml`, `Cargo.lock` and font attribution. Then prove a cold build from a fresh clone of that branch and record it.
-5. **Then commit to `main`** this report, `mise.toml` and any approved spec edits, with explicit paths. T01 starts in a fresh session after that.
+After round 2, the user approved these. They are now in `docs/spec/`:
 
-## Proposed spec change: binary snapshot for live attach (draft, awaiting review)
+1. **Keep GPUI** (decisions.md, decision 3).
+2. **Rendering** (M1 spec §7.3): cached per-cell glyphs, no ligatures across cells, multi-codepoint grapheme clusters shaped as units, positions and widths from libghostty's cells. Dirty-row reuse stays, with one render state per terminal. Font family, size or line-height changes clear the glyph and row caches.
+3. **Live attach** (§5.1, §5.5): libghostty binary snapshots, between daemon and window at the exact same core build. Protocol stays 1 because nothing implements it yet.
+4. **`hello` core identity** (§5.3): built from the full pinned revisions plus the build settings that change terminal behaviour, compared byte for byte. A mismatch blocks attaching and offers a user-triggered restart. The restart stops the daemon through its persisting shutdown (`daemon.shutdown`, or `systemctl --user stop` or `SIGTERM` across a protocol mismatch), waits up to 5 s, never sends `SIGKILL`, then starts and restores.
+5. **Reboot persistence keeps formatter output** (§6.3), but still saves the main screen and history under an alternate-screen program. In that case it formats a decoded scratch copy of a binary snapshot, never the live terminal.
 
-Approved in principle by the user. **Draft only.** Nothing below has been applied to `docs/spec/`. API names are from the pinned bindings (`snapshot.rs`, `terminal.rs` at `9ede35b8`).
+`tasks.md` follows: T07, T11, T13, T15, T22, T41, T46, T48 and T50 changed; T07 adds the pin-upgrade rule.
+
+## Review corrections, applied to the spec
+
+The final review of the round-2 draft found four problems. Each is fixed in `docs/spec/` and, where it could be, checked on the desktop with `snapcheck --design` (`desktop-2026-10-25/snapcheck-design-*.log`).
+
+1. **A 4096-byte continuation cap doesn't guarantee a snapshot.** Reproduced: with a 5,000-byte unfinished OSC 2, `encode_snapshot_alloc` and the continuation query both return `InvalidValue`, and `is_vt_ground` is false. A 4,000-byte control encodes normally. Given the next chunk, `vt_write_until_ground` stops right after the terminator (3 bytes for `yy`+BEL, 4 for `yy`+ST). A snapshot taken at that point decodes to a terminal equal to the source, before and after the rest of the chunk. Output with no ground point is consumed whole. **Spec (§5.5, "Mid-sequence snapshots"):** the waiting attach is served at the first ground point by splitting that read into two numbered items, so nothing is lost or duplicated and the shell is never blocked. Waiting has a 2 s deadline, then error 1002 `mid_sequence` with a user-triggered Retry. Resync uses the same rule and `pane.detached`. No polling, and no timer while idle.
+2. **The 64 MiB frame limit doesn't bound decoding.** **Spec (§5.1, §5.5, "Decoding limits"):** the header and decoded size are checked (1–1,000 each, and they must match); the accepted continuation is capped at 4096 bytes (libghostty's default is 65 MiB); decoding allocations go through a counting allocator capped at 256 MiB; declared history is at most 100,000 rows per screen (and `scrollback.lines` is capped to match, §9.1); and the whole snapshot must be consumed. That last check needs care: on the desktop, one-shot `decode` **accepted 4 trailing bytes silently**. A reader-based decoder read exactly the snapshot (20,892 of 20,896 bytes; 714,283 of 714,287 for a 200 × 60 terminal with 42 history pages). So the spec has the client count the bytes taken. A truncated snapshot returned `InvalidValue`. The allocation cap and peak decode memory are not measured yet; T07 measures them.
+3. **Reply ownership on decoded mirrors.** Callbacks aren't in a snapshot, so a decoded terminal starts with none. Without `on_pty_write`, libghostty drops replies. **Spec (§4.2, §5.5, "Mirror callbacks"):** only the pane's terminal in the daemon has reply callbacks. Mirrors and scratch terminals install none of the reply or metadata callbacks, only drawing callbacks such as `on_render_hold`, and finish setup before the first live byte, because the restored parser state can complete a query on that byte. Not run as a separate test here; T07 adds "a restored mirror sends no reply".
+4. **The 4 ms target stays a per-frame target.** The checklist above quotes the laptop's full distribution: one of 600 frames at 4.11 ms. It does not restate the gate as a percentile.
+
+The checks also corrected the first version of the new §6.3 text. `CSI ? 1049 l` alone does **not** leave an alternate screen entered with mode 47 or 1047: the scratch terminal stayed on it with no history. Sending `CSI ? 1049 l`, `CSI ? 1047 l`, `CSI ? 47 l` restored the main screen and its 77 history rows for all three modes, and the live terminal stayed on its alternate screen. §6.3 and T07 say so. After 47 and 1047 only the cursor differs, which doesn't matter for inert reboot restore.
+
+## Second machine: desktop, 2026-10-25
+
+Development moved here mid-day. Raw evidence: `spike/measurements/desktop-2026-10-25/` on `spike/t00`, with `environment.txt` and each folder's `power.jsonl`. **Different hardware, scale and power from the laptop. Don't pool or ratio the two.**
+
+| Item | Desktop |
+| --- | --- |
+| Hardware | Dell Inspiron 3671, Intel Core i5-9400 (6 cores, no SMT), 11 GiB RAM |
+| GPU | Intel UHD Graphics 630 (CoffeeLake-S GT2), Mesa 26.2.5 `vulkan-intel` (ANV); `vulkaninfo` not installed, so adapter selection wasn't captured |
+| OS / compositor | Omarchy 4.0.6, Linux 7.2.8-9-omarchy; Hyprland 0.56.2, same commit as the laptop |
+| Monitor | `HDMI-A-1`, Samsung C32F391, **1920 × 1080 @ 60 Hz, scale 1**, top reserved 26 px |
+| Power | Desktop on mains: profile `performance`, governor `powersave`, EPP `performance`. sysfs lists only a wireless mouse battery, so `power_supply_online` shows that, not mains |
+| Toolchain | Rust 1.98.1 via `spike/mise.toml`, Zig 0.17.0, mise 2026.10.17 |
+| Binaries | Fresh-clone builds: GUI from 94f8d92 (same hash at 09c6967); snapcheck from 09c6967 (`49ecfcca…`, adds `--design`) |
+
+**Frames** (`frames/`, `measure.py frames --scale 1`). Same driver, grid, font, 30 warm-ups and 600 reported frames as round 2. GPUI reported viewport 1800 × 1400, scale 1, cell 8.400 × 21.000, 200 × 60, `fits=true`. The 1400 px window is taller than the 1080 px monitor, so part of it is off-screen, as on the laptop. At scale 1 the surface has a quarter of the laptop's device pixels.
+
+| Workload | Internal p50 / p95 / max ms | GPUI p50 / p95 / p99 / max ms | GPUI frames over 4 ms |
+| --- | ---: | ---: | ---: |
+| **Full-damage styled, cached glyphs (gate)** | **1.40 / 1.53 / 1.92** | **2.24 / 2.48 / 2.82 / 3.13** | **0 of 600** |
+| Static (clean frames) | 0.58 / 0.64 / 0.98 | 1.42 / 1.68 / 1.88 / 3.44 | 0 |
+| Typing, one cell per frame | 0.60 / 0.68 / 0.92 | 1.46 / 1.72 / 1.91 / 1.99 | 0 |
+| Scroll, one log line per frame | 0.80 / 0.94 / 1.88 | 1.42 / 1.64 / 1.86 / 3.37 | 0 |
+| Full-damage styled, shaped runs | 2.84 / 3.18 / 3.84 | 3.70 / 4.15 / 4.50 / 4.76 | 55 |
+
+**`cat` 50 MiB and idle** (`cat-idle/`). 0.493 / 0.480 / 0.496 s; all exit 0 and consume 52,798,016 PTY bytes; 27 / 26 / 28 paints while `cat` wrote. After run 1, idle CPU over 30 one-second samples averaged **0.00%**, with 21 threads in state S.
+
+**Snapshots** (`snapcheck-programs-*.log`). All 31 rows ran. Binary snapshot **31/31** at restore and **31/31** after follow-up. Formatter 25/31 at restore, 16/31 after, 18/31 with continuation. Against the laptop's final run, only `less -R, then quit` differs: here it fails after follow-up (94 cells, cursor y, row counts), as it did in an earlier laptop session. `snapcheck-bench-*.log`: formatter dump 16.0–16.6 ms plus restore 13.0–13.1 ms (1,224 KiB); binary encode 4.4–4.8 ms plus decode 9.4–9.6 ms (2,801 KiB); 10,001 rows each.
+
+**Not measured on the desktop:** `--verify` cache-oracle runs, `rowbench`, other power profiles, and the by-eye checks.
+
+## T00 closure
+
+- Every gate in the checklist has a result. The two that failed, the formatter and the round-1 redraw, are resolved by the user's decisions, which are now in the spec.
+- The spike is archived on `spike/t00` and never merged. `main` gets only `docs/spike-00.md`, `mise.toml` and the `docs/spec/` edits, committed with explicit paths.
+- **Optional, needs the user:** a by-eye look on the desktop, including the round-2 scrolling recheck (below).
+- **Proposed follow-ups, not started:** T01 should pin Rust in `mise.toml` as well as `rust-toolchain.toml`, or document the `RUSTUP_TOOLCHAIN` override; T07 measures peak decode memory; T50 decides the Font Logos glyphs.
+
+## Original spec draft: binary snapshot for live attach (superseded)
+
+**Historical.** This was the draft as written after round 2. The user approved the direction, and the spec was then written with the corrections in "Review corrections, applied to the spec" above. Where they differ, `docs/spec/` is authoritative. In particular, item 2's "the frame is already limited to 64 MiB" does **not** bound decoding, and item 3's 4096-byte cap does **not** guarantee a snapshot is available. API names are from the pinned bindings (`snapshot.rs`, `terminal.rs` at `9ede35b8`).
 
 **Why.** The formatter loses state that a live mirror needs (table above). The binary snapshot matched all 31 checked cases. It's also cheaper at the attach budget's size (10,000 lines, 200 × 60): round-1 encode 7.9–8.4 ms plus decode 15.7–19.6 ms, against formatter dump 20.2–26.5 ms plus restore 23.0–33.1 ms. The cost is 2.3× the bytes (2,801 vs 1,224 KiB) and no compatibility guarantee: the pinned docs call format v1 "a work in progress".
 
@@ -380,7 +458,7 @@ Do not update decision 3, the AGENTS lookup pins, or main commits before those d
 
 ## By-eye / input-method checks — user observations recorded
 
-Run this exact command in the desktop session:
+On the laptop, in the graphical session:
 
 ```sh
 cd /home/phagmaier/Code/shoal/spike && ./target/release/spike-gui
@@ -393,6 +471,7 @@ Default requested size is **900×600**, font **14 px**, app_id **`dev.shoal.Spik
 3. **Smoothness not fully satisfactory:** “Text is pretty smooth scrolling isn't ideal.” Record the scrolling issue as observed, without attributing a cause or treating the manual check as passed. No new measurement was run to reconfirm the user's observation.
 4. **Skipped (no input method):** user confirms “No input method i type only in english and don't plan to type in anything else.” No IME functionality test is needed for this user's T00 gate; this is not a general claim that IME support works.
 5. **Scrolling, optional recheck after round 2:** round 2 carries fractional wheel and touchpad deltas over instead of rounding each event, and draws during floods. Not yet re-checked by the user. Same command as above: run `seq 1 5000`, then scroll back with the touchpad and the mouse wheel.
+6. **Desktop, optional:** observations 1–3 were made on the laptop at scale 2. Nobody has looked at the spike on the desktop (scale 1). Its Hyprland config has blur explicitly off (`decoration:blur:enabled` false, set), so wallpaper blur won't appear there until blur is enabled. From a fresh-clone build: `cd <clone>/spike && ./target/release/spike-gui`.
 
 At measurement time blur was globally off (`hyprctl getoption decoration:blur:enabled` → false). If blur does not appear, this is a compositor configuration issue to check first, not a GPUI failure. For the installed Lua configuration, the user can opt into:
 

@@ -1,0 +1,5 @@
+Linux 7.2.8-9-omarchy (omarchyDesktop) 	10/25/2026 	_x86_64_	(6 CPU)
+
+03:06:17 AM   UID       PID    %usr %system  %guest   %wait    %CPU   CPU  Command
+03:06:18 AM  1000     67067    1.00    0.00    0.00    0.00    1.00     0  spike-gui
+Average:     1000     67067    1.00    0.00    0.00    0.00    1.00     -  spike-gui

@@ -1,0 +1,10 @@
+UTC start: 2026-10-25T10:03:46Z
+Command: ./target/release/snapcheck --bench (fresh clone at 09c6967, snapcheck sha256 49ecfcca676c3b65)
+defaults: scrollback max bytes Ok(None), max lines Ok(Some(10000))
+fed 1043 KiB in 12.2 ms; terminal: 200 x 60, 10001 total rows
+restore with tracking=false: 12.9 ms
+restore with tracking=true: 12.9 ms
+formatter: dump 16.4 ms + restore 13.0 ms (1224 KiB) | binary: encode 4.8 ms + decode 9.4 ms (2801 KiB) | rows 10001 / 10001
+formatter: dump 16.0 ms + restore 13.0 ms (1224 KiB) | binary: encode 4.4 ms + decode 9.4 ms (2801 KiB) | rows 10001 / 10001
+formatter: dump 16.6 ms + restore 13.1 ms (1224 KiB) | binary: encode 4.6 ms + decode 9.6 ms (2801 KiB) | rows 10001 / 10001
+Exit status: 0

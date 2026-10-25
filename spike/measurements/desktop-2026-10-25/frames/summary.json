@@ -1,0 +1,119 @@
+{
+  "frames-glyph-scroll": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 1.419245,
+    "gpui_p95_ms": 1.644771,
+    "gpui_p99_ms": 1.863469,
+    "gpui_max_ms": 3.373799,
+    "internal": [
+      "build draw list (render)           n=600   p50=  0.43 ms  p95=  0.50 ms  p99=  0.60 ms  max=  1.11 ms",
+      "  of which render-state update     n=600   p50=  0.02 ms  p95=  0.03 ms  p99=  0.05 ms  max=  0.07 ms",
+      "resolve rows (render)              n=600   p50=  0.06 ms  p95=  0.08 ms  p99=  0.12 ms  max=  0.18 ms",
+      "paint (canvas)                     n=600   p50=  0.28 ms  p95=  0.34 ms  p99=  0.41 ms  max=  0.64 ms",
+      "render start -> paint end          n=600   p50=  0.80 ms  p95=  0.94 ms  p99=  1.15 ms  max=  1.88 ms",
+      "rows rebuilt / frame               n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=600   p50=2220.00     p95=2280.00     p99=2994.00     max=3165.00   ",
+      "bench output + VT parse (untimed)  n=600   p50=  0.01 ms  p95=  0.03 ms  p99=  0.06 ms  max=  0.09 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-static": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 1.417155,
+    "gpui_p95_ms": 1.680424,
+    "gpui_p99_ms": 1.884789,
+    "gpui_max_ms": 3.438288,
+    "internal": [
+      "build draw list (render)           n=600   p50=  0.01 ms  p95=  0.01 ms  p99=  0.02 ms  max=  0.03 ms",
+      "  of which render-state update     n=600   p50=  0.00 ms  p95=  0.00 ms  p99=  0.01 ms  max=  0.02 ms",
+      "resolve rows (render)              n=600   p50=  0.00 ms  p95=  0.00 ms  p99=  0.01 ms  max=  0.02 ms",
+      "paint (canvas)                     n=600   p50=  0.54 ms  p95=  0.60 ms  p99=  0.65 ms  max=  0.92 ms",
+      "render start -> paint end          n=600   p50=  0.58 ms  p95=  0.64 ms  p99=  0.70 ms  max=  0.98 ms",
+      "rows rebuilt / frame               n=600   p50=  0.00     p95=  0.00     p99=  0.00     max=  0.00   ",
+      "rows re-resolved / frame           n=600   p50=  0.00     p95=  0.00     p99=  0.00     max=  0.00   ",
+      "glyphs painted / frame             n=600   p50=3990.00     p95=3990.00     p99=3990.00     max=3990.00   ",
+      "bench output + VT parse (untimed)  n=600   p50=  0.00 ms  p95=  0.00 ms  p99=  0.02 ms  max=  0.02 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=941x508 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-styled": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 2.236099,
+    "gpui_p95_ms": 2.479696,
+    "gpui_p99_ms": 2.818691,
+    "gpui_max_ms": 3.134745,
+    "internal": [
+      "build draw list (render)           n=600   p50=  0.71 ms  p95=  0.79 ms  p99=  0.85 ms  max=  0.92 ms",
+      "  of which render-state update     n=600   p50=  0.07 ms  p95=  0.10 ms  p99=  0.12 ms  max=  0.18 ms",
+      "resolve rows (render)              n=600   p50=  0.12 ms  p95=  0.17 ms  p99=  0.21 ms  max=  0.27 ms",
+      "paint (canvas)                     n=600   p50=  0.52 ms  p95=  0.57 ms  p99=  0.61 ms  max=  0.82 ms",
+      "render start -> paint end          n=600   p50=  1.40 ms  p95=  1.53 ms  p99=  1.68 ms  max=  1.92 ms",
+      "rows rebuilt / frame               n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=600   p50=3990.00     p95=3990.00     p99=3990.00     max=3990.00   ",
+      "bench output + VT parse (untimed)  n=600   p50=  0.60 ms  p95=  0.66 ms  p99=  0.70 ms  max=  0.80 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ]
+  },
+  "frames-glyph-typing": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 1.461027,
+    "gpui_p95_ms": 1.719827,
+    "gpui_p99_ms": 1.909178,
+    "gpui_max_ms": 1.99213,
+    "internal": [
+      "build draw list (render)           n=600   p50=  0.01 ms  p95=  0.03 ms  p99=  0.05 ms  max=  0.07 ms",
+      "  of which render-state update     n=600   p50=  0.00 ms  p95=  0.00 ms  p99=  0.02 ms  max=  0.03 ms",
+      "resolve rows (render)              n=600   p50=  0.01 ms  p95=  0.01 ms  p99=  0.01 ms  max=  0.02 ms",
+      "paint (canvas)                     n=600   p50=  0.54 ms  p95=  0.61 ms  p99=  0.66 ms  max=  0.83 ms",
+      "render start -> paint end          n=600   p50=  0.60 ms  p95=  0.68 ms  p99=  0.73 ms  max=  0.92 ms",
+      "rows rebuilt / frame               n=600   p50=  1.00     p95=  1.00     p99=  1.00     max=  1.00   ",
+      "rows re-resolved / frame           n=600   p50=  1.00     p95=  1.00     p99=  1.00     max=  1.00   ",
+      "glyphs painted / frame             n=600   p50=4123.00     p95=4123.00     p99=4123.00     max=4123.00   ",
+      "bench output + VT parse (untimed)  n=600   p50=  0.01 ms  p95=  0.01 ms  p99=  0.03 ms  max=  0.04 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=941x508 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ]
+  },
+  "frames-shape-styled": {
+    "gpui_n": 600,
+    "gpui_p50_ms": 3.697385,
+    "gpui_p95_ms": 4.154998,
+    "gpui_p99_ms": 4.504206,
+    "gpui_max_ms": 4.76296,
+    "internal": [
+      "build draw list (render)           n=600   p50=  0.70 ms  p95=  0.79 ms  p99=  0.84 ms  max=  0.93 ms",
+      "  of which render-state update     n=600   p50=  0.06 ms  p95=  0.09 ms  p99=  0.12 ms  max=  0.13 ms",
+      "resolve rows (render)              n=600   p50=  0.82 ms  p95=  0.96 ms  p99=  1.19 ms  max=  1.55 ms",
+      "paint (canvas)                     n=600   p50=  1.27 ms  p95=  1.40 ms  p99=  1.57 ms  max=  1.70 ms",
+      "render start -> paint end          n=600   p50=  2.84 ms  p95=  3.18 ms  p99=  3.44 ms  max=  3.84 ms",
+      "rows rebuilt / frame               n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=600   p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=600   p50=  0.00     p95=  0.00     p99=  0.00     max=  0.00   ",
+      "bench output + VT parse (untimed)  n=600   p50=  0.64 ms  p95=  0.70 ms  p99=  0.74 ms  max=  0.78 ms"
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ]
+  }
+}

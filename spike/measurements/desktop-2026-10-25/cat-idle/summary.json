@@ -1,0 +1,1088 @@
+{
+  "cat-1": {
+    "gpui_n": 30,
+    "gpui_p50_ms": 2.887851,
+    "gpui_p95_ms": 7.411117,
+    "gpui_p99_ms": 29.11532,
+    "gpui_max_ms": 29.11532,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "feed: 2965 chunks, 2965 slices, 351.5 ms in vt_write",
+      "build draw list (render)           n=28    p50=  0.32 ms  p95=  0.35 ms  p99=  0.36 ms  max=  0.36 ms",
+      "  of which render-state update     n=28    p50=  0.02 ms  p95=  0.04 ms  p99=  0.04 ms  max=  0.04 ms",
+      "resolve rows (render)              n=28    p50=  0.11 ms  p95=  0.12 ms  p99=  5.29 ms  max=  5.29 ms",
+      "paint (canvas)                     n=28    p50=  1.01 ms  p95=  2.47 ms  p99=  3.95 ms  max=  3.95 ms",
+      "render start -> paint end          n=28    p50=  1.47 ms  p95=  2.96 ms  p99=  9.59 ms  max=  9.59 ms",
+      "rows rebuilt / frame               n=28    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=28    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=28    p50=7965.00     p95=8093.00     p99=8100.00     max=8100.00   "
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=941x508 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "0.492988",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792922746871621,
+        "feed_bytes": 1621477,
+        "paint_ms": 3.947,
+        "total_ms": 9.592
+      },
+      {
+        "unix_us": 1792922746914814,
+        "feed_bytes": 4491058,
+        "paint_ms": 2.469,
+        "total_ms": 2.955
+      },
+      {
+        "unix_us": 1792922746929943,
+        "feed_bytes": 6096521,
+        "paint_ms": 1.005,
+        "total_ms": 1.459
+      },
+      {
+        "unix_us": 1792922746946614,
+        "feed_bytes": 7970963,
+        "paint_ms": 1.026,
+        "total_ms": 1.505
+      },
+      {
+        "unix_us": 1792922746963271,
+        "feed_bytes": 9851127,
+        "paint_ms": 1.0,
+        "total_ms": 1.469
+      },
+      {
+        "unix_us": 1792922746979887,
+        "feed_bytes": 11800360,
+        "paint_ms": 1.002,
+        "total_ms": 1.456
+      },
+      {
+        "unix_us": 1792922746996576,
+        "feed_bytes": 13757172,
+        "paint_ms": 0.997,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922747013200,
+        "feed_bytes": 15591290,
+        "paint_ms": 0.997,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922747029889,
+        "feed_bytes": 17490473,
+        "paint_ms": 1.007,
+        "total_ms": 1.507
+      },
+      {
+        "unix_us": 1792922747046468,
+        "feed_bytes": 19424548,
+        "paint_ms": 1.022,
+        "total_ms": 1.486
+      },
+      {
+        "unix_us": 1792922747063450,
+        "feed_bytes": 21325874,
+        "paint_ms": 1.06,
+        "total_ms": 1.553
+      },
+      {
+        "unix_us": 1792922747079976,
+        "feed_bytes": 23239377,
+        "paint_ms": 1.028,
+        "total_ms": 1.503
+      },
+      {
+        "unix_us": 1792922747096673,
+        "feed_bytes": 25167142,
+        "paint_ms": 1.01,
+        "total_ms": 1.48
+      },
+      {
+        "unix_us": 1792922747113149,
+        "feed_bytes": 27028716,
+        "paint_ms": 0.997,
+        "total_ms": 1.456
+      },
+      {
+        "unix_us": 1792922747129823,
+        "feed_bytes": 28915163,
+        "paint_ms": 1.019,
+        "total_ms": 1.474
+      },
+      {
+        "unix_us": 1792922747146529,
+        "feed_bytes": 30787328,
+        "paint_ms": 0.999,
+        "total_ms": 1.467
+      },
+      {
+        "unix_us": 1792922747163165,
+        "feed_bytes": 32664648,
+        "paint_ms": 0.996,
+        "total_ms": 1.463
+      },
+      {
+        "unix_us": 1792922747179862,
+        "feed_bytes": 34577400,
+        "paint_ms": 1.005,
+        "total_ms": 1.473
+      },
+      {
+        "unix_us": 1792922747196506,
+        "feed_bytes": 36451255,
+        "paint_ms": 1.016,
+        "total_ms": 1.482
+      },
+      {
+        "unix_us": 1792922747213331,
+        "feed_bytes": 38425387,
+        "paint_ms": 0.996,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922747229830,
+        "feed_bytes": 40354886,
+        "paint_ms": 0.994,
+        "total_ms": 1.442
+      },
+      {
+        "unix_us": 1792922747246667,
+        "feed_bytes": 42342014,
+        "paint_ms": 1.001,
+        "total_ms": 1.46
+      },
+      {
+        "unix_us": 1792922747263385,
+        "feed_bytes": 44294648,
+        "paint_ms": 1.071,
+        "total_ms": 1.539
+      },
+      {
+        "unix_us": 1792922747279955,
+        "feed_bytes": 46047859,
+        "paint_ms": 0.997,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922747296573,
+        "feed_bytes": 48017684,
+        "paint_ms": 1.006,
+        "total_ms": 1.473
+      },
+      {
+        "unix_us": 1792922747313325,
+        "feed_bytes": 49986508,
+        "paint_ms": 1.001,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922747329907,
+        "feed_bytes": 51842362,
+        "paint_ms": 1.003,
+        "total_ms": 1.489
+      },
+      {
+        "unix_us": 1792922747346669,
+        "feed_bytes": 52798016,
+        "paint_ms": 1.027,
+        "total_ms": 1.494
+      }
+    ],
+    "paints_ending_while_cat_writes": 27,
+    "while_cat_writes": [
+      {
+        "unix_us": 1792922746871621,
+        "feed_bytes": 1621477,
+        "paint_ms": 3.947,
+        "total_ms": 9.592
+      },
+      {
+        "unix_us": 1792922746914814,
+        "feed_bytes": 4491058,
+        "paint_ms": 2.469,
+        "total_ms": 2.955
+      },
+      {
+        "unix_us": 1792922746929943,
+        "feed_bytes": 6096521,
+        "paint_ms": 1.005,
+        "total_ms": 1.459
+      },
+      {
+        "unix_us": 1792922746946614,
+        "feed_bytes": 7970963,
+        "paint_ms": 1.026,
+        "total_ms": 1.505
+      },
+      {
+        "unix_us": 1792922746963271,
+        "feed_bytes": 9851127,
+        "paint_ms": 1.0,
+        "total_ms": 1.469
+      },
+      {
+        "unix_us": 1792922746979887,
+        "feed_bytes": 11800360,
+        "paint_ms": 1.002,
+        "total_ms": 1.456
+      },
+      {
+        "unix_us": 1792922746996576,
+        "feed_bytes": 13757172,
+        "paint_ms": 0.997,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922747013200,
+        "feed_bytes": 15591290,
+        "paint_ms": 0.997,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922747029889,
+        "feed_bytes": 17490473,
+        "paint_ms": 1.007,
+        "total_ms": 1.507
+      },
+      {
+        "unix_us": 1792922747046468,
+        "feed_bytes": 19424548,
+        "paint_ms": 1.022,
+        "total_ms": 1.486
+      },
+      {
+        "unix_us": 1792922747063450,
+        "feed_bytes": 21325874,
+        "paint_ms": 1.06,
+        "total_ms": 1.553
+      },
+      {
+        "unix_us": 1792922747079976,
+        "feed_bytes": 23239377,
+        "paint_ms": 1.028,
+        "total_ms": 1.503
+      },
+      {
+        "unix_us": 1792922747096673,
+        "feed_bytes": 25167142,
+        "paint_ms": 1.01,
+        "total_ms": 1.48
+      },
+      {
+        "unix_us": 1792922747113149,
+        "feed_bytes": 27028716,
+        "paint_ms": 0.997,
+        "total_ms": 1.456
+      },
+      {
+        "unix_us": 1792922747129823,
+        "feed_bytes": 28915163,
+        "paint_ms": 1.019,
+        "total_ms": 1.474
+      },
+      {
+        "unix_us": 1792922747146529,
+        "feed_bytes": 30787328,
+        "paint_ms": 0.999,
+        "total_ms": 1.467
+      },
+      {
+        "unix_us": 1792922747163165,
+        "feed_bytes": 32664648,
+        "paint_ms": 0.996,
+        "total_ms": 1.463
+      },
+      {
+        "unix_us": 1792922747179862,
+        "feed_bytes": 34577400,
+        "paint_ms": 1.005,
+        "total_ms": 1.473
+      },
+      {
+        "unix_us": 1792922747196506,
+        "feed_bytes": 36451255,
+        "paint_ms": 1.016,
+        "total_ms": 1.482
+      },
+      {
+        "unix_us": 1792922747213331,
+        "feed_bytes": 38425387,
+        "paint_ms": 0.996,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922747229830,
+        "feed_bytes": 40354886,
+        "paint_ms": 0.994,
+        "total_ms": 1.442
+      },
+      {
+        "unix_us": 1792922747246667,
+        "feed_bytes": 42342014,
+        "paint_ms": 1.001,
+        "total_ms": 1.46
+      },
+      {
+        "unix_us": 1792922747263385,
+        "feed_bytes": 44294648,
+        "paint_ms": 1.071,
+        "total_ms": 1.539
+      },
+      {
+        "unix_us": 1792922747279955,
+        "feed_bytes": 46047859,
+        "paint_ms": 0.997,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922747296573,
+        "feed_bytes": 48017684,
+        "paint_ms": 1.006,
+        "total_ms": 1.473
+      },
+      {
+        "unix_us": 1792922747313325,
+        "feed_bytes": 49986508,
+        "paint_ms": 1.001,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922747329907,
+        "feed_bytes": 51842362,
+        "paint_ms": 1.003,
+        "total_ms": 1.489
+      }
+    ]
+  },
+  "cat-2": {
+    "gpui_n": 29,
+    "gpui_p50_ms": 2.816466,
+    "gpui_p95_ms": 7.547976,
+    "gpui_p99_ms": 30.349614,
+    "gpui_max_ms": 30.349614,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "feed: 3099 chunks, 3099 slices, 343.2 ms in vt_write",
+      "build draw list (render)           n=27    p50=  0.31 ms  p95=  0.33 ms  p99=  0.36 ms  max=  0.36 ms",
+      "  of which render-state update     n=27    p50=  0.02 ms  p95=  0.03 ms  p99=  0.04 ms  max=  0.04 ms",
+      "resolve rows (render)              n=27    p50=  0.10 ms  p95=  0.12 ms  p99=  5.48 ms  max=  5.48 ms",
+      "paint (canvas)                     n=27    p50=  0.99 ms  p95=  1.80 ms  p99=  3.87 ms  max=  3.87 ms",
+      "render start -> paint end          n=27    p50=  1.45 ms  p95=  2.26 ms  p99=  9.71 ms  max=  9.71 ms",
+      "rows rebuilt / frame               n=27    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=27    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=27    p50=7965.00     p95=8100.00     p99=8100.00     max=8100.00   "
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=941x508 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "0.479894",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792922777521961,
+        "feed_bytes": 1607320,
+        "paint_ms": 3.869,
+        "total_ms": 9.706
+      },
+      {
+        "unix_us": 1792922777564128,
+        "feed_bytes": 4231799,
+        "paint_ms": 1.8,
+        "total_ms": 2.261
+      },
+      {
+        "unix_us": 1792922777579920,
+        "feed_bytes": 5924061,
+        "paint_ms": 0.992,
+        "total_ms": 1.44
+      },
+      {
+        "unix_us": 1792922777596906,
+        "feed_bytes": 7892891,
+        "paint_ms": 1.06,
+        "total_ms": 1.525
+      },
+      {
+        "unix_us": 1792922777613200,
+        "feed_bytes": 9742884,
+        "paint_ms": 1.001,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922777629979,
+        "feed_bytes": 11737297,
+        "paint_ms": 0.993,
+        "total_ms": 1.434
+      },
+      {
+        "unix_us": 1792922777646616,
+        "feed_bytes": 13738439,
+        "paint_ms": 0.994,
+        "total_ms": 1.436
+      },
+      {
+        "unix_us": 1792922777663277,
+        "feed_bytes": 15670798,
+        "paint_ms": 0.993,
+        "total_ms": 1.453
+      },
+      {
+        "unix_us": 1792922777680019,
+        "feed_bytes": 17717557,
+        "paint_ms": 0.987,
+        "total_ms": 1.442
+      },
+      {
+        "unix_us": 1792922777696724,
+        "feed_bytes": 19774755,
+        "paint_ms": 0.993,
+        "total_ms": 1.441
+      },
+      {
+        "unix_us": 1792922777713258,
+        "feed_bytes": 21757450,
+        "paint_ms": 0.996,
+        "total_ms": 1.459
+      },
+      {
+        "unix_us": 1792922777729819,
+        "feed_bytes": 23603866,
+        "paint_ms": 1.008,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922777746870,
+        "feed_bytes": 25598859,
+        "paint_ms": 1.008,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922777763353,
+        "feed_bytes": 27503905,
+        "paint_ms": 0.995,
+        "total_ms": 1.438
+      },
+      {
+        "unix_us": 1792922777779972,
+        "feed_bytes": 29541512,
+        "paint_ms": 0.986,
+        "total_ms": 1.425
+      },
+      {
+        "unix_us": 1792922777796646,
+        "feed_bytes": 31593274,
+        "paint_ms": 1.018,
+        "total_ms": 1.468
+      },
+      {
+        "unix_us": 1792922777813397,
+        "feed_bytes": 33600710,
+        "paint_ms": 0.99,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922777830005,
+        "feed_bytes": 35582118,
+        "paint_ms": 0.997,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922777846689,
+        "feed_bytes": 37568960,
+        "paint_ms": 0.991,
+        "total_ms": 1.445
+      },
+      {
+        "unix_us": 1792922777863263,
+        "feed_bytes": 39502461,
+        "paint_ms": 1.01,
+        "total_ms": 1.48
+      },
+      {
+        "unix_us": 1792922777879974,
+        "feed_bytes": 41456558,
+        "paint_ms": 0.992,
+        "total_ms": 1.457
+      },
+      {
+        "unix_us": 1792922777896551,
+        "feed_bytes": 43410367,
+        "paint_ms": 0.988,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922777913246,
+        "feed_bytes": 45455410,
+        "paint_ms": 0.99,
+        "total_ms": 1.436
+      },
+      {
+        "unix_us": 1792922777929938,
+        "feed_bytes": 47484151,
+        "paint_ms": 0.988,
+        "total_ms": 1.435
+      },
+      {
+        "unix_us": 1792922777946573,
+        "feed_bytes": 49522044,
+        "paint_ms": 0.993,
+        "total_ms": 1.438
+      },
+      {
+        "unix_us": 1792922777963371,
+        "feed_bytes": 51390053,
+        "paint_ms": 1.044,
+        "total_ms": 1.561
+      },
+      {
+        "unix_us": 1792922777979953,
+        "feed_bytes": 52798016,
+        "paint_ms": 1.023,
+        "total_ms": 1.477
+      }
+    ],
+    "paints_ending_while_cat_writes": 26,
+    "while_cat_writes": [
+      {
+        "unix_us": 1792922777521961,
+        "feed_bytes": 1607320,
+        "paint_ms": 3.869,
+        "total_ms": 9.706
+      },
+      {
+        "unix_us": 1792922777564128,
+        "feed_bytes": 4231799,
+        "paint_ms": 1.8,
+        "total_ms": 2.261
+      },
+      {
+        "unix_us": 1792922777579920,
+        "feed_bytes": 5924061,
+        "paint_ms": 0.992,
+        "total_ms": 1.44
+      },
+      {
+        "unix_us": 1792922777596906,
+        "feed_bytes": 7892891,
+        "paint_ms": 1.06,
+        "total_ms": 1.525
+      },
+      {
+        "unix_us": 1792922777613200,
+        "feed_bytes": 9742884,
+        "paint_ms": 1.001,
+        "total_ms": 1.45
+      },
+      {
+        "unix_us": 1792922777629979,
+        "feed_bytes": 11737297,
+        "paint_ms": 0.993,
+        "total_ms": 1.434
+      },
+      {
+        "unix_us": 1792922777646616,
+        "feed_bytes": 13738439,
+        "paint_ms": 0.994,
+        "total_ms": 1.436
+      },
+      {
+        "unix_us": 1792922777663277,
+        "feed_bytes": 15670798,
+        "paint_ms": 0.993,
+        "total_ms": 1.453
+      },
+      {
+        "unix_us": 1792922777680019,
+        "feed_bytes": 17717557,
+        "paint_ms": 0.987,
+        "total_ms": 1.442
+      },
+      {
+        "unix_us": 1792922777696724,
+        "feed_bytes": 19774755,
+        "paint_ms": 0.993,
+        "total_ms": 1.441
+      },
+      {
+        "unix_us": 1792922777713258,
+        "feed_bytes": 21757450,
+        "paint_ms": 0.996,
+        "total_ms": 1.459
+      },
+      {
+        "unix_us": 1792922777729819,
+        "feed_bytes": 23603866,
+        "paint_ms": 1.008,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922777746870,
+        "feed_bytes": 25598859,
+        "paint_ms": 1.008,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922777763353,
+        "feed_bytes": 27503905,
+        "paint_ms": 0.995,
+        "total_ms": 1.438
+      },
+      {
+        "unix_us": 1792922777779972,
+        "feed_bytes": 29541512,
+        "paint_ms": 0.986,
+        "total_ms": 1.425
+      },
+      {
+        "unix_us": 1792922777796646,
+        "feed_bytes": 31593274,
+        "paint_ms": 1.018,
+        "total_ms": 1.468
+      },
+      {
+        "unix_us": 1792922777813397,
+        "feed_bytes": 33600710,
+        "paint_ms": 0.99,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922777830005,
+        "feed_bytes": 35582118,
+        "paint_ms": 0.997,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922777846689,
+        "feed_bytes": 37568960,
+        "paint_ms": 0.991,
+        "total_ms": 1.445
+      },
+      {
+        "unix_us": 1792922777863263,
+        "feed_bytes": 39502461,
+        "paint_ms": 1.01,
+        "total_ms": 1.48
+      },
+      {
+        "unix_us": 1792922777879974,
+        "feed_bytes": 41456558,
+        "paint_ms": 0.992,
+        "total_ms": 1.457
+      },
+      {
+        "unix_us": 1792922777896551,
+        "feed_bytes": 43410367,
+        "paint_ms": 0.988,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922777913246,
+        "feed_bytes": 45455410,
+        "paint_ms": 0.99,
+        "total_ms": 1.436
+      },
+      {
+        "unix_us": 1792922777929938,
+        "feed_bytes": 47484151,
+        "paint_ms": 0.988,
+        "total_ms": 1.435
+      },
+      {
+        "unix_us": 1792922777946573,
+        "feed_bytes": 49522044,
+        "paint_ms": 0.993,
+        "total_ms": 1.438
+      },
+      {
+        "unix_us": 1792922777963371,
+        "feed_bytes": 51390053,
+        "paint_ms": 1.044,
+        "total_ms": 1.561
+      }
+    ]
+  },
+  "cat-3": {
+    "gpui_n": 31,
+    "gpui_p50_ms": 2.848708,
+    "gpui_p95_ms": 12.93045,
+    "gpui_p99_ms": 18.717913,
+    "gpui_max_ms": 18.717913,
+    "internal": [
+      "PTY bytes consumed: 52798016",
+      "feed: 3695 chunks, 3695 slices, 352.3 ms in vt_write",
+      "build draw list (render)           n=29    p50=  0.32 ms  p95=  0.38 ms  p99=  0.40 ms  max=  0.40 ms",
+      "  of which render-state update     n=29    p50=  0.02 ms  p95=  0.03 ms  p99=  0.03 ms  max=  0.03 ms",
+      "resolve rows (render)              n=29    p50=  0.10 ms  p95=  0.12 ms  p99=  5.23 ms  max=  5.23 ms",
+      "paint (canvas)                     n=29    p50=  1.01 ms  p95=  1.89 ms  p99=  3.96 ms  max=  3.96 ms",
+      "render start -> paint end          n=29    p50=  1.47 ms  p95=  2.36 ms  p99=  9.56 ms  max=  9.56 ms",
+      "rows rebuilt / frame               n=29    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "rows re-resolved / frame           n=29    p50= 60.00     p95= 60.00     p99= 60.00     max= 60.00   ",
+      "glyphs painted / frame             n=29    p50=7965.00     p95=8100.00     p99=8100.00     max=8100.00   "
+    ],
+    "geometry": [
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true",
+      "SPIKE_GEOMETRY viewport=950x517 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=941x508 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=false",
+      "SPIKE_GEOMETRY viewport=1800x1400 scale=1 font_px=14.00 cell_px=8.400x21.000 grid=200x60 fits=true"
+    ],
+    "cat_seconds": "0.495994",
+    "cat_exit": 0,
+    "output_paints": [
+      {
+        "unix_us": 1792922779154759,
+        "feed_bytes": 780780,
+        "paint_ms": 3.964,
+        "total_ms": 9.56
+      },
+      {
+        "unix_us": 1792922779180950,
+        "feed_bytes": 3301584,
+        "paint_ms": 1.892,
+        "total_ms": 2.363
+      },
+      {
+        "unix_us": 1792922779196647,
+        "feed_bytes": 5159869,
+        "paint_ms": 0.996,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922779213259,
+        "feed_bytes": 7069491,
+        "paint_ms": 1.005,
+        "total_ms": 1.472
+      },
+      {
+        "unix_us": 1792922779229917,
+        "feed_bytes": 8978684,
+        "paint_ms": 1.003,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922779246697,
+        "feed_bytes": 10939929,
+        "paint_ms": 1.001,
+        "total_ms": 1.544
+      },
+      {
+        "unix_us": 1792922779263209,
+        "feed_bytes": 12698829,
+        "paint_ms": 0.998,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922779279920,
+        "feed_bytes": 14667796,
+        "paint_ms": 1.001,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779296642,
+        "feed_bytes": 16627250,
+        "paint_ms": 1.034,
+        "total_ms": 1.487
+      },
+      {
+        "unix_us": 1792922779313456,
+        "feed_bytes": 18523583,
+        "paint_ms": 1.065,
+        "total_ms": 1.58
+      },
+      {
+        "unix_us": 1792922779329987,
+        "feed_bytes": 20369492,
+        "paint_ms": 1.007,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922779346648,
+        "feed_bytes": 22244027,
+        "paint_ms": 1.017,
+        "total_ms": 1.476
+      },
+      {
+        "unix_us": 1792922779363269,
+        "feed_bytes": 23902593,
+        "paint_ms": 1.0,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779380058,
+        "feed_bytes": 25855971,
+        "paint_ms": 1.03,
+        "total_ms": 1.499
+      },
+      {
+        "unix_us": 1792922779396630,
+        "feed_bytes": 27794195,
+        "paint_ms": 1.038,
+        "total_ms": 1.486
+      },
+      {
+        "unix_us": 1792922779413190,
+        "feed_bytes": 29709392,
+        "paint_ms": 1.014,
+        "total_ms": 1.479
+      },
+      {
+        "unix_us": 1792922779430006,
+        "feed_bytes": 31690371,
+        "paint_ms": 1.028,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922779446690,
+        "feed_bytes": 33668349,
+        "paint_ms": 0.999,
+        "total_ms": 1.437
+      },
+      {
+        "unix_us": 1792922779463230,
+        "feed_bytes": 35554805,
+        "paint_ms": 1.013,
+        "total_ms": 1.477
+      },
+      {
+        "unix_us": 1792922779480013,
+        "feed_bytes": 37288599,
+        "paint_ms": 1.028,
+        "total_ms": 1.482
+      },
+      {
+        "unix_us": 1792922779496699,
+        "feed_bytes": 39197730,
+        "paint_ms": 1.004,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922779513289,
+        "feed_bytes": 41099956,
+        "paint_ms": 1.004,
+        "total_ms": 1.477
+      },
+      {
+        "unix_us": 1792922779529877,
+        "feed_bytes": 42987230,
+        "paint_ms": 1.022,
+        "total_ms": 1.483
+      },
+      {
+        "unix_us": 1792922779546462,
+        "feed_bytes": 44587512,
+        "paint_ms": 1.009,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779563280,
+        "feed_bytes": 46553219,
+        "paint_ms": 1.017,
+        "total_ms": 1.474
+      },
+      {
+        "unix_us": 1792922779579921,
+        "feed_bytes": 48541636,
+        "paint_ms": 1.002,
+        "total_ms": 1.462
+      },
+      {
+        "unix_us": 1792922779596635,
+        "feed_bytes": 50496353,
+        "paint_ms": 1.002,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922779613406,
+        "feed_bytes": 52517894,
+        "paint_ms": 0.998,
+        "total_ms": 1.451
+      },
+      {
+        "unix_us": 1792922779629956,
+        "feed_bytes": 52798016,
+        "paint_ms": 1.013,
+        "total_ms": 1.474
+      }
+    ],
+    "paints_ending_while_cat_writes": 28,
+    "while_cat_writes": [
+      {
+        "unix_us": 1792922779154759,
+        "feed_bytes": 780780,
+        "paint_ms": 3.964,
+        "total_ms": 9.56
+      },
+      {
+        "unix_us": 1792922779180950,
+        "feed_bytes": 3301584,
+        "paint_ms": 1.892,
+        "total_ms": 2.363
+      },
+      {
+        "unix_us": 1792922779196647,
+        "feed_bytes": 5159869,
+        "paint_ms": 0.996,
+        "total_ms": 1.446
+      },
+      {
+        "unix_us": 1792922779213259,
+        "feed_bytes": 7069491,
+        "paint_ms": 1.005,
+        "total_ms": 1.472
+      },
+      {
+        "unix_us": 1792922779229917,
+        "feed_bytes": 8978684,
+        "paint_ms": 1.003,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922779246697,
+        "feed_bytes": 10939929,
+        "paint_ms": 1.001,
+        "total_ms": 1.544
+      },
+      {
+        "unix_us": 1792922779263209,
+        "feed_bytes": 12698829,
+        "paint_ms": 0.998,
+        "total_ms": 1.448
+      },
+      {
+        "unix_us": 1792922779279920,
+        "feed_bytes": 14667796,
+        "paint_ms": 1.001,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779296642,
+        "feed_bytes": 16627250,
+        "paint_ms": 1.034,
+        "total_ms": 1.487
+      },
+      {
+        "unix_us": 1792922779313456,
+        "feed_bytes": 18523583,
+        "paint_ms": 1.065,
+        "total_ms": 1.58
+      },
+      {
+        "unix_us": 1792922779329987,
+        "feed_bytes": 20369492,
+        "paint_ms": 1.007,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922779346648,
+        "feed_bytes": 22244027,
+        "paint_ms": 1.017,
+        "total_ms": 1.476
+      },
+      {
+        "unix_us": 1792922779363269,
+        "feed_bytes": 23902593,
+        "paint_ms": 1.0,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779380058,
+        "feed_bytes": 25855971,
+        "paint_ms": 1.03,
+        "total_ms": 1.499
+      },
+      {
+        "unix_us": 1792922779396630,
+        "feed_bytes": 27794195,
+        "paint_ms": 1.038,
+        "total_ms": 1.486
+      },
+      {
+        "unix_us": 1792922779413190,
+        "feed_bytes": 29709392,
+        "paint_ms": 1.014,
+        "total_ms": 1.479
+      },
+      {
+        "unix_us": 1792922779430006,
+        "feed_bytes": 31690371,
+        "paint_ms": 1.028,
+        "total_ms": 1.471
+      },
+      {
+        "unix_us": 1792922779446690,
+        "feed_bytes": 33668349,
+        "paint_ms": 0.999,
+        "total_ms": 1.437
+      },
+      {
+        "unix_us": 1792922779463230,
+        "feed_bytes": 35554805,
+        "paint_ms": 1.013,
+        "total_ms": 1.477
+      },
+      {
+        "unix_us": 1792922779480013,
+        "feed_bytes": 37288599,
+        "paint_ms": 1.028,
+        "total_ms": 1.482
+      },
+      {
+        "unix_us": 1792922779496699,
+        "feed_bytes": 39197730,
+        "paint_ms": 1.004,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922779513289,
+        "feed_bytes": 41099956,
+        "paint_ms": 1.004,
+        "total_ms": 1.477
+      },
+      {
+        "unix_us": 1792922779529877,
+        "feed_bytes": 42987230,
+        "paint_ms": 1.022,
+        "total_ms": 1.483
+      },
+      {
+        "unix_us": 1792922779546462,
+        "feed_bytes": 44587512,
+        "paint_ms": 1.009,
+        "total_ms": 1.455
+      },
+      {
+        "unix_us": 1792922779563280,
+        "feed_bytes": 46553219,
+        "paint_ms": 1.017,
+        "total_ms": 1.474
+      },
+      {
+        "unix_us": 1792922779579921,
+        "feed_bytes": 48541636,
+        "paint_ms": 1.002,
+        "total_ms": 1.462
+      },
+      {
+        "unix_us": 1792922779596635,
+        "feed_bytes": 50496353,
+        "paint_ms": 1.002,
+        "total_ms": 1.454
+      },
+      {
+        "unix_us": 1792922779613406,
+        "feed_bytes": 52517894,
+        "paint_ms": 0.998,
+        "total_ms": 1.451
+      }
+    ]
+  }
+}
