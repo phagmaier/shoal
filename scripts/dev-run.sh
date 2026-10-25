@@ -18,6 +18,7 @@ export XDG_CONFIG_HOME="$sandbox/config"
 export XDG_STATE_HOME="$sandbox/state"
 export XDG_CACHE_HOME="$sandbox/cache"
 export XDG_DATA_HOME="$sandbox/data"
-export RUST_LOG="${RUST_LOG:-shoal=debug,shoald=debug}"
+# shoald reads its level from SHOAL_LOG (M1 spec §4.6) and logs to stderr on a terminal.
+export SHOAL_LOG="${SHOAL_LOG:-debug}"
 # mise selects the pinned tools before this script changes HOME.
 exec cargo run --locked --manifest-path "$repo/Cargo.toml" --package "$1" --bin "$2"

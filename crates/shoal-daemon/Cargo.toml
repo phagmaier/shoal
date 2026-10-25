@@ -10,3 +10,19 @@ description = "Session daemon for Shoal"
 [[bin]]
 name = "shoald"
 path = "src/main.rs"
+
+[dependencies]
+shoal-config.workspace = true
+shoal-proto.workspace = true
+shoal-term = { path = "../shoal-term" }
+jiff.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "signal", "io-util", "time"] }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["fmt", "registry", "std"] }
+
+[dev-dependencies]
+shoal-testkit = { path = "../shoal-testkit" }
+tempfile.workspace = true

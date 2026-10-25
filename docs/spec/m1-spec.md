@@ -186,6 +186,8 @@ pub enum PaneStatus {
 4. Load config and theme (the daemon needs theme colors to answer programs that ask the terminal for its colors).
 5. Restore the saved workspace (section 6), then start accepting connections.
 
+**Settled details (T10, 2026-10-25).** An existing runtime folder must be a directory owned by the daemon's user, or `shoald` exits 1. Its mode is reset to 0700. The lock file is created 0600 and never removed. A peer with another uid is closed without a reply. On stop, the socket is removed *before* the lock is released, so a daemon that takes the lock next never loses its fresh socket. A start error exits 1 with `shoald: <reason>` on stderr and in the log. A persistent accept error, such as running out of descriptors, pauses accepting for 100 ms.
+
 **How it gets started.** `shoald.service` is a systemd user unit (`Type=simple`, `Restart=on-failure`, `TimeoutStopSec=10`). Any client that can't connect runs `systemctl --user start shoald.service` and polls the socket for up to 2 s. If that fails or systemd is absent, it spawns `shoald` detached (`setsid`, stdio to `/dev/null`). Shells run inside the service's cgroup, so closing windows or the Hyprland session doesn't touch them, and stopping the service ends them cleanly.
 
 ### 4.2 Pane runtime
@@ -228,6 +230,8 @@ On `SIGTERM`, `SIGINT` or `daemon.shutdown`: persist everything (section 6), `SI
 
 `tracing` to `~/.local/state/shoal/logs/shoald.log`, rotated daily, kept 7 days, level from `SHOAL_LOG` (default `info`). Never log pane output or typed input.
 
+**Settled details (T10, 2026-10-25).** The current file is always `shoald.log`. The first line written on a later UTC day renames it to `shoald.log.<YYYY-MM-DD>` (the day its lines belong to; a file left from an earlier day rotates under its modification date), and rotated files more than 7 days older than today are deleted. Rotation happens on writes, never on a timer. `SHOAL_LOG` is a level name (`trace`, `debug`, `info`, `warn`, `error`, `off`); anything else logs a warning and uses `info`. When stderr is a terminal, as under `just dev-daemon`, lines also go there; under systemd or the detached spawn they don't.
+
 ## 5. Protocol
 
 Protocol version 1. Every change updates this section in the same commit. The T00 spike revised version 1 (binary snapshots, `core` in `hello`) before anything implemented it. T04's user-confirmed wire clarifications below also precede the first implementation, so it stays version 1.
@@ -260,6 +264,8 @@ The first frame must be `hello`; anything else gets an error and the connection 
 → {"jsonrpc":"2.0","id":1,"method":"hello","params":{"protocol":1,"client":"gui","version":"0.1.0","core":"<core id>","env":{"WAYLAND_DISPLAY":"wayland-1"}}}
 ← {"jsonrpc":"2.0","id":1,"result":{"protocol":1,"daemon_version":"0.1.0","core":"<core id>","pid":4312}}
 ```
+
+**Connection rules (T10, 2026-10-25).** Before a successful `hello`, any other frame (request, notification, response, invalid envelope or INPUT) gets error 1002 `hello must come first`, with the request's id or null, and the connection closes. A `hello` that fails (1003 protocol mismatch, 1004 bad parameters) also closes it. After `hello`: an invalid envelope gets -32600 with a null id and the connection stays open, a second `hello` gets 1002, and client notifications and responses are ignored. OUTPUT, SNAPSHOT or RESIZED from a client is a protocol error and closes the connection, like an unknown kind.
 
 **Core identity.** Binary snapshots decode reliably only between identical libghostty builds (5.5), so `core` names the exact terminal core a binary was built with. `shoal-term` builds the string at compile time from the full pinned revisions and the build settings that can change terminal behaviour:
 

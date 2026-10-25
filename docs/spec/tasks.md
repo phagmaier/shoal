@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01–T08 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T08 (terminal wrapper: rendering and input) was merged and pushed with the user's approval after `just check` (138 tests) passed on the merged `main`. T31 (native prompt) is done and merged into `main` with the user's approval (a fast-forward of the commit on which `just check` passed, 171 tests). In progress: T10 (daemon skeleton and test kit), on branch `t10-daemon-skeleton`.
+**Current status:** T01–T08 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T08 (terminal wrapper: rendering and input) was merged and pushed with the user's approval after `just check` (138 tests) passed on the merged `main`. T31 (native prompt) is done and merged into `main` with the user's approval (a fast-forward of the commit on which `just check` passed, 171 tests). T10 (daemon skeleton and test kit) is done on branch `t10-daemon-skeleton` (186 tests pass in `just check`) and awaits the user's merge decision. Open planning gap: no task yet loads config and theme in the daemon (see T10's follow-ups). Next in the safe order: T11 (pane runtime).
 
 **How to use this list**
 
@@ -120,6 +120,25 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 ### T10 · Daemon skeleton and test kit
 
 - **Needs:** T04, T05.
+- **Status:** done 2026-10-25 on `t10-daemon-skeleton`, starting from `main` at `9d7651b`; not merged yet. M1 spec §4.1, §4.6 and §5.3 record the settled details.
+- **Verified:** `mise exec -- just check` passes (186 tests, 15 new). Integration tests run the real `shoald` in a `TempEnv`:
+  - **Handshake:** `hello` returns protocol 1, the version, `shoal_term::core_id()` and the child's pid. A request, a notification, an invalid envelope or an INPUT frame sent first gets 1002 and the connection closes. A protocol-2 `hello` gets 1003 with `daemon_protocol` and `pid`, a `hello` with bad parameters gets 1004, and both close.
+  - **After `hello`:** requests are answered in order (-32601 unknown, 1004 bad parameters, 1002 second `hello`, -32600 with a null id for an invalid envelope, a client notification ignored). An unknown frame kind or a daemon-only frame closes just that connection, and INPUT is accepted quietly.
+  - **Lifecycle:** a second daemon exits 0 and logs "already running" while the first keeps serving. A stale socket file left by a dropped listener is recovered. SIGTERM and SIGINT each exit 0, remove the socket and close connections. The runtime folder ends up 0700 (an existing 0755 one is fixed) and the socket and lock file 0600. A missing `XDG_RUNTIME_DIR` exits 1 with `shoald: XDG_RUNTIME_DIR must be an absolute path`.
+  - **Log rotation unit tests:** a new day, seven days kept, a file from an earlier day, same-day appends, and another process rotating first.
+  - **Idle:** with a connection open, 3 s used 0 CPU ticks and 0 voluntary context switches across all 7 threads.
+  - **Not testable here:** refusing a peer with another uid needs a second user account; verified by reading the code.
+- **Review:** direct review. Fixed three defects found by reading the code:
+  - Rotation could overwrite a day's log when a second `shoald` rotated first; it now renames only the file it has open (same inode). Caught by a test that fails without the fix.
+  - The lock is released only after the socket is removed.
+  - A persistent accept error pauses 100 ms instead of spinning.
+  - Also: `dev-run.sh` now sets `SHOAL_LOG` (the spec's variable) instead of `RUST_LOG`.
+  - Known methods that aren't built yet answer -32601 `<method> is not implemented yet` until T12 and T13.
+  - New dependencies: `tokio` 1.54 (rt, net, signal, io-util, time; the async runtime the actor and connections need), `tracing` 0.1 and `tracing-subscriber` 0.3 (fmt and registry only; §4.6 names tracing), and for the test kit `rustix` 1.1 with `process` (already in the lockfile through `tempfile`; sends signals without `unsafe`). Rotation is our own small writer because `tracing-appender` always puts the date in the live file's name, while §4.6 names it `shoald.log`.
+- **Follow-ups:**
+  1. *Planning gap, needs placing:* no task loads config and theme in the daemon. That covers §4.1 step 4, the daemon's theme and config watch (§9.1–9.2), `daemon.notice` for config problems, and handing the palette, `shell.program` and `scrollback.lines` to panes. Suggestion: startup loading in T11, which needs those values; watching and notices in T12.
+  2. T20 needs a way to find `shoald` from other crates' tests: `TempEnv::spawn_daemon` takes the binary path, and only `shoal-daemon`'s own tests have `CARGO_BIN_EXE_shoald`.
+  3. Socket paths must fit `sockaddr_un` (108 bytes). A very long `XDG_RUNTIME_DIR` fails at bind with a clear message.
 - **Build:** `shoald` startup from M1 spec §4.1 (runtime folder, lock, socket permissions, peer uid check), the `hello` handshake, unknown-method errors, logging (§4.6), clean exit on `SIGTERM`. `shoal-testkit`: a `TempEnv` that points every XDG folder and `HOME` at temp folders, spawns the built daemon, gives tests a raw connection, and provides `eventually`.
 - **Done when:** tests show `hello` succeeds; a non-`hello` first message closes the connection; a second daemon exits 0 with "already running"; a stale socket file is recovered; `SIGTERM` exits 0 and removes the socket.
 
