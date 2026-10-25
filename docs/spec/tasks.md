@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01–T06 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T06 was merged and pushed with the user's approval after `just check` passed on the merged `main`. Next in the safe order: T07 (terminal wrapper).
+**Current status:** T01–T06 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T06 was merged and pushed with the user's approval after `just check` passed on the merged `main`. T07 (terminal wrapper) done on `t07-terminal-wrapper`, awaiting approval to merge; its GUI-facing half is now T08, next in the safe order.
 
 **How to use this list**
 
@@ -17,7 +17,7 @@
 **Order and parallelism**
 
 ```
-Phase 0  Foundations      T00 → T01 → T02..T07
+Phase 0  Foundations      T00 → T01 → T02..T08
 Phase 1  Daemon           T10..T16          (needs Phase 0)
 Phase 2  Client and CLI   T20..T22          (needs Phase 1)
 Phase 3  Shell + prompt   T31 after T06; T30 after T11   (runs alongside Phase 1)
@@ -25,7 +25,7 @@ Phase 4  Window           T40..T48          (needs Phase 2)
 Phase 5  Ship             T50..T52          (needs everything)
 ```
 
-A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T42, T43, T44, T45, T46, T47, T48, T50, T51, T52.
+A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T42, T43, T44, T45, T46, T47, T48, T50, T51, T52.
 
 ## Phase 0 · Foundations
 
@@ -96,9 +96,19 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T07 · Terminal wrapper
 
 - **Needs:** T01 (pins from T00).
-- **Build:** `shoal-term`: `Terminal::new(cols, rows, scrollback)` with 4096-byte continuation tracking (M1 spec §4.2), `feed`, `feed_until_ground`, `resize`, `snapshot` (binary encode, with a distinct mid-sequence error), `restore` (bounded incremental decode with every limit in M1 spec §5.5), `format_vt` for persistence (main screen beneath an alternate screen, §6.3), `core_id()` (§5.3), a reply sink for terminal queries, `capture_text`, mode queries, key and mouse encoder wrappers, render-state access. Mirrors built by `restore` have no reply sink. No other crate may import libghostty.
+- **Status:** done 2026-10-25 on `t07-terminal-wrapper`, starting from `main` at `bb4dabc`; committed on the branch, awaiting the user's approval to merge and push. Split the same day: the GUI-facing wrappers (render-state access, key and mouse encoders) moved to T08. This task's Done when tests none of them, and their shape is best set alongside their consumers, T41 and T42.
+- **Measured:** peak decode memory for 200 × 60 with 10,000 styled lines (a 3.5 MiB snapshot) is **15.6 MiB** of resident growth (`tests/memory.rs`). The counting allocator saw only 0.26 MiB, because Ghostty maps terminal pages straight from the OS. A 1000 × 60 snapshot with 99,000 lines is within every other limit but would need about 390 MiB. The user chose to add a declared-cell budget (32 Mi cells over both screens); it refuses that snapshot after 0.4 MiB. M1 spec §5.5 records this.
+- **Verified:** `mise exec -- just check` passes (all 117 tests, including 21 new terminal tests, plus cargo-deny and boundaries). Public docs build with warnings denied. Goldens with hand-worked text cover writes, scrolling into history, reflow on resize (wider, narrower, hard breaks) and the alternate screen. Fifteen T00 snapshot cases round-trip at restore and after follow-up output, comparing VT captures of every cell, cursor, screens, history, title, directory, the 42-mode T00 inventory and parser state; they include split CSI, split UTF-8, both alternate-screen modes and the saved cursor. Other tests cover a CPR reply reaching the sink while a mirror restored mid-query answers nothing, the 5,000-byte OSC mid-sequence error with recovery at the terminator, every decode limit (truncated, corrupted at every 7th byte, trailing bytes, wrong and out-of-range sizes, history just over and just under 100,000 rows, the cell budget and an allocator refusal), and `format_vt` under 47, 1047 and 1049 against a never-alternate reference. `core_id()` is checked against `Cargo.lock`, the sys crate's own Ghostty pin and `third_party/fetch.sh`.
+- **Review:** direct review; fixed a debug-only panic path in `snapshot` and dropped the OSC 4 palette from persistence output, so old program overrides don't mask the theme after reboot. Mutation checks: disabling continuation tracking fails the round trips. Leaving the alternate screen with `?1049l` alone is *not* caught: at this pin it returns to the primary screen but leaves the 47 or 1047 flag set, which only matters to a formatter emitting modes. M1 spec §6.3 now states that refinement of T00's finding, and the triple exit stays. libghostty's default 10,000-byte scrollback cap is replaced by the line limit. New dependency: `allocator-api2` 0.4.0, the trait libghostty-vt's `allocator_api` feature adapts.
+- **Build:** `shoal-term`: `Terminal::new(cols, rows, scrollback)` with 4096-byte continuation tracking (M1 spec §4.2), `feed`, `feed_until_ground`, `resize`, `snapshot` (binary encode, with a distinct mid-sequence error), `restore` (bounded incremental decode with every limit in M1 spec §5.5), `format_vt` for persistence (main screen beneath an alternate screen, §6.3), `core_id()` (§5.3), a reply sink for terminal queries, `capture_text`, mode queries. Mirrors built by `restore` have no reply sink. No other crate may import libghostty.
 - **Done when:** golden tests for write, resize with reflow, alternate screen, and a binary snapshot round trip comparing cells and modes, including the split-CSI, split-UTF-8, alternate-screen and saved-cursor cases from T00; a test proving the reply sink receives the answer to a cursor-position query, and that a restored mirror sends no reply; a 5,000-byte unfinished OSC gives the mid-sequence error, and `feed_until_ground` plus `snapshot` recovers at the terminator; truncated, corrupted, trailing-byte, wrong-size, over-history and over-allocation snapshots return errors without panicking; `format_vt` with alternate screens 47, 1047 and 1049 active saves the main screen and history, and leaves the live terminal on its alternate screen; `core_id()` matches the revisions in `Cargo.lock`; peak decode memory for 200 × 60 with 10,000 lines of history is measured and recorded.
 - **Pin upgrades:** any later libghostty pin change re-runs these snapshot tests and the T00 fidelity cases before it merges.
+
+### T08 · Terminal wrapper: rendering and input
+
+- **Needs:** T07.
+- **Build:** the GUI-facing half of `shoal-term`, split from T07: render-state access for one render state per terminal (dirty rows, bulk cell reads, styles and colors, graphemes, cursor; M1 spec §7.3), the key encoder using the terminal's current modes, and the mouse, focus and bracketed-paste encoders (§5.6, §7.4). All of it is exposed through Shoal-owned types, so the GUI never names libghostty.
+- **Done when:** golden tests that encode keys under normal and application cursor modes and Kitty keyboard flags, mouse events under X10, SGR and any-event tracking, focus reports, and pastes with and without bracketed paste; and a render-state test whose dirty rows, cell text, widths, styles and cursor match a fed terminal and become clean after a frame.
 
 ## Phase 1 · The daemon
 
@@ -190,13 +200,13 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 
 ### T41 · Terminal rendering
 
-- **Needs:** T07, T40.
+- **Needs:** T07, T08, T40.
 - **Build:** pane mirrors fed by attach streams, decoded within the §5.5 limits with no reply callbacks; the draw-list builder from render state (one render state per mirror, dirty rows, merged runs, M1 spec §7.3 color and alpha rules); cached per-cell glyph placement with grapheme clusters shaped as units and libghostty's cell widths (§7.3); the GPUI element that paints it; the font chain with the embedded symbols font; shapes for box drawing, blocks and powerline; cursor styles; the mid-sequence and decode-error banners with Retry; keeping mirrors for the 8 most recent tabs.
 - **Done when:** draw-list golden tests from fixture terminal states (styled text, wide characters, emoji, box drawing, each cursor shape); manually, nvim, htop and btop render correctly and the logged full redraw of 200 × 60 is under 4 ms.
 
 ### T42 · Keyboard, paste and mouse
 
-- **Needs:** T41, T05.
+- **Needs:** T41, T05, T08.
 - **Build:** the keymap dispatcher wired to every §10 action that exists so far; key encoding through the mirror's modes; input-method text; bracketed paste; mouse reporting versus local selection with Shift; focus reports; Ctrl+Insert and Shift+Insert.
 - **Done when:** unit tests for keymap resolution and paste wrapping; manually, the key items in §13 "Window, keys and layout" pass.
 

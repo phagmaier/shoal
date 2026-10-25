@@ -6,3 +6,11 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "libghostty-vt terminal wrapper for Shoal"
+
+[dependencies]
+libghostty-vt.workspace = true
+allocator-api2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
