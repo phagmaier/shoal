@@ -157,6 +157,8 @@ pub enum PaneStatus {
 
 **The pane thread.** Each pane gets one OS thread, named `pane-<id>`, that owns the PTY and the `shoal-term` terminal. It waits with `poll` on the PTY and an eventfd for commands, so it uses no CPU while quiet.
 
+**The pane's terminal.** When it is created, the terminal enables continuation tracking with a 4096-byte cap (`set_continuation_max_bytes(4096)`), so a snapshot taken mid-sequence carries the unfinished escape or UTF-8 bytes (5.5). It installs `on_pty_write` and the other reply callbacks, which write to the PTY, and the callbacks the metadata needs (bell, title, directory, prompt marks). The pane's terminal is the only terminal in Shoal with reply callbacks; mirrors and scratch terminals have none.
+
 - **Output:** read up to 64 KiB, feed the terminal, append to the pane's stream with the next sequence number, wake subscribers. Batch into one frame per pane at most every 4 ms or 64 KiB.
 - **Replies:** when a program asks the terminal something (cursor position, colors, device attributes), the reply goes straight back into the PTY from this thread.
 - **Commands:** `Write(bytes)`, `Resize(size)`, `Snapshot(reply)`, `Subscribe`, `Unsubscribe`, `Capture`, `Kill`.
@@ -189,7 +191,7 @@ On `SIGTERM`, `SIGINT` or `daemon.shutdown`: persist everything (section 6), `SI
 
 ## 5. Protocol
 
-Protocol version 1. Every change updates this section in the same commit.
+Protocol version 1. Every change updates this section in the same commit. The T00 spike revised version 1 (binary snapshots, `core` in `hello`) before anything implemented it, so it stays version 1.
 
 ### 5.1 Frames
 
@@ -203,7 +205,7 @@ frame = len:u32 | kind:u8 | payload        len = bytes of kind + payload; intege
 0x20 INPUT     client → daemon  pane:u64 bytes...
 ```
 
-Maximum frame size 64 MiB; a bigger frame or unknown kind closes the connection with a logged protocol error. Binary frames carry the numeric pane id (`3`), JSON the prefixed form (`"p3"`).
+Maximum frame size 64 MiB; a bigger frame or unknown kind closes the connection with a logged protocol error. Binary frames carry the numeric pane id (`3`), JSON the prefixed form (`"p3"`). SNAPSHOT `bytes` are a libghostty binary snapshot (5.5). The frame limit bounds bytes on the wire, not what decoding a snapshot allocates; 5.5 sets the decoding limits.
 
 ### 5.2 JSON messages
 
@@ -214,15 +216,34 @@ JSON-RPC 2.0 shapes: a request has `id`, `method`, `params`; a response has `id`
 The first frame must be `hello`; anything else gets an error and the connection closes. The window sends the allowlisted environment variables from 4.2 in `env`.
 
 ```
-→ {"jsonrpc":"2.0","id":1,"method":"hello","params":{"protocol":1,"client":"gui","version":"0.1.0","env":{"WAYLAND_DISPLAY":"wayland-1"}}}
-← {"jsonrpc":"2.0","id":1,"result":{"protocol":1,"daemon_version":"0.1.0","pid":4312}}
+→ {"jsonrpc":"2.0","id":1,"method":"hello","params":{"protocol":1,"client":"gui","version":"0.1.0","core":"<core id>","env":{"WAYLAND_DISPLAY":"wayland-1"}}}
+← {"jsonrpc":"2.0","id":1,"result":{"protocol":1,"daemon_version":"0.1.0","core":"<core id>","pid":4312}}
 ```
+
+**Core identity.** Binary snapshots decode reliably only between identical libghostty builds (5.5), so `core` names the exact terminal core a binary was built with. `shoal-term` builds the string at compile time from the full pinned revisions and the build settings that can change terminal behaviour:
+
+```
+ghostty=<40-hex commit>;libghostty-rs=<40-hex commit>;version=<build_info::version_string>;optimize=<mode>;cpu=<model>;simd=<bool>;kitty_graphics=<bool>;tmux=<bool>
+```
+
+Two `core` strings are compatible only when they are byte-for-byte equal. The window sends `core`; the CLI omits it, because it never decodes snapshots. The daemon always returns its own.
+
+**Mismatches.**
+
+- **Different `protocol`:** `hello` fails with error 1003 (`data: {daemon_protocol, pid}`) and the connection closes.
+- **Same `protocol`, different `core`:** `hello` succeeds and every other method works, but `pane.attach` fails with error 1003 (`data: {daemon_core}`). The window never decodes a snapshot from a different core.
+
+In both cases the window shows a banner: "shoald is from a different build. Restart it to show panes. Running programs will end; layout and scrollback come back." It has a **Restart daemon** button. Nothing restarts until the user clicks it. Then:
+
+1. **Stop the old daemon through its normal shutdown (4.5),** which persists everything before ending the panes. With the same protocol, send `daemon.shutdown`. With a different protocol, JSON can't be trusted: if `systemctl --user show -p MainPID shoald.service` reports `pid`, run `systemctl --user stop shoald.service`; otherwise send `SIGTERM` to `pid`.
+2. **Wait up to 5 s for the socket to disappear.** If it doesn't, show "shoald didn't stop. Run `shoal daemon stop`." and stop there. Never `SIGKILL`: that loses up to 30 s of scrollback.
+3. **Start the daemon as in 4.1 and reconnect.** It restores the workspace (6.4) and starts fresh shells.
 
 ### 5.4 Methods
 
 | Method | Params | Result |
 | --- | --- | --- |
-| `hello` | `protocol`, `client` (`gui` \| `cli`), `version`, `env` | `protocol`, `daemon_version`, `pid` |
+| `hello` | `protocol`, `client` (`gui` \| `cli`), `version`, `core?` (5.3), `env` | `protocol`, `daemon_version`, `core`, `pid` |
 | `workspace.get` | none | `rev`, `workspace` |
 | `workspace.subscribe` | none | `{}`, then `workspace.changed` notifications |
 | `session.open_smart` | `cwd?` | `session` (rule in 4.4) |
@@ -255,19 +276,42 @@ The first frame must be `hello`; anything else gets an error and the connection 
 
 - `workspace.changed {rev, workspace}`: the whole workspace after any change, at most one per 16 ms per connection.
 - `daemon.notice {level, message, key?}`: banner-worthy problems (config error, theme folder not found, a restore that skipped a broken file).
+- `pane.detached {pane, reason}`: the daemon stopped streaming a pane to this connection without being asked. M1's only reason is `mid_sequence` (5.5).
 - `pane.event {pane, event}`: reserved for agent panes (M3). Not sent in M1.
 
-**Error codes:** `-32600` invalid request, `-32601` unknown method, `1001` not found, `1002` invalid state, `1003` version mismatch (data: `daemon_protocol`), `1004` bad params, `1005` internal.
+**Error codes:** `-32600` invalid request, `-32601` unknown method, `1001` not found, `1002` invalid state, `1003` version mismatch (data: `daemon_protocol` and `pid` from `hello`, `daemon_core` from `pane.attach`; 5.3), `1004` bad params, `1005` internal.
 
 ### 5.5 Attaching to a pane
 
+A snapshot is libghostty's binary snapshot (`Terminal::encode_snapshot`). It holds the active and inactive screens, scrollback, styles, cursor and saved cursor, modes, colors, title, prompt marks, and unfinished parser state. The T00 spike matched all 31 checked cases with it, where the formatter lost state (`docs/spike-00.md`). Its format (version 1) carries no compatibility guarantee, so a window decodes only snapshots from a daemon with the same `core` (5.3).
+
 1. The client sends `pane.attach`.
-2. On the pane's thread, in one step: dump a snapshot with the formatter (screen, scrollback, styles, cursor, modes), note the current sequence number `N`, and register the subscriber for items after `N`.
-3. The daemon sends `SNAPSHOT(pane, N, cols, rows, bytes)`, then the JSON result `{seq: N, cols, rows}`, then `OUTPUT` and `RESIZED` frames numbered `N+1`, `N+2`, ...
-4. The client builds a fresh mirror terminal at `cols × rows`, feeds it the snapshot, then every item in order. A `RESIZED` frame resizes the mirror at exactly that point.
+2. On the pane's thread, in one step: encode a snapshot, note the current sequence number `N`, and register the subscriber for items after `N`. If the parser is mid-sequence, see "Mid-sequence snapshots" below.
+3. The daemon sends `SNAPSHOT(pane, N, cols, rows, bytes)`, then the JSON result `{seq: N, cols, rows}`, then `OUTPUT` and `RESIZED` frames numbered `N+1`, `N+2`, ... A snapshot that would exceed the frame limit fails the attach with error 1002 (`data: {"reason": "too_large"}`).
+4. The client decodes the snapshot into a fresh mirror within the decoding limits below, sets up its callbacks, then feeds it every item in order. A `RESIZED` frame resizes the mirror at exactly that point.
 5. A later `SNAPSHOT` for an attached pane means "replace your mirror". A sequence gap means the mirror is stale: the client sends `pane.attach` again.
 
-**Backpressure:** each subscriber has an 8 MiB queue. On overflow the daemon drops the queue and sends a fresh `SNAPSHOT` at the current sequence number. A slow window never slows the shell or other windows.
+**Mid-sequence snapshots.** The 4096-byte continuation cap (4.2) does not make a snapshot always available. If the parser is inside an escape sequence longer than the cap, encoding fails until the parser returns to ground. A long OSC 52 clipboard write or a Kitty graphics transfer can do this. T00 reproduced it with a 5,000-byte unfinished OSC. Encoding worked again after the terminator. When an attach finds the snapshot unavailable:
+
+- The pane thread keeps reading, feeding and numbering output as usual. The shell is never blocked, other subscribers see no change, and the waiting subscriber gets nothing yet.
+- It feeds new output with `vt_write_until_ground`. At the first ground point it splits that read in two. The prefix becomes item `N`, the snapshot is encoded right after it, and the rest becomes item `N+1`. The snapshot at `N` holds every byte up to the split, so nothing is lost or delivered twice. Each waiting attach costs one more encode, with no polling.
+- If the parser hasn't reached ground within 2 s of the request, `pane.attach` fails with error 1002 (`data: {"reason": "mid_sequence"}`). The pane shows "This pane is in the middle of an escape sequence." with a **Retry** button. The window doesn't retry by itself. The daemon still has all the output, so a later retry shows everything.
+- The 2 s deadline is a `poll` timeout that exists only while an attach waits. An idle pane has no timer.
+- Any other encode error fails the attach with error 1005 and is logged.
+
+**Decoding limits.** The 64 MiB frame limit bounds bytes on the wire, not what decoding allocates. The client decodes within these limits and checks each one:
+
+- `cols` and `rows` in the SNAPSHOT header are each between 1 and 1,000. The decoded terminal's `cols()` and `rows()` equal them.
+- The decoder accepts at most the daemon's 4096-byte continuation (`set_max_continuation_bytes(4096)`; libghostty's default is 65 MiB). It does not retain continuation tracking.
+- The decoder and the terminal it returns use a counting allocator (`Decoder::new_with_alloc`). Allocations during decoding are capped at 256 MiB; a refused allocation fails the decode. The cap lifts once FINISH is validated. From then on, `scrollback.lines` bounds the mirror like any terminal.
+- The client decodes incrementally (`Decoder::ready`, then `next` until FINISH). The declared history of each screen (`history_rows_primary`, `history_rows_alternate`) is at most 100,000 rows. At the pinned bindings these are readable through each page's `Progress`, so the client checks them at the first history page and stops there if they're over.
+- Decoding reaches FINISH and consumes the whole snapshot. No bytes may follow FINISH in the frame. A one-shot decode accepts trailing bytes silently, so the client decodes from a reader that counts the bytes taken and checks that the count equals the snapshot length. In T00 the decoder read exactly up to FINISH and no further.
+
+Any failure, including an allocation refusal, is an error, never a panic. The window drops the mirror and re-attaches once. A second failure shows an error banner in the pane with a **Retry** button.
+
+**Mirror callbacks.** Callbacks are not part of a snapshot, so a decoded terminal has none. A mirror never installs `on_pty_write` or any other callback that answers the program (`on_enquiry`, `on_xtversion`, `on_size`, `on_color_scheme`, `on_device_attributes`, `on_clipboard_read`). libghostty then drops every reply, and only the daemon answers queries (decision 4, rule 1). A mirror installs no bell, title, directory, clipboard-write or notification callbacks either, because the daemon owns that metadata. Callbacks that only affect drawing, such as `on_render_hold`, are allowed. The mirror sets its scrollback limit from config and finishes setup before the first live byte is fed. The restored parser state can complete a query on the very next byte.
+
+**Backpressure:** each subscriber has an 8 MiB queue. On overflow the daemon drops the queue and sends a fresh `SNAPSHOT` at the current sequence number, under the same mid-sequence rule. If the 2 s deadline passes, the daemon unsubscribes the window and sends `pane.detached {pane, reason: "mid_sequence"}`, and the pane shows the same Retry banner. A slow window never slows the shell or other windows.
 
 ### 5.6 Input and size
 
@@ -330,8 +374,8 @@ A format change bumps `format` and ships a migration from every older format, wi
 ### 6.3 When it writes
 
 - **Layout:** after any structural change, debounced to once per second, and on shutdown.
-- **Scrollback:** for a pane whose output changed, after 2 s of quiet, at most once every 30 s; and every pane on shutdown. The pane thread runs the formatter; compressing and writing happen on a blocking worker, never on the workspace actor.
-- **What is saved:** the main screen plus scrollback up to `scrollback.lines`, with colors and styles. If a full-screen program is up, only the main screen underneath is saved.
+- **Scrollback:** for a pane whose output changed, after 2 s of quiet, at most once every 30 s; and every pane on shutdown. The pane thread runs the formatter (or the encoder, below); decoding, compressing and writing happen on a blocking worker, never on the workspace actor.
+- **What is saved:** formatter output (terminal bytes) for the main screen plus scrollback up to `scrollback.lines`, with colors and styles. If a full-screen program is up, only the main screen underneath is saved. The formatter sees only the active screen, so in that case the pane thread encodes a binary snapshot (5.5) instead and hands the bytes to the blocking worker. The worker decodes them into a scratch terminal with no callbacks, leaves the alternate screen there, formats it, compresses and writes. To leave the alternate screen it sends `CSI ? 1049 l`, `CSI ? 1047 l`, `CSI ? 47 l`, because each mode exits only the way it entered. In T00, `CSI ? 1049 l` alone left a screen entered with 47 or 1047 in place. The live terminal is never changed. If the snapshot is unavailable mid-sequence (5.5), that write is skipped until the next trigger. On shutdown the previous file is kept.
 - **Safely:** write `*.tmp`, fsync, rename over the old file, fsync the folder.
 - **Cleanup:** a closed pane's folder is deleted at the next layout write. With `scrollback.persist = false`, no scrollback files are written and existing ones are deleted; the layout is still saved.
 
@@ -368,10 +412,11 @@ Sizes are logical pixels before scaling.
 
 ### 7.3 Drawing the grid
 
-- **Mirrors.** Each attached pane has a mirror: a `shoal-term` terminal plus its render state. New bytes are fed in and a frame is requested; nothing redraws while nothing changes.
-- **Per frame.** Only dirty rows are rebuilt: merged background rectangles, text shaped per style run, underline and strike lines, selection, cursor. Clean rows reuse cached shaped lines. The renderer produces an internal draw list first, so it is testable without a GPU and portable to the fallback toolkit.
+- **Mirrors.** Each attached pane has a mirror: a `shoal-term` terminal plus exactly one render state. A second render state on the same terminal would consume the first one's dirty flags. New bytes are fed in and a frame is requested; nothing redraws while nothing changes.
+- **Per frame.** Only dirty rows are rebuilt, chosen by the render state's dirty flags: merged background rectangles, text, underline and strike lines, selection, cursor. Clean rows reuse their cached entries. The renderer produces an internal draw list first, so it is testable without a GPU and portable to the fallback toolkit.
+- **Text.** Glyphs are placed cell by cell from a cache keyed by font, style and grapheme. A cell holding one codepoint uses its cached glyph. A cell holding a multi-codepoint grapheme cluster is shaped as one unit. Positions and widths always come from libghostty's cells, never from the shaper. There are no ligatures across cells. Changing font family, size or line height clears the glyph cache and every row cache. The T00 spike measured this design: per-run shaping missed the 4 ms full-redraw target, and cached per-cell glyphs met it (`docs/spike-00.md`).
 - **Colors.** Default-background cells are not painted, so the pane's translucent fill shows. Explicit backgrounds are painted at `window.opacity`. Dim text is drawn at 60% alpha.
-- **Fonts.** `font.family` (default JetBrains Mono), then the bundled Symbols Nerd Font Mono (embedded, MIT), then the system emoji font, then system fallback. Wide characters take two cells, as libghostty reports.
+- **Fonts.** `font.family` (default JetBrains Mono), then the bundled Symbols Nerd Font Mono, then the system emoji font, then system fallback. Wide characters take two cells, as libghostty reports. The bundled font is embedded from Nerd Fonts v3.5.1. It is not under one license: its icon sets carry MIT, CC BY 4.0, OFL 1.1 and Apache 2.0 terms, and one set (Font Logos) has no license at all. T50 settles packaging and attribution (`docs/spike-00.md`, "Font provenance").
 - **Drawn as shapes, not glyphs:** box drawing (U+2500–257F), block elements (U+2580–259F) and powerline separators (U+E0B0–E0B7).
 - **Cursor.** The shape a program asks for, else `cursor.style`; color `cursor.color` (default `accent`). An unfocused pane shows a hollow block.
 - **Links.** OSC 8 links and plain URLs on the hovered row underline while Ctrl is held; Ctrl+click opens them with `xdg-open`.
@@ -398,7 +443,8 @@ A popover under the session chip: each session with its tab count and an "on scr
 
 - `daemon.notice` and config errors show as a dismissable one-line banner at the top of the pane area.
 - If the daemon connection drops: a "Reconnecting to shoald…" overlay, retries with backoff from 100 ms to 2 s, starting the daemon if needed. Mirrors are rebuilt from fresh snapshots.
-- If the daemon's version differs from the window's: a banner with a "Restart daemon" button, which persists, restarts and restores.
+- If the daemon's `protocol` or `core` differs from the window's: the banner and user-triggered restart in 5.3. Panes stay blank until the restart.
+- If only `daemon_version` differs: a banner with a "Restart daemon" button that runs the same restart steps. Panes still attach.
 - Closing a pane, tab or session where something other than the shell is running shows an inline bar: "nvim is running. Close it? Enter / Esc" (`behavior.confirm_close_running`).
 
 ### 7.8 Instant tab switching
@@ -474,7 +520,7 @@ blink = false
 color = "accent"            # a palette key or "#rrggbb"
 
 [scrollback]
-lines = 10000
+lines = 10000               # at most 100000 (the attach decoding limit, 5.5)
 persist = true
 
 [shell]
@@ -637,6 +683,10 @@ Milestone 1 is done when every box is ticked. **Auto** items are tests run by `j
 **Robustness**
 
 - [ ] Auto: a client that stops reading gets a resync snapshot; the shell and other clients are unaffected.
+- [ ] Auto: an attach requested inside an unfinished OSC longer than 4096 bytes completes at the terminator, and the mirror then equals the daemon's capture; with no terminator it fails after 2 s with `mid_sequence` while the shell keeps running.
+- [ ] Auto: a window whose `core` differs from the daemon's gets error 1003 from `pane.attach`.
+- [ ] Auto: truncated, corrupted, oversized and trailing-byte snapshots fail to decode with an error, never a panic.
+- [ ] Auto: with nvim on the alternate screen, the saved scrollback holds the main screen and history beneath it.
 - [ ] Auto: the frame decoder survives 10 minutes of fuzzing without a panic.
 - [ ] Manual: killing the daemon with a window open shows "Reconnecting", restarts it, and restores the panes.
 

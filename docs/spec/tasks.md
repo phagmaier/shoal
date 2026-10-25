@@ -29,6 +29,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T00 · Spike: GPUI and libghostty on Hyprland
 
+- **Status:** done 2026-10-25. `docs/spike-00.md` has the results. The spike stays on `spike/t00`. The snapshot and rendering decisions it led to are in M1 spec §5 and §7.3.
 - **Needs:** nothing. Throwaway code on a `spike/t00` branch, never merged to `main`.
 - **Build:** a GPUI window with a transparent background running `bash` through a PTY into a libghostty-vt terminal, drawn as a plain grid with the bundled symbols font as fallback. Plus a small harness that dumps a terminal with the formatter, restores it into a second terminal, and compares cells and modes.
 - **Done when:** `docs/spike-00.md` (committed to `main`) records the go/no-go checklist from `decisions.md` ("Risks and the spike") with numbers (frame time at 200 × 60, `cat` of 50 MB, idle CPU, snapshot fidelity per mode, input-method result), the chosen GPUI and Ghostty commits, the Zig version, and exact build steps from a clean checkout. The user has confirmed the by-eye checks. `mise.toml` with the pinned Zig is committed to `main` with the doc. If any check fails, the doc records why and the agent stops for the user's decision: for GPUI it proposes the winit + wgpu fallback as a spec change; for snapshot fidelity it lists the missing modes and proposes the explicit mode list from `decisions.md`; for a missed number it records the gap and what might close it.
@@ -72,8 +73,9 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T07 · Terminal wrapper
 
 - **Needs:** T01 (pins from T00).
-- **Build:** `shoal-term`: `Terminal::new(cols, rows, scrollback)`, `feed`, `resize`, `snapshot_vt`, a reply sink for terminal queries, `capture_text`, mode queries, key and mouse encoder wrappers, render-state access. No other crate may import libghostty.
-- **Done when:** golden tests for write, resize with reflow, alternate screen, and a snapshot round trip comparing cells and modes; a test proving the reply sink receives the answer to a cursor-position query.
+- **Build:** `shoal-term`: `Terminal::new(cols, rows, scrollback)` with 4096-byte continuation tracking (M1 spec §4.2), `feed`, `feed_until_ground`, `resize`, `snapshot` (binary encode, with a distinct mid-sequence error), `restore` (bounded incremental decode with every limit in M1 spec §5.5), `format_vt` for persistence (main screen beneath an alternate screen, §6.3), `core_id()` (§5.3), a reply sink for terminal queries, `capture_text`, mode queries, key and mouse encoder wrappers, render-state access. Mirrors built by `restore` have no reply sink. No other crate may import libghostty.
+- **Done when:** golden tests for write, resize with reflow, alternate screen, and a binary snapshot round trip comparing cells and modes, including the split-CSI, split-UTF-8, alternate-screen and saved-cursor cases from T00; a test proving the reply sink receives the answer to a cursor-position query, and that a restored mirror sends no reply; a 5,000-byte unfinished OSC gives the mid-sequence error, and `feed_until_ground` plus `snapshot` recovers at the terminator; truncated, corrupted, trailing-byte, wrong-size, over-history and over-allocation snapshots return errors without panicking; `format_vt` with alternate screens 47, 1047 and 1049 active saves the main screen and history, and leaves the live terminal on its alternate screen; `core_id()` matches the revisions in `Cargo.lock`; peak decode memory for 200 × 60 with 10,000 lines of history is measured and recorded.
+- **Pin upgrades:** any later libghostty pin change re-runs these snapshot tests and the T00 fidelity cases before it merges.
 
 ## Phase 1 · The daemon
 
@@ -86,7 +88,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T11 · Pane runtime
 
 - **Needs:** T07, T10.
-- **Build:** the pane thread from §4.2: PTY spawn, environment rules, the `poll` loop, output batching, sequence numbers, the reply sink, the command channel, kill, exit detection, the early-exit guard. Internal API only.
+- **Build:** the pane thread from §4.2: PTY spawn, environment rules, the terminal setup (continuation tracking, reply and metadata callbacks), the `poll` loop, output batching, sequence numbers, the reply sink, the command channel, kill, exit detection, the early-exit guard. Internal API only.
 - **Done when:** tests cover an echo round trip; `stty size` matching after a resize; `exit 3` giving `Exited { code: 3 }`; kill ending `sleep 100` within 2.5 s; a cursor-position query answered; the required environment variables present; the thread sleeping (state `S` in `/proc`) when the shell is idle.
 
 ### T12 · Workspace actor and methods
@@ -98,8 +100,8 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T13 · Attach and streaming
 
 - **Needs:** T12.
-- **Build:** `pane.attach`, `pane.detach`, the `SNAPSHOT`, `OUTPUT`, `RESIZED` and `INPUT` frames, 8 MiB subscriber queues with resync, size arbitration by focus (§5.5–5.6).
-- **Done when:** a mirror built from an attach taken mid-output equals the daemon's capture; 100,000 lines stream with no sequence gap; a stalled reader gets a resync while a second client is unaffected; `pane.set_size` from an unfocused connection is ignored.
+- **Build:** `pane.attach`, `pane.detach`, the `SNAPSHOT`, `OUTPUT`, `RESIZED` and `INPUT` frames, 8 MiB subscriber queues with resync, mid-sequence snapshots split at the first ground point with the 2 s deadline and `pane.detached`, the `core` check on attach, size arbitration by focus (§5.3, §5.5–5.6).
+- **Done when:** a mirror built from an attach taken mid-output equals the daemon's capture; an attach inside a 5,000-byte unfinished OSC completes at the terminator with no gap or duplicate, and without a terminator fails after 2 s while the shell keeps running; 100,000 lines stream with no sequence gap; a stalled reader gets a resync while a second client is unaffected; a connection with a different `core` gets 1003 from `pane.attach`; `pane.set_size` from an unfocused connection is ignored.
 
 ### T14 · Pane metadata
 
@@ -110,8 +112,8 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T15 · Persistence writer
 
 - **Needs:** T13.
-- **Build:** §6.1–6.3: atomic writes, debounce rules, the formatter on the pane thread with compression on a blocking worker, the full-screen-program rule, `scrollback.persist = false`, cleanup of closed panes.
-- **Done when:** `workspace.json` matches a schema snapshot; a scrollback file appears after 2 s of quiet and decompresses to text containing a marker line; `SIGTERM` writes everything; `persist = false` deletes the files; a simulated crash mid-write leaves the previous file intact.
+- **Build:** §6.1–6.3: atomic writes, debounce rules, the formatter on the pane thread with compression on a blocking worker, the full-screen-program rule (snapshot on the pane thread, scratch decode and formatter on the worker), `scrollback.persist = false`, cleanup of closed panes.
+- **Done when:** `workspace.json` matches a schema snapshot; a scrollback file appears after 2 s of quiet and decompresses to text containing a marker line; with `nvim` on the alternate screen, the file holds the marker and the main screen beneath it, not nvim's screen; `SIGTERM` writes everything; `persist = false` deletes the files; a simulated crash mid-write leaves the previous file intact.
 
 ### T16 · Restore
 
@@ -136,7 +138,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 ### T22 · Daemon lifecycle
 
 - **Needs:** T20, T16.
-- **Build:** `shoald.service`; `shoal daemon start | stop | status | persist`; the auto-start strategy (§4.1); version-mismatch detection in `hello` and the restart helper (persist, stop, start, wait).
+- **Build:** `shoald.service`; `shoal daemon start | stop | status | persist`; the auto-start strategy (§4.1); protocol, core and version mismatch detection in `hello` and the restart helper from §5.3 (shutdown that persists, wait up to 5 s, start, reconnect).
 - **Done when:** a test exercises the fallback spawn in a `TempEnv` with no `systemctl`; manually, with the unit installed, `shoal` starts the daemon and the daemon outlives closing every window.
 
 ## Phase 3 · Shell integration and prompt
@@ -166,7 +168,7 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 ### T41 · Terminal rendering
 
 - **Needs:** T07, T40.
-- **Build:** pane mirrors fed by attach streams; the draw-list builder from render state (dirty rows, merged runs, M1 spec §7.3 color and alpha rules); the GPUI element that paints it; the font chain with the embedded symbols font; shapes for box drawing, blocks and powerline; cursor styles; keeping mirrors for the 8 most recent tabs.
+- **Build:** pane mirrors fed by attach streams, decoded within the §5.5 limits with no reply callbacks; the draw-list builder from render state (one render state per mirror, dirty rows, merged runs, M1 spec §7.3 color and alpha rules); cached per-cell glyph placement with grapheme clusters shaped as units and libghostty's cell widths (§7.3); the GPUI element that paints it; the font chain with the embedded symbols font; shapes for box drawing, blocks and powerline; cursor styles; the mid-sequence and decode-error banners with Retry; keeping mirrors for the 8 most recent tabs.
 - **Done when:** draw-list golden tests from fixture terminal states (styled text, wide characters, emoji, box drawing, each cursor shape); manually, nvim, htop and btop render correctly and the logged full redraw of 200 × 60 is under 4 ms.
 
 ### T42 · Keyboard, paste and mouse
@@ -196,7 +198,7 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 ### T46 · Reconnect and banners
 
 - **Needs:** T40, T22.
-- **Build:** §7.7: the reconnect overlay, the version-mismatch banner and restart, notice and config-error banners.
+- **Build:** §7.7: the reconnect overlay, the protocol, core and version mismatch banners with the user-triggered restart (§5.3), notice and config-error banners.
 - **Done when:** manually, `kill -9` of the daemon with a window open recovers by itself, and a broken config line shows a banner naming it.
 
 ### T47 · Close confirmations and exited panes
@@ -208,7 +210,7 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 ### T48 · Live theme and font changes
 
 - **Needs:** T41, T06.
-- **Build:** recolor on theme reload without re-attaching; per-window font zoom that resizes grids; applying `window.*`, `cursor.*` and `font.*` changes from config reloads.
+- **Build:** recolor on theme reload without re-attaching; per-window font zoom that resizes grids; applying `window.*`, `cursor.*` and `font.*` changes from config reloads, clearing the glyph and row caches on any font change (§7.3).
 - **Done when:** manually, `omarchy-theme-set` recolors in under a second, and Ctrl+= grows the font while `stty size` in the pane shrinks to match.
 
 ## Phase 5 · Ship it
@@ -216,8 +218,8 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 ### T50 · Install and packaging
 
 - **Needs:** T22, T30, T48.
-- **Build:** `just install PREFIX=~/.local` (binaries, systemd unit, shell scripts, `dev.shoal.Shoal.desktop`, icon), `just uninstall`, a draft `PKGBUILD`, and `docs/omarchy.md` explaining how to make Super+Enter open Shoal (check Omarchy 4's current default-terminal mechanism first; don't guess).
-- **Done when:** a clean install works on the user's machine, and uninstall leaves nothing but config and state.
+- **Build:** `just install PREFIX=~/.local` (binaries, systemd unit, shell scripts, `dev.shoal.Shoal.desktop`, icon, the bundled font's license texts), `just uninstall`, a draft `PKGBUILD`, and `docs/omarchy.md` explaining how to make Super+Enter open Shoal (check Omarchy 4's current default-terminal mechanism first; don't guess). The bundled Symbols Nerd Font has mixed licenses and an unlicensed icon set (Font Logos); ask the user whether to subset those glyphs out or obtain terms before shipping it (`docs/spike-00.md`, "Font provenance").
+- **Done when:** a clean install works on the user's machine, uninstall leaves nothing but config and state, and the installed font ships with the license texts for every icon set it contains.
 
 ### T51 · Performance harness
 

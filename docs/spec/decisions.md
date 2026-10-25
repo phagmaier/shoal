@@ -37,7 +37,7 @@ Shoal is three Rust binaries built around one rule: the daemon owns everything, 
 | --- | --- | --- | --- |
 | 1 | Terminal core | libghostty-vt, behind our own wrapper crate | High |
 | 2 | Language | Rust (edition 2024) | High |
-| 3 | GUI and rendering | GPUI pinned to one Zed commit; fallback winit + wgpu | Medium, proven by a spike first |
+| 3 | GUI and rendering | GPUI pinned to one Zed commit; fallback winit + wgpu | Medium; the T00 spike kept GPUI |
 | 4 | Daemon | One per-user daemon owns panes, layout and persistence; windows mirror it | High |
 | 5 | Client-daemon protocol | Unix socket, length-prefixed frames, JSON for control, binary for pane bytes | High |
 | 6 | Config and theme | TOML; read Omarchy's `colors.toml` directly and watch it | High |
@@ -51,13 +51,14 @@ Shoal is three Rust binaries built around one rule: the daemon owns everything, 
 
 **Why it fits Shoal:**
 
-- It can dump a pane's full state as plain terminal bytes (its "formatter"). That gives reattach and reboot restore almost for free. zmx uses it for exactly this ([zmx](https://erock-git-zmx.pgs.sh)).
+- It can capture a pane two ways. Its binary snapshot module restores a pane's complete state; live attach uses it, with daemon and window on the identical libghostty build. Its formatter dumps the screen as plain terminal bytes; reboot restore uses that, as zmx does ([zmx](https://erock-git-zmx.pgs.sh)). The T00 spike showed the formatter alone loses state a live mirror needs (`docs/spike-00.md`).
 - It already handles Kitty keyboard and graphics protocols, reflow on resize, prompt marks, a key encoder and a mouse encoder.
 - Maintained Rust bindings exist: the `libghostty-vt` crate, 0.2.2 as of Sep 28, 2026 ([lib.rs](https://lib.rs/crates/libghostty-vt)).
 
 **What it costs:**
 
 - **The API is not stable.** Ghostty made an ABI-breaking change on Oct 21, 2026 ([changelog](https://github.com/dive/ghostty-tip-changelog/releases/tag/daily-2026-10-21)). Mitigation: pin one Ghostty commit, wrap it in `shoal-term`, treat upgrades as their own task with tests.
+- **The snapshot format has no compatibility guarantee.** Mitigation: `hello` carries a core identity built from the full pinned revisions, and a window attaches only to a daemon with the identical one (M1 spec §5.3). A pin upgrade re-runs the snapshot fidelity suite.
 - **The build needs Zig.** The bindings compile libghostty-vt from source; the Zig version depends on the pinned commit ([libghostty-rs](https://github.com/uzaaft/libghostty-rs)). Pin it with mise.
 - **Not thread-safe.** Each terminal object lives on one thread; the daemon gives every pane its own thread anyway.
 
@@ -87,6 +88,8 @@ Shoal is three Rust binaries built around one rule: the daemon owns everything, 
 **What it costs:** no stable release; crates.io `gpui` 0.2.2 is far behind Zed main ([awesome-gpui](https://github.com/edo-zhou/awesome-gpui)). Mitigation: pin one commit and keep a read-only copy of its source in `third_party/`. Thin docs, heavy compile times.
 
 **Fallback if the spike fails:** winit + wgpu with glyphon for text and a small hand-written UI layer. The terminal renderer is written against an internal draw list, so it moves over unchanged.
+
+**Spike result (T00, `docs/spike-00.md`):** GPUI is kept, pinned to Zed v1.25.3 (`8dd255c3eafb5231056fe4e6f601cedd011f1c93`) with libghostty-rs `9ede35b8ea94a55ed3608408d67e102883129f1e` (Ghostty `521cf2c5d30bd48028ca61546c64e7913764073d`, Zig 0.17.0). A full 200 × 60 redraw met the 4 ms target only with cached per-cell glyphs and dirty-row reuse. Per-style-run shaping missed it, so M1 draws without cross-cell ligatures (M1 spec §7.3).
 
 **Rejected:** GTK4 (fighting its theming for the Tern look) and iced (unproven for a fast grid).
 
@@ -128,7 +131,7 @@ Closing a window removes only the left side; everything inside the daemon keeps 
 - Binary for pane bytes avoids base64 on the busiest path.
 - Full-state updates: any layout change resends the whole workspace (a few KB) with its revision. No delta logic.
 - Remote later is the same protocol: `ssh host shoal proxy` pipes frames over SSH.
-- A `hello` handshake carries a protocol number; on mismatch the window offers to restart the daemon.
+- A `hello` handshake carries a protocol number and a core identity (the exact libghostty build). On either mismatch the window offers a user-triggered daemon restart that persists first (M1 spec §5.3).
 
 ### 6. Config and Omarchy theme
 
@@ -173,19 +176,21 @@ Each milestone is something you'd use daily before the next starts.
 | --- | --- | --- |
 | GPUI on Hyprland | Transparency, input methods or frame pacing misbehave; API churn | Spike first; pin one commit; vendor source; winit + wgpu fallback |
 | libghostty-vt churn | A pin upgrade breaks our code | Only `shoal-term` touches it; upgrades are their own task with golden tests |
-| Snapshot fidelity | The formatter's dump misses a mode, so a reattached mirror behaves differently | Spike compares restored vs original cell by cell and mode by mode; fallback is an explicit mode list in the attach reply |
+| Snapshot fidelity | The formatter's dump misses state, so a reattached mirror behaves differently | T00 found the formatter loses title, dynamic colors, saved cursor, the screen under an alternate screen, prompt marks and parser state, which no mode list can carry. Live attach uses the exact-build binary snapshot instead (31/31 checked cases). A pin upgrade re-runs the snapshot fidelity suite. |
 | Mirror drift after resize | Daemon and window reflow differently | Resizes sequenced in the stream; resync replaces the mirror |
 | Zig toolchain | Bindings need a specific Zig version | Pin with mise; clear build error on the wrong one |
 | Omarchy changes paths | Theme sync silently stops | Probe both locations, log which is used, banner if neither exists |
 
 **What the spike must show (go/no-go):**
 
-- [ ] A transparent GPUI window on Hyprland, blurred by Hyprland, with crisp text at your scale factor.
-- [ ] A 200 × 60 grid fed by `bash` through libghostty-vt, redrawing under 4 ms per frame.
-- [ ] `cat` of a 50 MB log finishes, and idle CPU after it is near zero.
-- [ ] A formatter snapshot restored into a second terminal matches the original screen, scrollback and modes.
-- [ ] Typing through an input method (e.g. fcitx5), if you use one, reaches the terminal.
-- [ ] Pinned commits for GPUI and Ghostty written down, with build steps that work from a clean checkout.
+- [x] A transparent GPUI window on Hyprland, blurred by Hyprland, with crisp text at your scale factor. (Confirmed by eye on the laptop at scale 2.)
+- [x] A 200 × 60 grid fed by `bash` through libghostty-vt, redrawing under 4 ms per frame. (Laptop: 599 of 600 frames under 4 ms, max 4.11 ms; desktop: all 600.)
+- [x] `cat` of a 50 MB log finishes, and idle CPU after it is near zero.
+- [ ] A formatter snapshot restored into a second terminal matches the original screen, scrollback and modes. **Failed;** live attach uses the exact-build binary snapshot instead (31/31).
+- [ ] Typing through an input method (e.g. fcitx5), if you use one, reaches the terminal. **Skipped:** no input method is used.
+- [x] Pinned commits for GPUI and Ghostty written down, with build steps that work from a clean checkout.
+
+**Result (T00, 2026-10-25):** GPUI kept. Numbers, pins, the build recipe and the decisions are in `docs/spike-00.md`.
 
 ## Sources
 
