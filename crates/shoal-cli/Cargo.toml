@@ -10,3 +10,12 @@ description = "Command-line interface and shell integration for Shoal"
 [[bin]]
 name = "shoal"
 path = "src/main.rs"
+
+[dependencies]
+shoal-config = { path = "../shoal-config" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true

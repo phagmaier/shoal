@@ -28,3 +28,7 @@ dev-gui:
 # T04 supplies fuzz/Cargo.toml and the frame_decoder target; only fuzz uses nightly.
 fuzz-proto *args:
     mise exec -- cargo +nightly fuzz run frame_decoder {{args}}
+
+# The native prompt's hyperfine budgets (M1 spec §8.3) on a release build.
+bench-prompt:
+    mise exec -- scripts/bench-prompt.sh

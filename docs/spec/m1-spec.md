@@ -535,6 +535,16 @@ Prints one line ready for the shell, with non-printing escapes wrapped (`\[ \]` 
 
 **Speed budget:** under 5 ms p95 outside a repository, under 30 ms inside a ~5,000-file repository. Hard cap 100 ms: a segment still running is skipped and shows `?`.
 
+**Settled details (T31, 2026-10-25).**
+
+- *Arguments:* `--shell` is required; the others default to 0 and take `--name value` or `--name=value`. Bad usage exits 2. `--jobs` above 0 shows `✦<n>` in `cyan` before the prompt character (settled with the user). `--cols` is accepted and ignored: M1 prompts don't change with width.
+- *Line:* segments in `prompt.segments` order, then ` took 12s` in `yellow` (`12s`, `3m 4s`, `1h 5m`; strictly over 2 s), then `✦<n>`, then the prompt character and one space. Colors are 24-bit SGR from the same resolved palette as the window (`[theme.colors]`, theme files, built-in), so a theme switch applies from the next prompt. Icons are Nerd Font code points: separator U+E0B0, branch U+E0A0, Node U+E718, Python U+E73C, Rust U+E7A8, Go U+E627, Ruby U+E739.
+- *Escaping:* literal text escapes `\`, `$` and `` ` `` with a backslash for both shells, and zsh also doubles `%`. Nothing in a path or branch name ever runs, whatever the user's `promptvars` or `prompt_subst` settings. Text shows exactly under bash's default `promptvars` and under zsh's `prompt_subst`. With `prompt_subst` off, those three characters show a backslash in front, and as root bash shows a literal `$` as `#`. Control characters show as U+FFFD.
+- *Path:* `$PWD` when absolute, else the real directory. `$HOME` becomes `~` only at a component boundary, and `~` counts as one of the three parts.
+- *User:* hidden when `$USER` is empty. Over SSH (`$SSH_CONNECTION` non-empty) the host is the kernel hostname.
+- *Git:* the repository is found by walking up from the real directory to a `.git` directory or file. The command is `git --no-optional-locks status --porcelain=v2 --branch`, so a prompt never takes the index lock. Any entry, untracked files included, is dirty. `⇡`/`⇣` show only when nonzero, and a detached head shows 7 hex digits. On timeout or failure, the branch comes from `HEAD`, following a `.git` file to its git directory, plus `?`. Segments wait until 95 ms after start, and git also stops at its 80 ms timeout; a child still running is killed.
+- *Runtime:* only the current directory's marker files count; the first in the table's order wins. Programs are `node`, `python` then `python3`, `rustc`, `go` (asked `go version`; it has no `--version`) and `ruby`. Each is found on absolute `PATH` entries, and the segment is hidden when the program isn't there. The version shows as `major.minor`, or `?` when unknown. The cache maps each program path to its mtime (seconds and nanoseconds) and version, and is replaced atomically. An unreadable cache counts as empty. *Shims are never cached* (settled with the user): a version manager's stand-in keeps one path and mtime while the version follows each project's pin. That covers a program whose real target is `mise` or `rustup`, or one in a `shims` directory (asdf, pyenv, rbenv, nodenv). Those are asked every prompt, alongside git.
+
 ## 9. Config and theme
 
 ### 9.1 `~/.config/shoal/config.toml`

@@ -541,6 +541,13 @@ dependencies = [
 [[package]]
 name = "shoal-cli"
 version = "0.1.0"
+dependencies = [
+ "insta",
+ "serde",
+ "serde_json",
+ "shoal-config",
+ "tempfile",
+]
 
 [[package]]
 name = "shoal-client"

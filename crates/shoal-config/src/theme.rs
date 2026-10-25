@@ -83,8 +83,9 @@ impl ThemeSource {
     }
 }
 
-/// Theme files as read, before config overrides are layered on top.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Theme files as read, before config overrides are layered on top. The default
+/// has no theme files, so only `[theme.colors]` and the built-in palette apply.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LoadedTheme {
     /// The Omarchy theme folder in use; `None` for a file source or when neither
     /// Omarchy location has one, in which case the built-in palette applies.
