@@ -170,6 +170,14 @@ Each milestone is something you'd use daily before the next starts.
 | M7 · Orchestration (opt-in) | MCP server in the daemon: list, spawn, send, read, wait, behind the vision's guardrails | One agent hands work to another, visibly and stoppably |
 | Later | Diff pane, worktree helpers, agent overview | |
 
+### Carried into later milestones
+
+Ideas borrowed from Tern, recorded so the milestone that owns each one specs it:
+
+- **M2 · Command finished events.** The M1 shell integration already sends OSC 133 `D;<exit code>`, and libghostty-vt hands it to the pane thread's semantic-prompt callback. M2 turns it into a per-pane "command finished" event with exit code and duration (timed from `C` to `D`). That powers notifications like "build finished in a background tab". The first prompt mark also tells the daemon a new shell is ready for input.
+- **M3 · Queue until ready.** An agent pane accepts prompts once its ACP session exists (`session/new`, or `session/load` when resuming). Until then the daemon queues prompts in order and the composer shows the agent as starting, so nothing sent during startup or a reboot resume is dropped.
+- **M7 · More verbs.** Add `interrupt`, `stop` and `transcript` to list, spawn, send, read and wait. `interrupt` sends Ctrl+C to a shell pane and ACP `session/cancel` to an agent; it is how "stoppably" in M7's gate is met. `stop` ends the pane or agent. `transcript` returns an agent's structured history, where `read` returns screen text. `wait` can use M2's command-finished event for shell panes.
+
 ## Risks and the spike
 
 | Risk | What could go wrong | Mitigation |
