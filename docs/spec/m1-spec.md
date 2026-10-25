@@ -228,7 +228,7 @@ On `SIGTERM`, `SIGINT` or `daemon.shutdown`: persist everything (section 6), `SI
 
 ## 5. Protocol
 
-Protocol version 1. Every change updates this section in the same commit. The T00 spike revised version 1 (binary snapshots, `core` in `hello`) before anything implemented it, so it stays version 1.
+Protocol version 1. Every change updates this section in the same commit. The T00 spike revised version 1 (binary snapshots, `core` in `hello`) before anything implemented it. T04's user-confirmed wire clarifications below also precede the first implementation, so it stays version 1.
 
 ### 5.1 Frames
 
@@ -242,11 +242,13 @@ frame = len:u32 | kind:u8 | payload        len = bytes of kind + payload; intege
 0x20 INPUT     client → daemon  pane:u64 bytes...
 ```
 
-Maximum frame size 64 MiB; a bigger frame or unknown kind closes the connection with a logged protocol error. Binary frames carry the numeric pane id (`3`), JSON the prefixed form (`"p3"`). SNAPSHOT `bytes` are a libghostty binary snapshot (5.5). The frame limit bounds bytes on the wire, not what decoding a snapshot allocates; 5.5 sets the decoding limits.
+Maximum declared `len` is 64 MiB (kind + payload); the four-byte length prefix is additional. A bigger frame or unknown kind closes the connection with a logged protocol error. Binary frames carry the numeric pane id (`3`), JSON the prefixed form (`"p3"`). SNAPSHOT `bytes` are a libghostty binary snapshot (5.5). The frame limit bounds bytes on the wire, not what decoding a snapshot allocates; 5.5 sets the decoding limits.
 
 ### 5.2 JSON messages
 
 JSON-RPC 2.0 shapes: a request has `id`, `method`, `params`; a response has `id` plus `result` or `error {code, message, data?}`; a notification has `method` and `params` but no `id`. The daemon handles one connection's requests in order.
+
+**Wire details (T04, settled 2026-10-25).** Every JSON message has `jsonrpc: "2.0"`. Request ids are strings or integers; an error response may have `id: null` when no valid request id is available. A success response has a valid id and exactly one `result`; an error response has exactly one `error`. Methods with no parameters emit `params: {}` and also accept omitted `params`. Unknown method names remain decodable so the daemon can return -32601; invalid method parameters are distinct from an invalid envelope. JSON batches are not objects and are outside this protocol.
 
 ### 5.3 Handshake
 
@@ -309,10 +311,12 @@ In both cases the window shows a banner: "shoald is from a different build. Rest
 | `daemon.persist` | none | `{}` once written (tests) |
 | `daemon.shutdown` | none | `{}`, then the daemon exits (4.5) |
 
+`index`, `cells`, counts (`sessions`, `panes`) and `uptime_s` are nonnegative integers; uptime is in whole seconds. `last_persist_at` is an RFC 3339 UTC timestamp, or null before any save. `session`, `tab` and `pane` results above are prefixed ids, as in 5.7.
+
 **Notifications from the daemon**
 
 - `workspace.changed {rev, workspace}`: the whole workspace after any change, at most one per 16 ms per connection.
-- `daemon.notice {level, message, key?}`: banner-worthy problems (config error, theme folder not found, a restore that skipped a broken file).
+- `daemon.notice {level, message, key?}`: banner-worthy problems (config error, theme folder not found, a restore that skipped a broken file); `level` is `info`, `warn` or `error`.
 - `pane.detached {pane, reason}`: the daemon stopped streaming a pane to this connection without being asked. M1's only reason is `mid_sequence` (5.5).
 - `pane.event {pane, event}`: reserved for agent panes (M3). Not sent in M1.
 

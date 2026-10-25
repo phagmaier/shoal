@@ -399,6 +399,13 @@ dependencies = [
 [[package]]
 name = "shoal-proto"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "shoal-model",
+ "thiserror",
+]
 
 [[package]]
 name = "shoal-term"

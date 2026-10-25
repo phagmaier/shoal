@@ -1,0 +1,6 @@
+# Literal v1 wire bytes: len:u32, kind:u8, little-endian headers, opaque payloads.
+json:     03 00 00 00 01 7b 7d
+output:   14 00 00 00 10 03 00 00 00 00 00 00 00 59 07 00 00 00 00 00 00 68 ff 0a
+snapshot: 18 00 00 00 11 03 00 00 00 00 00 00 00 58 07 00 00 00 00 00 00 78 00 28 00 00 ff 80
+resized:  15 00 00 00 12 03 00 00 00 00 00 00 00 5a 07 00 00 00 00 00 00 78 00 28 00
+input:    0c 00 00 00 20 03 00 00 00 00 00 00 00 6c 73 0d

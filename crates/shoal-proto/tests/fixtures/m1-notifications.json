@@ -1,0 +1,7 @@
+[
+  {"jsonrpc":"2.0","method":"workspace.changed","params":{"rev":42,"workspace":{"rev":42,"next_id":1,"sessions":[],"panes":{}}}},
+  {"jsonrpc":"2.0","method":"daemon.notice","params":{"level":"info","message":"Restored workspace"}},
+  {"jsonrpc":"2.0","method":"daemon.notice","params":{"level":"warn","message":"Theme folder not found","key":"theme"}},
+  {"jsonrpc":"2.0","method":"daemon.notice","params":{"level":"error","message":"Config error","key":"config"}},
+  {"jsonrpc":"2.0","method":"pane.detached","params":{"pane":"p3","reason":"mid_sequence"}}
+]

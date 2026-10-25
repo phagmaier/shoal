@@ -7,7 +7,9 @@ default:
 # Required pre-commit checks, including the M1 dependency boundaries.
 check:
     mise exec -- cargo fmt --all -- --check
+    mise exec -- cargo fmt --manifest-path fuzz/Cargo.toml --all -- --check
     mise exec -- cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+    mise exec -- cargo clippy --manifest-path fuzz/Cargo.toml --locked --all-targets -- -D warnings
     mise exec -- cargo test --locked --workspace --all-features
     mise exec -- cargo deny --locked --all-features check bans
     mise exec -- scripts/check-boundaries.sh

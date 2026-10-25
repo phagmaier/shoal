@@ -1,0 +1,4 @@
+/artifacts/
+/coverage/
+/corpus/frame_decoder/*
+!/corpus/frame_decoder/seed-*
