@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01, T02 and T03 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T04 is done on `t04-protocol`: reviewed, `just check` passes, and the required ten-minute fuzz run is clean. Merge and push await user approval. No later task has started.
+**Current status:** T01–T04 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T04 is reviewed, a fresh integration `just check` passes, and the required ten-minute fuzz run is clean. Merged and pushed with user approval. Next in the safe order: T05 (config core and keybinds), not started.
 
 **How to use this list**
 
@@ -66,7 +66,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T04 · Protocol crate
 
-- **Status:** done 2026-10-25 on `t04-protocol`, starting from `main`; user-confirmed frame limit, JSON envelopes and scalar types recorded in M1 spec §5 before implementation. Not merged or pushed.
+- **Status:** done 2026-10-25 on `t04-protocol`, starting from `main`; user-confirmed frame limit, JSON envelopes and scalar types recorded in M1 spec §5 before implementation. Merged into `main` and pushed with user approval; a fresh integration `mise exec -- just check` passes. T05 remains unstarted.
 - **Verified:** `mise exec -- just check` passes, including formatting and clippy for the separate fuzz workspace. All 18 protocol tests and the existing 51 model tests pass. Literal JSON and binary fixtures cover every M1 method/result/notification, error codes and error data, truncation, unknown kinds, concatenation, snapshot header limits and the exact 64 MiB boundary; a proptest covers arbitrary binary ids, sequences and payloads.
 - **Fuzz:** `mise exec -- just fuzz-proto -- -max_total_time=600 -timeout=5 -rss_limit_mb=2048 -max_len=65536 -print_final_stats=1` passes with AddressSanitizer: 13,632,246 inputs in 601 seconds, no findings. Versioned seeds and a separate committed lockfile make the target reproducible; deterministic tests cover the full frame-size boundary.
 - **Review:** direct review of implementation, tests, fixtures, dependency/lockfile changes and spec contracts complete. Focused checks caught unknown-method misclassification, array-shaped empty parameters and errors, and nonfinite ratios. Fuzzing exposed a JSON float changing value on reparse; its saved fixture fails before enabling serde_json's `float_roundtrip` feature and passes afterward. No unresolved in-scope findings, manual checks or follow-up tasks.
