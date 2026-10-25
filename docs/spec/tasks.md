@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T01–T04 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T04 is reviewed, a fresh integration `just check` passes, and the required ten-minute fuzz run is clean. Merged and pushed with user approval. Next in the safe order: T05 (config core and keybinds), not started.
+**Current status:** T01–T05 done and merged into `main` (2026-10-25), including T03's standalone review follow-up. T05 is reviewed, `just check` passes, and integration is authorized by the user. Next in the safe order: T06 (Omarchy theme loading), not started.
 
 **How to use this list**
 
@@ -66,7 +66,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T04 · Protocol crate
 
-- **Status:** done 2026-10-25 on `t04-protocol`, starting from `main`; user-confirmed frame limit, JSON envelopes and scalar types recorded in M1 spec §5 before implementation. Merged into `main` and pushed with user approval; a fresh integration `mise exec -- just check` passes. T05 remains unstarted.
+- **Status:** done 2026-10-25 on `t04-protocol`, starting from `main`; user-confirmed frame limit, JSON envelopes and scalar types recorded in M1 spec §5 before implementation. Merged into `main` and pushed with user approval; a fresh integration `mise exec -- just check` passes.
 - **Verified:** `mise exec -- just check` passes, including formatting and clippy for the separate fuzz workspace. All 18 protocol tests and the existing 51 model tests pass. Literal JSON and binary fixtures cover every M1 method/result/notification, error codes and error data, truncation, unknown kinds, concatenation, snapshot header limits and the exact 64 MiB boundary; a proptest covers arbitrary binary ids, sequences and payloads.
 - **Fuzz:** `mise exec -- just fuzz-proto -- -max_total_time=600 -timeout=5 -rss_limit_mb=2048 -max_len=65536 -print_final_stats=1` passes with AddressSanitizer: 13,632,246 inputs in 601 seconds, no findings. Versioned seeds and a separate committed lockfile make the target reproducible; deterministic tests cover the full frame-size boundary.
 - **Review:** direct review of implementation, tests, fixtures, dependency/lockfile changes and spec contracts complete. Focused checks caught unknown-method misclassification, array-shaped empty parameters and errors, and nonfinite ratios. Fuzzing exposed a JSON float changing value on reparse; its saved fixture fails before enabling serde_json's `float_roundtrip` feature and passes afterward. No unresolved in-scope findings, manual checks or follow-up tasks.
@@ -76,6 +76,10 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T31, T10, T11, T30,
 
 ### T05 · Config core and keybinds
 
+- **Status:** done 2026-10-25 on `t05-config-core`, starting from `main` at `617e4dd`; merged into `main` and pushed under the user's standing authorization. User-confirmed validation, keybinding override semantics and the required path segment are recorded in M1 spec §9.1.
+- **Verified:** `mise exec -- just check` passes (formatting, clippy with warnings denied, all 19 config tests plus 69 model/protocol tests, cargo-deny and dependency boundaries). Public config docs build with warnings denied. Literal fixtures independently cover every schema default and all 48 default bindings; tests cover partial files, exact file/line errors, unknown-key warnings, unbinding, invalid values, chord normalization and an arbitrary-text property test. XDG tests cover overrides, defaults, invalid roots and non-UTF-8 paths without mutating the process environment.
+- **Watcher:** real temporary-file tests cover one reload for a burst of writes, ignored unrelated writes, atomic saves, last-good retention, invalid startup and recovery, deletion/recreation, missing/replaced parent directories, symlink target edits and retargeting. Watch installation precedes the initial read; idle workers block without timers. No real user config, state or socket was touched.
+- **Review:** direct requirements, implementation, test-quality and dependency/lockfile review complete. Focused regressions failed before fixing opacity rounding at `1.00000001` and a duplicate normalized chord reporting the table header instead of its own line. No existing dependency versions were upgraded. No unresolved in-scope findings or manual checks remain; T06 stays unstarted.
 - **Needs:** T01.
 - **Build:** `shoal-config`: the schema with defaults from M1 spec §9.1, loading with line-numbered errors, unknown-key warnings, the chord parser, the default keymap from §10, a debounced file watcher, and the XDG path helpers.
 - **Done when:** tests for defaults, partial files, bad values (error names file and line), every default chord parsing, `"none"` unbinding, and the watcher firing once for a burst of writes.

@@ -49,6 +49,8 @@ The last column lists the other Shoal crates each crate may use, plus the main e
 | Shell integration | `<prefix>/share/shoal/shell/bash/`, `.../zsh/` |
 | systemd unit | `<prefix>/lib/systemd/user/shoald.service` |
 
+Config, state and cache use `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and `XDG_CACHE_HOME` when set to absolute paths; the table shows their defaults under an absolute `HOME`. Empty or relative overrides are ignored, following the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/). Path helpers do not create directories. Runtime paths require an absolute `XDG_RUNTIME_DIR`; callers that do not need a daemon socket can resolve config/state/cache without it.
+
 ## 3. Data model
 
 The whole workspace is one tree of plain data in `shoal-model`, shared by daemon, window and CLI. The daemon holds the only writable copy; everyone else receives full copies.
@@ -588,6 +590,12 @@ confirm_close_running = true
 ```
 
 **Chord grammar:** modifiers `ctrl`, `shift`, `alt`, `super` joined with `+`, then one key: a letter or digit, `f1`–`f12`, `enter`, `tab`, `escape`, `space`, `backspace`, `insert`, `delete`, `home`, `end`, `pageup`, `pagedown`, `up`, `down`, `left`, `right`, or a punctuation character such as `=`, `-` or `\`. Keys match by what they type on the layout.
+
+**Validation and overrides (T05, settled 2026-10-25).** A missing config file uses defaults. A malformed file or any invalid value rejects the entire edit; a reload retains the last good config. Font size and line height must be finite and positive, opacity must be finite and in 0..=1, window padding/gap/radius must be nonnegative, and scrollback lines must be in 0..=100000. Unknown config keys produce warnings; unknown action ids or prompt segment names are errors. `prompt.segments` must contain `path` exactly once.
+
+Keybinding overrides apply per chord: adding a shortcut preserves an action's default shortcuts until those chords are explicitly assigned `"none"` or another action. Chords are case-insensitive; repeated modifiers and multiple entries that normalize to the same chord are errors. `+` as the key is written `+` alone or after the modifier separator (for example `ctrl++`). Super has no default binding but is available in user chords.
+
+**Config watching.** Use native filesystem notifications, debounce 100 ms after the last relevant event, and reload at least once per 750 ms during continuous edits. Block while idle; no polling timer. Watch parent directories so atomic saves, directory replacement and initially absent config directories work. A symlink config also follows changes to its target. Reload callbacks carry the last good config alongside any error; the initial read follows watch installation so startup saves are not missed.
 
 ### 9.2 Theme mapping
 
