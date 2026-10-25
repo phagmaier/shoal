@@ -1,0 +1,14 @@
+# Rust build output
+/target/
+**/target/
+
+# Read-only copies fetched by third_party/fetch.sh (the script itself is tracked)
+/third_party/*
+!/third_party/fetch.sh
+!/third_party/README.md
+
+# Temporary files, including atomic-write leftovers
+*.tmp
+
+# Session kickoff prompt; not part of the repository
+KICKOFF.md
