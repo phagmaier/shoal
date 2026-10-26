@@ -12,7 +12,7 @@ they are what lets one agent change one crate without breaking another.
 - `docs/spec/` is the spec:
   - `decisions.md`: the key technical decisions and the milestone plan.
   - `m1-spec.md`: the milestone 1 spec. Tasks cite it as "M1 spec §N".
-  - `tasks.md`: status table plus full **Needs / Build / Done when** for active tasks only (T47+). Completed work is one row each; verbatim history is in `docs/spec/completed.md` (read-only archive).
+  - `tasks.md`: status table plus full **Needs / Build / Done when** for active tasks only (T48+). Completed work is one row each; T00–T46 verbatim history is in `docs/spec/completed.md` (read-only archive), and later task history is in Git.
   - `completed.md`: read-only archive of T00–T46. Never extend it with new prose.
 - `docs/agent-env.md`: disposable sandbox, Wayland/Hyprland discovery, tmpfs, fake systemctl. Read before running checks or manual scripts.
 - `docs/flakes.md`: known intermittent failures. Check before re-investigating a flake.

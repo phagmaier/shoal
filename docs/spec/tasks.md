@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T00–T46 done and merged into `main` (2026-10-26, T46 `ff0f47f`, 399 Rust tests). **Next: T47, then T48.** Full history for completed tasks is archived verbatim in `docs/spec/completed.md`.
+**Current status:** T00–T47 done and merged into `main` (2026-10-26, T47 `b5f8ac6`, 403 Rust tests). **Next: T48, then T49.** T00–T46 history is archived verbatim in `docs/spec/completed.md`; later task history is in Git.
 
 | ID | Title | Status |
 | --- | --- | --- |
@@ -34,10 +34,10 @@
 | T44 | Session switcher | done 2026-10-26 `87e1f74` |
 | T45 | Scrollback, selection and links | done 2026-10-26 `56df772` |
 | T46 | Reconnect and banners | done 2026-10-26 `ff0f47f` |
-| T47 | Close confirmations and exited panes | verification pending |
+| T47 | Close confirmations and exited panes | done 2026-10-26 `b5f8ac6` |
 | T48 | Live theme and font changes | ready |
 | T49 | Polish and hardening pass | ready after T48 (accepted checkpoint, see below) |
-| T50 | Install and packaging | blocked on T22, T30, T48 |
+| T50 | Install and packaging | blocked on T48, T49 |
 | T51 | Performance harness | blocked on T13, T41 |
 | T52 | Acceptance pass | blocked on everything above |
 
@@ -45,7 +45,7 @@
 
 - Hand an agent one task id plus `AGENTS.md`. Everything in the task's **Needs** must be done first.
 - **Done when** is the definition of done: those checks pass in `just check`, or, for manual checks, the user has run them.
-- Active tasks keep full **Needs / Build / Done when** below. Completed tasks keep one table row here; their verbatim record is in `docs/spec/completed.md`.
+- Active tasks keep full **Needs / Build / Done when** below. Completed tasks keep one table row here; T00–T46's verbatim record is in `docs/spec/completed.md`, and later task history is in Git.
 - If a task is bigger than one sitting, the agent stops, splits it, and writes the split back into this file.
 - "M1 spec §N" means section N of `docs/spec/m1-spec.md`.
 - Start each task in a fresh agent session. A prompt that works:
@@ -66,13 +66,6 @@ Phase 5  Ship             T50..T52          (needs everything)
 A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T43, T42, T44, T45, T46, T47, T48, T49, T50, T51, T52.
 
 ## Phase 4 · The window (remaining)
-
-### T47 · Close confirmations and exited panes
-
-- **Status:** implemented and reviewed on `t47-close-confirmations`; unit and guided checks passed (`target/manual/t47.txt`); final commit check pending. T43 and T14 are complete.
-- **Needs:** T43, T14.
-- **Build:** the confirm bar for closing over a running program, the error view for panes that exit right after starting.
-- **Done when:** a unit test for the "something is running" rule; manually, closing over `nvim` asks first and a bad `shell.program` shows its error instead of vanishing.
 
 ### T48 · Live theme and font changes
 
