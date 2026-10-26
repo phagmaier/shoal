@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T00–T47 done and merged into `main` (2026-10-26, T47 `b5f8ac6`, 403 Rust tests). **T48 implemented on `t48-live-theme-font`; full commit check pending; next: T49.** Guided checks passed (`target/manual/t48.txt`). T00–T46 history is archived verbatim in `docs/spec/completed.md`; later task history is in Git.
+**Current status:** T00–T48 done and merged into `main` (2026-10-26, T48 `f52912f`, 410 Rust tests). **Next: T49.** T48's full gate and guide passed (`target/t48-check-f52912f.log`, `target/manual/t48.txt`); the known CLI auto-start flake in the first run (`target/t48-check-14cc333.log`) passed a focused retry, 20 repeats and the full rerun. T00–T46 history is archived verbatim in `docs/spec/completed.md`; later task history is in Git.
 
 | ID | Title | Status |
 | --- | --- | --- |
@@ -35,9 +35,9 @@
 | T45 | Scrollback, selection and links | done 2026-10-26 `56df772` |
 | T46 | Reconnect and banners | done 2026-10-26 `ff0f47f` |
 | T47 | Close confirmations and exited panes | done 2026-10-26 `b5f8ac6` |
-| T48 | Live theme and font changes | verification pending |
-| T49 | Polish and hardening pass | ready after T48 (accepted checkpoint, see below) |
-| T50 | Install and packaging | blocked on T48, T49 |
+| T48 | Live theme and font changes | done 2026-10-26 `f52912f` |
+| T49 | Polish and hardening pass | ready (accepted checkpoint, see below) |
+| T50 | Install and packaging | blocked on T49 |
 | T51 | Performance harness | blocked on T13, T41 |
 | T52 | Acceptance pass | blocked on everything above |
 
@@ -66,12 +66,6 @@ Phase 5  Ship             T50..T52          (needs everything)
 A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T43, T42, T44, T45, T46, T47, T48, T49, T50, T51, T52.
 
 ## Phase 4 · The window (remaining)
-
-### T48 · Live theme and font changes
-
-- **Needs:** T41, T06.
-- **Build:** recolor on theme reload without re-attaching; per-window font zoom that resizes grids; applying `window.*`, `cursor.*` and `font.*` changes from config reloads, clearing the glyph and row caches on any font change (§7.3).
-- **Done when:** manually, `omarchy-theme-set` recolors in under a second, and Ctrl+= grows the font while `stty size` in the pane shrinks to match.
 
 ### T49 · Polish and hardening pass
 
