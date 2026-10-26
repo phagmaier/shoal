@@ -1,0 +1,153 @@
+---
+source: crates/shoal-cli/tests/commands.rs
+assertion_line: 128
+expression: text
+---
+{
+  "rev": "[rev]",
+  "workspace": {
+    "next_id": 11,
+    "panes": {
+      "p10": {
+        "bell": false,
+        "cwd": "~/code/shoal",
+        "id": "p10",
+        "kind": {
+          "argv": [
+            "false"
+          ],
+          "kind": "shell"
+        },
+        "program": null,
+        "restored_from": null,
+        "size": {
+          "cols": 80,
+          "rows": 24
+        },
+        "status": {
+          "code": 1,
+          "signal": null,
+          "state": "exited"
+        },
+        "title": "failing"
+      },
+      "p3": {
+        "bell": false,
+        "cwd": "~/code/shoal",
+        "id": "p3",
+        "kind": {
+          "argv": [],
+          "kind": "shell"
+        },
+        "program": null,
+        "restored_from": null,
+        "size": {
+          "cols": 80,
+          "rows": 24
+        },
+        "status": {
+          "state": "running"
+        },
+        "title": "shoal"
+      },
+      "p6": {
+        "bell": false,
+        "cwd": "~",
+        "id": "p6",
+        "kind": {
+          "argv": [],
+          "kind": "shell"
+        },
+        "program": null,
+        "restored_from": null,
+        "size": {
+          "cols": 80,
+          "rows": 24
+        },
+        "status": {
+          "state": "running"
+        },
+        "title": "~"
+      },
+      "p8": {
+        "bell": false,
+        "cwd": "~/notes",
+        "id": "p8",
+        "kind": {
+          "argv": [],
+          "kind": "shell"
+        },
+        "program": null,
+        "restored_from": null,
+        "size": {
+          "cols": 80,
+          "rows": 24
+        },
+        "status": {
+          "state": "running"
+        },
+        "title": "notes"
+      }
+    },
+    "rev": "[rev]",
+    "sessions": [
+      {
+        "active_tab": "t9",
+        "created_at": "[time]",
+        "id": "s1",
+        "last_active_at": "[time]",
+        "name": "work",
+        "tabs": [
+          {
+            "focused": "p3",
+            "id": "t2",
+            "layout": {
+              "split": {
+                "axis": "row",
+                "first": {
+                  "pane": "p3"
+                },
+                "id": "x7",
+                "ratio": 0.5,
+                "second": {
+                  "pane": "p8"
+                }
+              }
+            },
+            "name": null,
+            "zoomed": "p3"
+          },
+          {
+            "focused": "p10",
+            "id": "t9",
+            "layout": {
+              "pane": "p10"
+            },
+            "name": "failing",
+            "zoomed": null
+          }
+        ],
+        "windows": 0
+      },
+      {
+        "active_tab": "t5",
+        "created_at": "[time]",
+        "id": "s4",
+        "last_active_at": "[time]",
+        "name": "2",
+        "tabs": [
+          {
+            "focused": "p6",
+            "id": "t5",
+            "layout": {
+              "pane": "p6"
+            },
+            "name": null,
+            "zoomed": null
+          }
+        ],
+        "windows": 0
+      }
+    ]
+  }
+}

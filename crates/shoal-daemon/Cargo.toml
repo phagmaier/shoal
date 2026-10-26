@@ -17,7 +17,7 @@ name = "shoald"
 path = "src/main.rs"
 
 [dependencies]
-base64 = "0.22.1"
+base64.workspace = true
 zstd = { version = "0.13.3", default-features = false }
 shoal-config.workspace = true
 shoal-model.workspace = true

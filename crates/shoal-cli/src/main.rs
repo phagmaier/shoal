@@ -1,6 +1,7 @@
-//! `shoal`, the command-line interface: native prompt and shell integration
-//! (M1 spec §8). The remaining commands in §11 arrive with T21.
+//! `shoal`, the command-line interface (M1 spec §11): workspace commands,
+//! the native prompt and shell integration (§8).
 
+mod commands;
 mod prompt;
 mod shell_init;
 
@@ -13,9 +14,14 @@ fn main() -> ExitCode {
     match args.next() {
         Some(command) if command == "prompt" => prompt::main(args, started),
         Some(command) if command == "shell-init" => shell_init::main(args),
+        Some(command) if commands::COMMANDS.iter().any(|name| command == *name) => {
+            let command = command.to_string_lossy().into_owned();
+            commands::main(&command, args)
+        }
         _ => {
             eprintln!(
-                "shoal: unknown command\n{}\n{}",
+                "shoal: unknown command\n{}\n{}\n{}",
+                commands::USAGE,
                 prompt::USAGE,
                 shell_init::USAGE
             );

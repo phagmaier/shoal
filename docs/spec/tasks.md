@@ -244,6 +244,8 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 
 ### T21 · CLI commands
 
+- **Status:** done 2026-10-25 on `t21-cli-commands`, from `main` at `c6e4d01`; merged into `main` and pushed. The user left the open choices to the agent ("proceed as you see fit"); M1 spec §11 "Settled details (T21)" records them, including the `ls` layout.
+- **Verified:** `tests/commands.rs` runs the real `shoal` against the real `shoald`: reviewed insta snapshots of `shoal ls` as text and JSON (two sessions, a zoomed split in two folders, a named tab whose command exited 1); `send` then `capture` round trips by session name, pane id and `.`, with `--scrollback` and `--vt`; `kill` of a session; exit 3 with no daemon, 2 with usage text for bad usage, 1 for an unknown target, `.` without `SHOAL_PANE`, a missing `--cwd` folder and a daemon error (a taken name). Unit tests cover target resolution, argument parsing, `\n` handling and `ls` formatting. `shoal-client` re-exports `shoal-model` and `shoal-proto` as `model` and `proto`, so the CLI depends only on the client and config (deny.toml unchanged). The prompt budget still holds: `just bench-prompt` p95 0.77 ms outside a repository (0.72 ms before) and 18.7 ms inside one.
 - **Needs:** T20, T12.
 - **Build:** every command in M1 spec §11 except `prompt` and `shell-init`; target resolution including `.`; `--json`; the exit codes.
 - **Done when:** snapshot tests of `shoal ls` (human and JSON), errors on stderr with the right exit codes, and a `send` then `capture` round trip.

@@ -12,10 +12,13 @@ name = "shoal"
 path = "src/main.rs"
 
 [dependencies]
+base64.workspace = true
+shoal-client = { path = "../shoal-client" }
 shoal-config.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+shoal-testkit.workspace = true
 tempfile.workspace = true

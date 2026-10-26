@@ -754,6 +754,15 @@ Super is never bound (Hyprland owns it). Every action id can be rebound in `[key
 
 **Targets** are ids (`s3`, `t12`, `p40`), a session name, or `.` for the pane the command runs in (from `$SHOAL_PANE`). **Exit codes:** 0 success, 1 error, 2 bad usage, 3 daemon unreachable.
 
+**Settled details (T21, 2026-10-25; the user left these to the agent).**
+
+- *Scope:* T21 builds `new`, `ls`, `kill`, `send` and `capture`. `shoal` and `shoal attach` launch the window (T40); `shoal daemon` and CLI auto-start come with T22, so until then a stopped daemon is exit 3.
+- *Targets:* an id that exists wins over a session of the same name; otherwise the name is looked up. `send` and `capture` take any target and use its focused pane: a session's active tab's, or a tab's. `.` outside a pane (no `SHOAL_PANE`) is an error (exit 1).
+- *`send`:* `\n` in the text, or a real line break, sends a carriage return, as the Enter key does; `\\` is a backslash; anything else is typed as it is. Options end at `--`, so text may start with `-`.
+- *`new`:* `--cwd` is made absolute against the current folder and must be a folder (exit 1 otherwise), rather than silently starting in `$HOME`. It prints the new session's id.
+- *`ls`:* a tree, one line per session (`s1 work`, plus `(N windows)` when shown), tab (`t2 <name or title>`, `(active)`) and pane (`p3 <title>  <folder>  <status>`, `(focused)` in a split tab, `(zoomed)`). Folders under `$HOME` start with `~`. Statuses: `running`, `exited <code>`, `killed by signal <n>`. An empty workspace prints `No sessions.` `--json` prints `workspace.get`'s result.
+- *Errors:* `shoal: <message>` on stderr; bad usage prints `shoal <command>: <problem>` and the usage text. A timeout or lost connection counts as unreachable (exit 3).
+
 ## 12. Performance budgets
 
 Measured on the user's machine and recorded in `docs/perf.md`. A regression of more than 20% on an automated measure fails the check.

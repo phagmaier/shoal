@@ -1,0 +1,14 @@
+---
+source: crates/shoal-cli/tests/commands.rs
+assertion_line: 114
+expression: "ok(&env, &[\"ls\"])"
+---
+s1 work
+├─ t2 shoal
+│  ├─ p3 shoal     ~/code/shoal  running (focused) (zoomed)
+│  └─ p8 notes     ~/notes       running
+└─ t9 failing (active)
+   └─ p10 failing  ~/code/shoal  exited 1
+s4 2
+└─ t5 ~ (active)
+   └─ p6 ~         ~             running

@@ -18,3 +18,8 @@ pub use client::{Client, Connected, Event};
 pub use error::Error;
 pub use options::{AutoStart, NoAutoStart, Options, wait_for_socket};
 pub use stream::{AttachStream, StreamItem};
+
+/// The workspace and protocol types callers build calls from and read
+/// results into, so a client's users need no other Shoal crate.
+pub use shoal_model as model;
+pub use shoal_proto as proto;

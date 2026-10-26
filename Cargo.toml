@@ -20,6 +20,7 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
+base64 = "0.22.1"
 shoal-config = { path = "crates/shoal-config" }
 shoal-model = { path = "crates/shoal-model" }
 shoal-proto = { path = "crates/shoal-proto" }
