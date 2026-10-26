@@ -21,9 +21,9 @@ const SCROLLBACK: &str = "scrollback.vt.zst";
 /// The state folder and what Shoal keeps in it.
 #[derive(Debug, Clone)]
 pub struct Store {
-    state: PathBuf,
-    workspace: PathBuf,
-    panes: PathBuf,
+    pub(super) state: PathBuf,
+    pub(super) workspace: PathBuf,
+    pub(super) panes: PathBuf,
 }
 
 impl Store {

@@ -2,6 +2,7 @@
 
 mod attach;
 mod persist;
+mod restore;
 
 use std::{
     cell::RefCell,
@@ -48,6 +49,7 @@ pub struct Plan {
     scrollback: u32,
     persist: bool,
     theme: shoal_term::Theme,
+    restore: Option<super::Restore>,
 }
 
 impl Plan {
@@ -74,6 +76,7 @@ impl Plan {
             scrollback: settings.scrollback,
             persist: settings.persist,
             theme: settings.theme,
+            restore: spec.restore,
         })
     }
 }
@@ -152,7 +155,7 @@ impl Runtime {
             plan.cwd.clone(),
         )));
         let tracker = metadata.clone();
-        let terminal = Terminal::pane(
+        let mut terminal = Terminal::pane(
             PaneSetup {
                 cols: plan.size.cols,
                 rows: plan.size.rows,
@@ -165,6 +168,9 @@ impl Runtime {
                 tracker.borrow_mut().event(event, Instant::now());
             }),
         )?;
+        if let Some(saved) = &plan.restore {
+            restore::replay(&mut terminal, saved, &replies, &metadata, &plan.cwd)?;
+        }
         let pty = open(&plan)?;
         Ok(Self {
             id: plan.id,

@@ -50,6 +50,7 @@ impl Actor {
                         let registration = Registration { id, sender: self.sender.clone(), active: true };
                         if reply.send(registration).is_ok() && client == ClientKind::Gui {
                             for notice in self.notices.clone() { self.notify(id, &notice); }
+                            for notice in std::mem::take(&mut self.restore_notices) { self.notify(id, &notice); }
                         }
                     }
                     Some(Message::Request { connection, request, done }) => {

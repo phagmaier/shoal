@@ -1,8 +1,11 @@
-use std::fs;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde_json::{Value, json};
 use shoal_proto::{Message, Response, RpcError};
-use shoal_testkit::{Connection, Received, TempEnv};
+use shoal_testkit::{Connection, Received, TempEnv, eventually};
 
 pub const SHOALD: &str = env!("CARGO_BIN_EXE_shoald");
 
@@ -121,4 +124,65 @@ impl Rpc {
         assert_eq!(state["rev"], state["workspace"]["rev"]);
         state["workspace"].clone()
     }
+}
+
+pub fn state(env: &TempEnv) -> PathBuf {
+    env.state_home().join("shoal")
+}
+
+pub fn scrollback(env: &TempEnv, pane: &Value) -> PathBuf {
+    state(env).join(format!(
+        "panes/{}/scrollback.vt.zst",
+        pane.as_str().unwrap()
+    ))
+}
+
+pub fn saved_text(path: &Path) -> String {
+    String::from_utf8(zstd::decode_all(fs::File::open(path).unwrap()).unwrap()).unwrap()
+}
+
+pub fn saved_workspace(env: &TempEnv) -> Value {
+    serde_json::from_slice(&fs::read(state(env).join("workspace.json")).unwrap()).unwrap()
+}
+
+pub fn screen(rpc: &mut Rpc, pane: &Value) -> String {
+    rpc.ok(
+        "pane.capture",
+        json!({"pane": pane, "format": "text", "scrollback": true}),
+    )["data"]
+        .as_str()
+        .unwrap()
+        .to_owned()
+}
+
+pub fn wait_for(rpc: &mut Rpc, pane: &Value, needle: &str) {
+    eventually(&format!("{needle:?} on screen"), || {
+        screen(rpc, pane).contains(needle).then_some(())
+    });
+}
+
+/// A new session's pane, once its prompt is up.
+pub fn session(rpc: &mut Rpc) -> Value {
+    let session = rpc.ok("session.create", json!({}))["session"].clone();
+    let workspace = rpc.workspace();
+    let pane = workspace["sessions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["id"] == session)
+        .unwrap()["tabs"][0]["focused"]
+        .clone();
+    wait_for(rpc, &pane, "fixture>");
+    pane
+}
+
+/// Print `marker` and wait for it. The command splits the marker, so only
+/// its output contains it.
+pub fn print(rpc: &mut Rpc, pane: &Value, marker: &str) {
+    let (head, tail) = marker.split_at(3);
+    rpc.ok(
+        "pane.send_text",
+        json!({"pane": pane, "text": format!("printf '{head}%s\\n' {tail}\n")}),
+    );
+    wait_for(rpc, pane, &format!("{marker}\n"));
 }

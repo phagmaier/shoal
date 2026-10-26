@@ -5,6 +5,7 @@ mod geometry;
 mod metadata;
 mod methods;
 mod persistence;
+mod restore;
 mod spawning;
 mod streaming;
 mod workspace;
@@ -111,7 +112,9 @@ impl Handle {
     }
 }
 
-pub fn start(
+/// Restore the saved workspace (M1 spec §6.4), then run the actor. Returns
+/// once every restored pane has started, so clients only ever see the result.
+pub async fn start(
     paths: XdgPaths,
     settings: Settings,
     updates: mpsc::UnboundedReceiver<settings::Update>,
@@ -119,7 +122,7 @@ pub fn start(
 ) -> Handle {
     let (sender, receiver) = mpsc::unbounded_channel();
     let (events, event_receiver) = mpsc::unbounded_channel();
-    let actor = Actor {
+    let mut actor = Actor {
         workspace: Workspace {
             rev: 0,
             next_id: 1,
@@ -156,6 +159,7 @@ pub fn start(
         updates,
         updates_open: true,
         notices: Vec::new(),
+        restore_notices: Vec::new(),
         events,
         event_receiver,
         sender: sender.clone(),
@@ -163,6 +167,7 @@ pub fn start(
         shutdown,
         started: Instant::now(),
     };
+    actor.restore().await;
     tokio::spawn(actor.run());
     Handle { sender }
 }
@@ -268,6 +273,8 @@ struct Actor {
     updates: mpsc::UnboundedReceiver<settings::Update>,
     updates_open: bool,
     notices: Vec<Notification>,
+    /// Restore problems, for the first window only (§6.4 step 2).
+    restore_notices: Vec<Notification>,
     events: pane::Events,
     event_receiver: mpsc::UnboundedReceiver<(PaneId, pane::Event)>,
     sender: mpsc::UnboundedSender<Message>,

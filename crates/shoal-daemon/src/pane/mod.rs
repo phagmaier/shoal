@@ -57,6 +57,18 @@ pub struct PaneSpec {
     pub cwd: Option<PathBuf>,
     /// The latest connected window's values; only [`spawn::WINDOW_ENV`] apply.
     pub window_env: BTreeMap<String, String>,
+    /// Old output to show above the fresh shell, for a restored pane.
+    pub restore: Option<Restore>,
+}
+
+/// A restored pane's old output and its divider (M1 spec §6.4 steps 3–5).
+/// Both become the terminal's initial state, before the shell's first byte;
+/// they are not numbered stream output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Restore {
+    /// Saved terminal bytes; empty when there were none or they were unreadable.
+    pub saved: Vec<u8>,
+    pub divider: String,
 }
 
 /// What a pane reports to its owner, tagged with its id.

@@ -97,6 +97,22 @@ impl Persistence {
         })
     }
 
+    pub fn store(&self) -> &Store {
+        &self.store
+    }
+
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// A restored pane's scrollback file is still valid: keep naming it until
+    /// that pane's next write replaces it.
+    pub fn restored(&mut self, pane: PaneId) {
+        if self.enabled {
+            self.saved.insert(pane);
+        }
+    }
+
     /// Writes or flushes are unfinished.
     pub fn busy(&self) -> bool {
         self.layout_busy || !self.writes.is_empty() || !self.flushes.is_empty()

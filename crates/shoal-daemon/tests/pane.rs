@@ -69,6 +69,7 @@ impl Harness {
             argv: argv.iter().map(|arg| (*arg).to_owned()).collect(),
             cwd: None,
             window_env: BTreeMap::new(),
+            restore: None,
         }
     }
 

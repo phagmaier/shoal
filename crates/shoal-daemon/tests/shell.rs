@@ -84,6 +84,7 @@ impl Shell {
                 argv: vec![shell.into()],
                 cwd: None,
                 window_env: BTreeMap::new(),
+                restore: None,
             },
             &settings,
             events,

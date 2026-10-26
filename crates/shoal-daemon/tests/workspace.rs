@@ -4,6 +4,7 @@
 mod lifecycle;
 #[path = "workspace/live_settings.rs"]
 mod live_settings;
+#[allow(dead_code)]
 mod support;
 
 use std::{

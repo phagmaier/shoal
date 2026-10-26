@@ -35,7 +35,7 @@ pub async fn serve(
     let listener = UnixListener::from_std(bound.listener)?;
     let daemon = Arc::new(daemon);
     let (shutdown, mut stopping) = watch::channel(false);
-    let actor = actor::start(paths, settings, updates, shutdown);
+    let actor = actor::start(paths, settings, updates, shutdown).await;
     let mut connections = JoinSet::new();
     tracing::info!(socket = %bound.socket.display(), pid = daemon.pid, "shoald listening");
     let reason = loop {

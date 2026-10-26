@@ -8,78 +8,20 @@ use std::{
     fs,
     io::Write as _,
     os::unix::{fs::PermissionsExt as _, process::ExitStatusExt as _},
-    path::{Path, PathBuf},
+    path::Path,
     time::{Duration, Instant},
 };
 
 use serde_json::{Value, json};
 use shoal_daemon::persist::write_atomic;
-use shoal_testkit::{Signal, TempEnv, eventually};
-use support::{Rpc, SHOALD, config, fixture};
-
-fn state(env: &TempEnv) -> PathBuf {
-    env.state_home().join("shoal")
-}
-
-fn scrollback(env: &TempEnv, pane: &Value) -> PathBuf {
-    state(env).join(format!(
-        "panes/{}/scrollback.vt.zst",
-        pane.as_str().unwrap()
-    ))
-}
-
-fn saved_text(path: &Path) -> String {
-    String::from_utf8(zstd::decode_all(fs::File::open(path).unwrap()).unwrap()).unwrap()
-}
-
-fn saved_workspace(env: &TempEnv) -> Value {
-    serde_json::from_slice(&fs::read(state(env).join("workspace.json")).unwrap()).unwrap()
-}
+use shoal_testkit::{Signal, eventually};
+use support::{
+    Rpc, SHOALD, config, fixture, print, saved_text, saved_workspace, screen, scrollback, session,
+    state, wait_for,
+};
 
 fn mode(path: &Path) -> u32 {
     fs::metadata(path).unwrap().permissions().mode() & 0o777
-}
-
-fn screen(rpc: &mut Rpc, pane: &Value) -> String {
-    rpc.ok(
-        "pane.capture",
-        json!({"pane": pane, "format": "text", "scrollback": true}),
-    )["data"]
-        .as_str()
-        .unwrap()
-        .to_owned()
-}
-
-fn wait_for(rpc: &mut Rpc, pane: &Value, needle: &str) {
-    eventually(&format!("{needle:?} on screen"), || {
-        screen(rpc, pane).contains(needle).then_some(())
-    });
-}
-
-/// A new session's pane, once its prompt is up.
-fn session(rpc: &mut Rpc) -> Value {
-    let session = rpc.ok("session.create", json!({}))["session"].clone();
-    let workspace = rpc.workspace();
-    let pane = workspace["sessions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|item| item["id"] == session)
-        .unwrap()["tabs"][0]["focused"]
-        .clone();
-    wait_for(rpc, &pane, "fixture>");
-    pane
-}
-
-/// Print `marker` and wait for it. The command splits the marker, so only
-/// its output contains it.
-fn print(rpc: &mut Rpc, pane: &Value, marker: &str) {
-    let (head, tail) = marker.split_at(3);
-    rpc.ok(
-        "pane.send_text",
-        json!({"pane": pane, "text": format!("printf '{head}%s\\n' {tail}\n")}),
-    );
-    wait_for(rpc, pane, &format!("{marker}\n"));
 }
 
 fn session_with(rpc: &mut Rpc, marker: &str) -> Value {

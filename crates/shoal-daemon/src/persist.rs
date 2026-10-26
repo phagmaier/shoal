@@ -3,6 +3,8 @@
 
 mod files;
 mod format;
+mod load;
 
 pub use files::{Store, write_atomic};
 pub use format::{Document, FORMAT, SavedPane, SavedSession, SavedTab, scrollback_path};
+pub use load::{Loaded, Restored, divider, parse};

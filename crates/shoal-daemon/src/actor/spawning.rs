@@ -216,6 +216,7 @@ impl Actor {
             argv: argv.clone(),
             cwd: prepared.record.cwd.clone(),
             window_env: self.window_env.clone(),
+            restore: None,
         };
         self.pending.insert(
             id,

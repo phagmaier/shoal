@@ -476,6 +476,18 @@ A format change bumps `format` and ships a migration from every older format, wi
 
 **Budget:** 20 panes with 10,000 lines each restored in under 500 ms; shells start in parallel.
 
+**Settled details (T16, 2026-10-25).**
+
+- *When:* the daemon restores before it accepts a connection, so clients only see the result. Reading files and starting shells run on blocking workers, every pane in parallel. The release build restored 20 panes × 10,000 lines in 146 ms (an ignored test in `tests/restore.rs` measures it).
+- *Unusable file:* JSON that doesn't parse, a `format` other than 1, a wrong shape, a workspace that fails `validate`, or a pane size outside 1..=1000 counts as broken. It is renamed `workspace.json.broken-<YYYYMMDDTHHMMSSZ>` (UTC). The notice (`warn`) goes to the first GUI client only and names the new file.
+- *Ids and state:* `next_id` is the larger of the saved counter and one above the highest saved id. Every pane starts `running`, with `restored_from` set to `saved_at`, no `program`, and an empty `argv`. A pane created with a command gets a fresh shell, never the command again (settled with the user); the saved program appears only in the divider. Session window counts start at 0.
+- *Old output:* a pane's file is read by its id and decompressed up to 256 MiB. A missing, undecodable or oversized file adds `(old output unreadable)` to the divider. With `scrollback.persist = false` old files are not shown (settled with the user), and the first layout write deletes them.
+- *Making it inert:* on the pane's thread, into its own terminal, before the shell starts: CAN aborts an unfinished sequence; the alternate screens are left only when one is showing; then DECSTR, and off with reverse video, mouse reporting, focus events, bracketed paste, synchronized output, in-band resize, newline mode and the Kitty keyboard flags; an open hyperlink is closed and dynamic colors reset. Replies and metadata reports caused by the old bytes are discarded. Restored content is the pane's initial state, not numbered output; the stream still starts at 1 with the shell's first output.
+- *Divider:* dim, on the line below the last row with text, wherever the old cursor was. Times are local, as `Sat Oct 24 14:02`; notes follow in order: `was running <program>`, `(folder gone)`, `(old output unreadable)`. Control characters are dropped.
+- *Folders:* a missing saved folder starts the shell in `$HOME`, and the pane's `cwd` says so.
+- *Panes that can't start:* a pane whose shell fails to start is closed as if it had exited, which may close its tab and session. The first GUI client gets "N saved panes couldn't be restored."
+- *Saving afterwards:* the layout is written once at startup. A pane whose file was read keeps naming it until its next scrollback save replaces it, so a crash right after a restart loses nothing more. Restored shells start with the daemon's environment, since no window has connected yet.
+
 ## 7. Window and rendering
 
 ### 7.1 The window
