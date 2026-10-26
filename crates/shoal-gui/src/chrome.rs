@@ -6,7 +6,7 @@ use shoal_config::{
     Palette,
     schema::{Rgb, WindowConfig},
 };
-use shoal_model::{PaneId, Rect, SessionId, Tab, TabId, Workspace, rects};
+use shoal_model::{Divider, PaneId, Rect, SessionId, Tab, TabId, Workspace, dividers, rects};
 
 /// The top bar's height in logical pixels.
 pub const TOP_BAR_HEIGHT: u32 = 34;
@@ -39,6 +39,9 @@ pub struct Chrome {
     pub tabs: Vec<TabLabel>,
     /// The panes the active tab shows, in layout order.
     pub panes: Vec<PaneBox>,
+    /// The gaps between them that drag, parent splits first; none while a
+    /// pane is zoomed.
+    pub dividers: Vec<Divider>,
 }
 
 /// The session name at the left of the top bar.
@@ -112,13 +115,7 @@ pub fn chrome(
         .iter()
         .map(|tab| {
             let active = tab.id == session.active_tab;
-            let title = tab.name.clone().unwrap_or_else(|| {
-                workspace
-                    .panes
-                    .get(&tab.focused)
-                    .map(|pane| pane.title.clone())
-                    .unwrap_or_default()
-            });
+            let title = tab_title(workspace, tab);
             let mut bell = false;
             tab.layout.for_each_pane(&mut |pane| {
                 bell |= workspace.panes.get(&pane).is_some_and(|pane| pane.bell);
@@ -141,7 +138,7 @@ pub fn chrome(
             }
         })
         .collect();
-    let panes = session
+    let (panes, dividers) = session
         .tabs
         .iter()
         .find(|tab| tab.id == session.active_tab)
@@ -157,7 +154,32 @@ pub fn chrome(
         },
         tabs,
         panes,
+        dividers,
     })
+}
+
+/// A tab's label: its name, otherwise its focused pane's title.
+pub fn tab_title(workspace: &Workspace, tab: &Tab) -> String {
+    tab.name.clone().unwrap_or_else(|| {
+        workspace
+            .panes
+            .get(&tab.focused)
+            .map(|pane| pane.title.clone())
+            .unwrap_or_default()
+    })
+}
+
+/// The pane whose box holds `point`, in pane-area pixels.
+pub fn pane_at(panes: &[PaneBox], (x, y): (f32, f32)) -> Option<PaneId> {
+    let within = |start: u32, extent: u32, at: f32| {
+        (start as f32..start as f32 + extent as f32).contains(&at)
+    };
+    panes
+        .iter()
+        .find(|pane| {
+            within(pane.rect.x, pane.rect.width, x) && within(pane.rect.y, pane.rect.height, y)
+        })
+        .map(|pane| pane.pane)
 }
 
 fn pane_boxes(
@@ -166,7 +188,7 @@ fn pane_boxes(
     window: &WindowConfig,
     width: u32,
     height: u32,
-) -> Vec<PaneBox> {
+) -> (Vec<PaneBox>, Vec<Divider>) {
     let padding = window.padding;
     let area = Rect {
         x: padding.min(width),
@@ -174,26 +196,29 @@ fn pane_boxes(
         width: width.saturating_sub(padding.saturating_mul(2)),
         height: height.saturating_sub(padding.saturating_mul(2)),
     };
-    let shown: Vec<(PaneId, Rect)> = match tab.zoomed {
-        Some(zoomed) => vec![(zoomed, area)],
-        None => match rects(&tab.layout, area, window.gap) {
-            Ok(rects) => {
+    let (shown, gaps): (Vec<(PaneId, Rect)>, _) = match tab.zoomed {
+        Some(zoomed) => (vec![(zoomed, area)], Vec::new()),
+        None => match rects(&tab.layout, area, window.gap)
+            .and_then(|rects| Ok((rects, dividers(&tab.layout, area, window.gap)?)))
+        {
+            Ok((rects, gaps)) => {
                 let mut order = Vec::new();
                 tab.layout.for_each_pane(&mut |pane| order.push(pane));
-                order
+                let shown = order
                     .into_iter()
                     .filter_map(|pane| Some((pane, *rects.get(&pane)?)))
-                    .collect()
+                    .collect();
+                (shown, gaps)
             }
             Err(error) => {
                 tracing::warn!(%error, "can't lay out the tab");
-                Vec::new()
+                (Vec::new(), Vec::new())
             }
         },
     };
     // With one pane in view, which one has focus goes without saying.
     let marks_focus = shown.len() > 1;
-    shown
+    let boxes = shown
         .into_iter()
         .map(|(pane, rect)| {
             let focused = marks_focus && pane == tab.focused;
@@ -220,7 +245,8 @@ fn pane_boxes(
                 },
             }
         })
-        .collect()
+        .collect();
+    (boxes, gaps)
 }
 
 #[cfg(test)]

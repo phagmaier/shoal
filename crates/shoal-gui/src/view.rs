@@ -2,33 +2,40 @@
 //! each pane's mirror drawn inside its box, following the workspace as the
 //! daemon changes it.
 
+mod layout;
+mod topbar;
+
 use std::time::Instant;
 
 use gpui::{
-    AnyElement, BorderStyle, Bounds, ContentMask, Context, Div, Hsla, Rgba, SharedString,
-    Subscription, Window, canvas, div, point, prelude::*, px, quad, size,
+    AnyElement, BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, KeyDownEvent,
+    MouseButton, MouseDownEvent, Rgba, SharedString, Subscription, Task, Window, canvas, div,
+    point, prelude::*, px, quad, size,
 };
 use shoal_client::{
     Client, Event,
-    model::{PaneId, SessionId, Tab, Workspace},
-    proto::Notification,
+    model::{PaneId, SessionId, Tab, TabId, Workspace},
+    proto::{Call, Notification},
 };
-use shoal_config::{Config, Palette};
+use shoal_config::{Action, Config, Palette};
 
 use crate::{
-    chrome::{self, Chrome, Color, PaneBox, TOP_BAR_HEIGHT, TabLabel, UNDERLINE_WIDTH},
-    draw, fonts,
+    chrome::{self, Chrome, Color, PaneBox, TOP_BAR_HEIGHT},
+    drag::Drag,
+    draw,
     glyphs::{self, GlyphCache},
+    keys,
     metrics::{self, CellMetrics},
     mirror::{self, State},
     panes::Panes,
+    rename::Rename,
     session,
+    sizing::Sizer,
     terminal::{self, PaneFrame},
 };
 
 /// Chrome text size in logical pixels.
 const TEXT_SIZE: f32 = 13.0;
-const GLYPH_WIDTH: f32 = 16.0;
 
 pub struct ShoalWindow {
     pub(crate) client: Client,
@@ -42,6 +49,18 @@ pub struct ShoalWindow {
     /// Cell metrics, with the font family and line height they were
     /// measured for (the size and scale are in the metrics).
     metrics: Option<(CellMetrics, String, f64)>,
+    /// The boxes and dividers last drawn, for the mouse.
+    shown: layout::Shown,
+    sizer: Sizer,
+    /// Wakes the window when the sizer's wait ends.
+    size_timer: Option<(Instant, Task<()>)>,
+    drag: Option<Drag>,
+    /// Sends the dragged ratio once the throttle allows.
+    ratio_timer: Option<Task<()>>,
+    rename: Option<Rename>,
+    /// The window's keys go here; the rename field's go to its own.
+    focus: FocusHandle,
+    rename_focus: FocusHandle,
     _activation: Subscription,
 }
 
@@ -55,8 +74,14 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        // An inactive window draws its cursors hollow.
-        let activation = cx.observe_window_activation(window, |_, _, cx| cx.notify());
+        // An inactive window draws its cursors hollow, and the daemon
+        // follows the focused window's sizes.
+        let activation = cx.observe_window_activation(window, |view, window, cx| {
+            view.report_focus(window);
+            cx.notify();
+        });
+        let focus = cx.focus_handle();
+        window.focus(&focus, cx);
         let mut view = Self {
             client,
             session,
@@ -67,8 +92,19 @@ impl ShoalWindow {
             title: String::new(),
             glyphs: GlyphCache::default(),
             metrics: None,
+            shown: layout::Shown::default(),
+            sizer: Sizer::default(),
+            size_timer: None,
+            drag: None,
+            ratio_timer: None,
+            rename: None,
+            focus,
+            rename_focus: cx.focus_handle(),
             _activation: activation,
         };
+        if window.is_window_active() {
+            view.report_focus(window);
+        }
         view.sync_panes(cx);
         view
     }
@@ -80,12 +116,18 @@ impl ShoalWindow {
 
     /// Apply one connection event. Returns `false` once the session is gone
     /// and the window should close.
-    pub fn on_event(&mut self, event: Event, cx: &mut Context<Self>) -> bool {
+    pub fn on_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) -> bool {
         match event {
             Event::Notification(Notification::WorkspaceChanged(state)) => {
                 // Always the newest: one connection's notifications arrive in
                 // order, and a restarted daemon may restore an older `rev`.
                 self.workspace = state.workspace;
+                self.follow_drag();
+                if let Some(rename) = &self.rename
+                    && self.tab(rename.tab).is_none()
+                {
+                    self.finish_rename(None, window, cx);
+                }
                 self.sync_panes(cx);
                 cx.notify();
                 return self.shows_session();
@@ -100,6 +142,8 @@ impl ShoalWindow {
                 // answer doesn't matter here: a closed session arrives as a
                 // workspace change.
                 drop(self.client.send(session::show_call(self.session)));
+                self.report_focus(window);
+                cx.notify();
             }
             Event::Disconnected(error) => {
                 // T46 shows the reconnecting overlay.
@@ -109,8 +153,60 @@ impl ShoalWindow {
         true
     }
 
+    /// Tell the daemon whether this window has focus. The one that last had
+    /// it sizes the panes (§5.6), so on gaining it, ask for every shown
+    /// pane's size again.
+    fn report_focus(&mut self, window: &Window) {
+        let focused = window.is_window_active();
+        tracing::debug!(focused, "window focus");
+        drop(self.client.send(Call::WindowSetFocused { focused }));
+        if focused {
+            self.sizer.reset();
+        }
+    }
+
+    /// The window's own keys. Until T42 it acts only on renaming and
+    /// zooming.
+    fn key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(action) =
+            keys::chord(&event.keystroke).and_then(|chord| self.config.keybinds.get(&chord))
+        else {
+            return;
+        };
+        let Some(tab) = self.active_tab() else {
+            return;
+        };
+        match action {
+            Action::TabRename => {
+                let tab = tab.id;
+                self.start_rename(tab, window, cx);
+            }
+            Action::PaneZoom => {
+                let call = Call::PaneZoom {
+                    pane: tab.focused,
+                    zoomed: tab.zoomed.is_none(),
+                };
+                drop(self.client.send(call));
+            }
+            _ => return,
+        }
+        cx.stop_propagation();
+    }
+
     fn shows_session(&self) -> bool {
         self.workspace.sessions.iter().any(|s| s.id == self.session)
+    }
+
+    fn tabs(&self) -> &[Tab] {
+        self.workspace
+            .sessions
+            .iter()
+            .find(|s| s.id == self.session)
+            .map_or(&[], |session| &session.tabs)
+    }
+
+    fn tab(&self, id: TabId) -> Option<&Tab> {
+        self.tabs().iter().find(|tab| tab.id == id)
     }
 
     fn active_tab(&self) -> Option<&Tab> {
@@ -168,8 +264,12 @@ impl ShoalWindow {
     }
 
     /// Each shown pane's frame; `None` while it attaches or shows a banner.
-    fn pane_frames(&mut self, boxes: &[PaneBox], window: &Window) -> Vec<Option<PaneFrame>> {
-        let cell = self.cell_metrics(window);
+    fn pane_frames(
+        &mut self,
+        boxes: &[PaneBox],
+        cell: CellMetrics,
+        window: &Window,
+    ) -> Vec<Option<PaneFrame>> {
         let focused = self.focused_pane().filter(|_| window.is_window_active());
         let opacity = self.config.window.opacity as f32;
         let cursor = self.palette.cursor;
@@ -272,40 +372,28 @@ impl Render for ShoalWindow {
             chip,
             tabs,
             panes,
+            dividers,
             ..
         } = chrome;
-        let top_bar = div()
-            .h(px(TOP_BAR_HEIGHT as f32))
-            .w_full()
-            .flex_none()
-            .flex()
-            .flex_row()
-            .items_center()
-            .gap(px(2.0))
-            .px(px(8.0))
-            .overflow_hidden()
-            .bg(rgba(bar))
-            .child(
-                div()
-                    .flex_none()
-                    .mr(px(6.0))
-                    .px(px(8.0))
-                    .py(px(2.0))
-                    .rounded(px(6.0))
-                    .bg(rgba(chip.fill))
-                    .text_color(rgba(chip.text))
-                    .child(SharedString::from(chip.name)),
-            )
-            .children(tabs.into_iter().map(tab_label));
-        let frames = self.pane_frames(&panes, window);
+        let top_bar = self.top_bar(bar, chip, tabs, cx);
+        let cell = self.cell_metrics(window);
+        self.request_sizes(&panes, &cell, cx);
+        let frames = self.pane_frames(&panes, cell, window);
         let banners: Vec<_> = panes
             .iter()
             .filter_map(|pane| self.banner(pane, cx))
             .collect();
-        let cell = self.metrics.as_ref().map(|(cell, ..)| *cell);
+        let handles = self.divider_handles(&dividers);
+        let dragging = self.drag.as_ref().map(|drag| drag.axis);
+        let drag_listeners = self.drag_listeners(dragging, cx);
+        self.shown = layout::Shown {
+            panes: panes.clone(),
+            dividers,
+        };
         let boxes = canvas(
             |_, _, _| (),
-            move |bounds, (), window, _| {
+            move |bounds, (), window, cx| {
+                drag_listeners(window, cx);
                 for (pane, frame) in panes.iter().zip(&frames) {
                     let origin =
                         bounds.origin + point(px(pane.rect.x as f32), px(pane.rect.y as f32));
@@ -319,7 +407,7 @@ impl Render for ShoalWindow {
                         rgba(pane.border),
                         BorderStyle::Solid,
                     ));
-                    let (Some(frame), Some(cell)) = (frame, cell) else {
+                    let Some(frame) = frame else {
                         continue;
                     };
                     // A mirror bigger than its box is clipped at the inset.
@@ -344,70 +432,24 @@ impl Render for ShoalWindow {
             .relative()
             .flex_1()
             .w_full()
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|view, event: &MouseDownEvent, _, cx| view.press(event.position, cx)),
+            )
             .child(boxes)
-            .children(banners);
+            .children(banners)
+            .children(handles);
         div()
             .size_full()
             .flex()
             .flex_col()
+            .track_focus(&self.focus)
+            .on_key_down(cx.listener(Self::key_down))
             .font_family(SharedString::from(self.config.font.family.clone()))
             .text_size(px(TEXT_SIZE))
             .child(top_bar)
             .child(pane_area)
     }
-}
-
-/// A tab's glyph and title, at most 200 px wide with an ellipsis, with the
-/// active tab's underline and a ringing tab's dot.
-fn tab_label(tab: TabLabel) -> Div {
-    let mut label = div()
-        .relative()
-        .h_full()
-        .min_w_0()
-        .max_w(px(200.0))
-        .flex()
-        .flex_row()
-        .items_center()
-        .gap(px(6.0))
-        .px(px(8.0))
-        .text_color(rgba(tab.text))
-        .child(
-            // Symbols spill past their one-cell advance; give them room.
-            div()
-                .flex_none()
-                .w(px(GLYPH_WIDTH))
-                .font_family(fonts::SYMBOLS_FAMILY)
-                .child(tab.glyph.text()),
-        )
-        .child(
-            div()
-                .min_w_0()
-                .overflow_hidden()
-                .whitespace_nowrap()
-                .text_ellipsis()
-                .child(SharedString::from(tab.title)),
-        );
-    if let Some(bell) = tab.bell {
-        label = label.child(
-            div()
-                .flex_none()
-                .size(px(6.0))
-                .rounded_full()
-                .bg(rgba(bell)),
-        );
-    }
-    if let Some(underline) = tab.underline {
-        label = label.child(
-            div()
-                .absolute()
-                .bottom_0()
-                .left(px(8.0))
-                .right(px(8.0))
-                .h(px(UNDERLINE_WIDTH))
-                .bg(rgba(underline)),
-        );
-    }
-    label
 }
 
 pub(crate) fn hsla(color: Color) -> Hsla {

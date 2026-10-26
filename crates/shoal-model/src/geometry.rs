@@ -3,7 +3,7 @@
 use std::cmp::Reverse;
 use std::collections::BTreeMap;
 
-use crate::{Axis, Direction, Layout, LayoutError, PaneId};
+use crate::{Axis, Direction, Layout, LayoutError, PaneId, SplitId};
 
 /// A half-open rectangle in tab-local pixels. Zero extents are allowed.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -41,6 +41,40 @@ pub fn rects(layout: &Layout, area: Rect, gap: u32) -> Result<BTreeMap<PaneId, R
     Ok(result)
 }
 
+/// The gap between a split's children: the drag target that moves its ratio.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Divider {
+    pub split: SplitId,
+    pub axis: Axis,
+    pub ratio: f32,
+    /// The split's whole area, both children and the gap.
+    pub area: Rect,
+    /// Between the children; empty when the gap is 0.
+    pub gap: Rect,
+}
+
+impl Divider {
+    /// The extent along the axis that the ratio shares out: the area less
+    /// the gap.
+    pub fn usable(&self) -> u32 {
+        match self.axis {
+            Axis::Row => self.area.width - self.gap.width,
+            Axis::Column => self.area.height - self.gap.height,
+        }
+    }
+}
+
+/// Every split's divider, parent before children, laid out as [`rects`]
+/// lays out the panes.
+pub fn dividers(layout: &Layout, area: Rect, gap: u32) -> Result<Vec<Divider>, LayoutError> {
+    if area.x.checked_add(area.width).is_none() || area.y.checked_add(area.height).is_none() {
+        return Err(LayoutError::AreaOverflow);
+    }
+    let mut result = Vec::new();
+    collect_dividers(layout, area, gap, &mut result);
+    Ok(result)
+}
+
 fn collect_rects(layout: &Layout, area: Rect, gap: u32, result: &mut BTreeMap<PaneId, Rect>) {
     match layout {
         Layout::Pane(pane) => {
@@ -53,46 +87,83 @@ fn collect_rects(layout: &Layout, area: Rect, gap: u32, result: &mut BTreeMap<Pa
             second,
             ..
         } => {
-            let extent = match axis {
-                Axis::Row => area.width,
-                Axis::Column => area.height,
-            };
-            let local_gap = gap.min(extent);
-            let usable = extent - local_gap;
-            // Every allowed f32 ratio (0.1..=0.9) is an exact multiple of 2^-27.
-            // Scaling by that power of two is exact; the integer product then
-            // fits in 59 bits and division floors without floating-point rounding.
-            const RATIO_SCALE: u64 = 1 << 27;
-            let share = (f64::from(*ratio) * RATIO_SCALE as f64) as u64;
-            let first_extent = (u64::from(usable) * share / RATIO_SCALE) as u32;
-            let second_extent = usable - first_extent;
-            let (first_area, second_area) = match axis {
-                Axis::Row => (
-                    Rect {
-                        width: first_extent,
-                        ..area
-                    },
-                    Rect {
-                        x: area.x + first_extent + local_gap,
-                        width: second_extent,
-                        ..area
-                    },
-                ),
-                Axis::Column => (
-                    Rect {
-                        height: first_extent,
-                        ..area
-                    },
-                    Rect {
-                        y: area.y + first_extent + local_gap,
-                        height: second_extent,
-                        ..area
-                    },
-                ),
-            };
+            let [first_area, _, second_area] = divide(*axis, *ratio, area, gap);
             collect_rects(first, first_area, gap, result);
             collect_rects(second, second_area, gap, result);
         }
+    }
+}
+
+fn collect_dividers(layout: &Layout, area: Rect, gap: u32, result: &mut Vec<Divider>) {
+    if let Layout::Split {
+        id,
+        axis,
+        ratio,
+        first,
+        second,
+    } = layout
+    {
+        let [first_area, gap_area, second_area] = divide(*axis, *ratio, area, gap);
+        result.push(Divider {
+            split: *id,
+            axis: *axis,
+            ratio: *ratio,
+            area,
+            gap: gap_area,
+        });
+        collect_dividers(first, first_area, gap, result);
+        collect_dividers(second, second_area, gap, result);
+    }
+}
+
+/// A split's first child, gap and second child.
+fn divide(axis: Axis, ratio: f32, area: Rect, gap: u32) -> [Rect; 3] {
+    let extent = match axis {
+        Axis::Row => area.width,
+        Axis::Column => area.height,
+    };
+    let local_gap = gap.min(extent);
+    let usable = extent - local_gap;
+    // Every allowed f32 ratio (0.1..=0.9) is an exact multiple of 2^-27.
+    // Scaling by that power of two is exact; the integer product then
+    // fits in 59 bits and division floors without floating-point rounding.
+    const RATIO_SCALE: u64 = 1 << 27;
+    let share = (f64::from(ratio) * RATIO_SCALE as f64) as u64;
+    let first_extent = (u64::from(usable) * share / RATIO_SCALE) as u32;
+    let second_extent = usable - first_extent;
+    match axis {
+        Axis::Row => [
+            Rect {
+                width: first_extent,
+                ..area
+            },
+            Rect {
+                x: area.x + first_extent,
+                width: local_gap,
+                ..area
+            },
+            Rect {
+                x: area.x + first_extent + local_gap,
+                width: second_extent,
+                ..area
+            },
+        ],
+        Axis::Column => [
+            Rect {
+                height: first_extent,
+                ..area
+            },
+            Rect {
+                y: area.y + first_extent,
+                height: local_gap,
+                ..area
+            },
+            Rect {
+                y: area.y + first_extent + local_gap,
+                height: second_extent,
+                ..area
+            },
+        ],
     }
 }
 

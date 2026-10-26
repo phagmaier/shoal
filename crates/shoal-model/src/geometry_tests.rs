@@ -139,6 +139,54 @@ fn rects_cap_each_gap_independently_on_alternating_axes() {
 }
 
 #[test]
+fn dividers_sit_in_the_gaps_between_the_rects() {
+    // The same layout as above: the row split's gap is x 56..59, and the
+    // column split's, inside the second child, is y 36..39.
+    let layout = branch(
+        1,
+        Axis::Row,
+        0.5,
+        Layout::Pane(p(2)),
+        branch(3, Axis::Column, 0.5, Layout::Pane(p(4)), Layout::Pane(p(5))),
+    );
+    let found = dividers(&layout, r(7, 11, 102, 54), 3).unwrap();
+    assert_eq!(
+        found,
+        vec![
+            Divider {
+                split: SplitId::new(1),
+                axis: Axis::Row,
+                ratio: 0.5,
+                area: r(7, 11, 102, 54),
+                gap: r(56, 11, 3, 54),
+            },
+            Divider {
+                split: SplitId::new(3),
+                axis: Axis::Column,
+                ratio: 0.5,
+                area: r(59, 11, 50, 54),
+                gap: r(59, 36, 50, 3),
+            },
+        ]
+    );
+    assert_eq!(found[0].usable(), 99);
+    assert_eq!(found[1].usable(), 51);
+    // Without a gap the divider is empty, at the first child's edge.
+    let flat = dividers(&layout, r(0, 0, 100, 50), 0).unwrap();
+    assert_eq!(flat[0].gap, r(50, 0, 0, 50));
+    assert_eq!(flat[0].usable(), 100);
+    assert!(
+        dividers(&Layout::Pane(p(2)), r(0, 0, 10, 10), 3)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        dividers(&layout, r(u32::MAX, 0, 1, 1), 0),
+        Err(LayoutError::AreaOverflow)
+    );
+}
+
+#[test]
 fn neighbor_finds_all_four_directions_and_does_not_wrap() {
     let rects = BTreeMap::from([
         (p(1), r(10, 10, 10, 10)),

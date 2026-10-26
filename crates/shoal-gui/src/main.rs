@@ -3,15 +3,19 @@
 //! `shoal attach` start it detached.
 
 mod chrome;
+mod drag;
 mod draw;
 mod fonts;
 mod glyphs;
+mod keys;
 mod metrics;
 mod mirror;
 mod panes;
+mod rename;
 mod retention;
 mod session;
 mod shapes;
+mod sizing;
 mod terminal;
 mod view;
 
@@ -156,7 +160,7 @@ fn open_window(opened: Opened, config: Config, palette: shoal_config::Palette, c
     cx.spawn(async move |cx| {
         while let Some(event) = events.next().await {
             let open = window.update(cx, |view, window, cx| {
-                let shown = view.on_event(event, cx);
+                let shown = view.on_event(event, window, cx);
                 if !shown {
                     tracing::info!("the session closed; closing the window");
                     window.remove_window();

@@ -48,6 +48,12 @@ pane=$("$shoal" ls --json | jq -r --arg s "$session" '.workspace.sessions[]
     | select(.id == $s) | . as $x | .tabs[] | select(.id == $x.active_tab) | .focused')
 record "session $session, pane $pane"
 send() { "$shoal" send "$session" "$1" >/dev/null; }
+# Size a pane from outside the window (M1 spec §5.6: from a connection that
+# reported focus).
+set_size() {
+    "$repo/target/release/examples/call" window.set_focused '{"focused":true}' \
+        pane.set_size "{\"pane\":\"$1\",\"cols\":$2,\"rows\":$3}" >/dev/null
+}
 
 say "2. Make the new window fullscreen: click it, then press Super+F."
 pause "Press Enter when it is fullscreen."
@@ -67,7 +73,7 @@ if [[ -n ${win_w:-} && -n $cell_w ]]; then
 else
     cols=120 rows=40
 fi
-"$repo/target/release/examples/set-size" "$pane" "$cols" "$rows" >/dev/null
+set_size "$pane" "$cols" "$rows" >/dev/null
 record "visual checks at ${cols} × ${rows} (window ${win_w:-?} × ${win_h:-?})"
 sleep 1
 
@@ -102,7 +108,7 @@ fi
 say "6. Full redraw timing at 200 × 60"
 echo "The pane grows to 200 × 60. On a 1080p screen its bottom is cut off; that's"
 echo "expected until windows size their panes (T43). Nothing to judge here."
-"$repo/target/release/examples/set-size" "$pane" 200 60 >/dev/null
+set_size "$pane" 200 60 >/dev/null
 sleep 1
 start=$(wc -l <"$log")
 # Each step makes frames that rebuild every row: btop's first screen, then
@@ -125,7 +131,7 @@ if [[ -n $times ]]; then
 else
     record "TIME  no full redraws of 200 × 60 in $log"
 fi
-"$repo/target/release/examples/set-size" "$pane" "$cols" "$rows" >/dev/null
+set_size "$pane" "$cols" "$rows" >/dev/null
 
 say "7. Done"
 read -r -p "Anything else you noticed? (Enter to skip) " note

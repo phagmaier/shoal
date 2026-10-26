@@ -531,6 +531,16 @@ Sizes are logical pixels before scaling.
 - Pane boxes fill the pane area less `window.padding`, split by `rects` with `window.gap`. A window smaller than its padding draws empty boxes.
 - T43 adds the `+` and split buttons, and all clicking.
 
+**Layout details (T43, 2026-10-26).**
+
+- *Grid size:* whole cells inside a box's 6 px inset, counted in device pixels (at a fractional scale the logical cell size isn't exact), at most 1000 × 1000. A box that can't hold one cell keeps its pane's size rather than reflowing it to 1 × 1. The window sends `pane.set_size` when a shown pane's grid differs from what the window last asked for, or, having never asked, from the size in force. It doesn't ask again when its sizes don't count (§5.6). Panes of hidden tabs keep their size until shown; a zoomed pane gets the whole area.
+- *Focus:* the window sends `window.set_focused` on every activation change, after each reconnect, and at start when already active. On gaining focus it asks for every shown pane's size again, so the focused window's sizes win.
+- *Dividers:* the grab target is the gap, widened to 6 px when `window.gap` is smaller. The divider follows the pointer from where it was grabbed, to the pixel, within the ratio range, and the window draws the dragged ratio at once, over the daemon's echoes. `split.set_ratio` goes on the first move, then at most every 1/60 s, and on release. Sizes wait until they have held still for 50 ms, during the drag and after it, since an echo of an earlier ratio may still arrive.
+- *Click to focus:* a left press in an unfocused pane's box sends `pane.focus`. T42 decides how it combines with mouse reporting.
+- *Tabs:* a click activates; middle-click closes (T47 adds the confirmation). Double-click or `tab.rename` renames inline: the label starts selected, so typing replaces it; Enter or a click elsewhere commits, Escape cancels. An empty name clears the tab's name, giving back its automatic title; an unchanged one sends nothing. `+` appends a tab, and the split buttons split the focused pane, both in the focused pane's folder (the daemon's default). Their glyphs are Codicons `add` (U+EA60), `split-horizontal` (U+EB56) and `split-vertical` (U+EB57).
+- *Tooltips:* after 500 ms, the action's name and its first bound chord as key caps (none when unbound), in `dark_foreground` on `darker_background`.
+- *Keys before T42:* the window acts only on the chords bound to `tab.rename` and `pane.zoom`, so zoom can be checked by hand; T42's dispatcher takes over. The rename field takes typed text without input-method composition, which T42 adds.
+
 ### 7.3 Drawing the grid
 
 - **Mirrors.** Each attached pane has a mirror: a `shoal-term` terminal plus exactly one render state. A second render state on the same terminal would consume the first one's dirty flags. New bytes are fed in and a frame is requested; nothing redraws while nothing changes.

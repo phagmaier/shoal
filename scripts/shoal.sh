@@ -15,7 +15,7 @@ build() {
     echo "Building the release binaries (fast when nothing changed)..."
     (cd "$repo" && mise exec -- cargo build --locked --release --quiet \
         --package shoal-daemon --package shoal-cli --package shoal-gui \
-        --example set-size)
+        --example call)
     # Release builds find their shell integration in <prefix>/share, beside
     # bin (M1 spec §8.2); make target/ that prefix, as install-unit does.
     ln -sfn ../share "$repo/target/share"

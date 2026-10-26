@@ -1,5 +1,6 @@
 use serde_json::{Value, json};
 use shoal_config::{Palette, schema::Rgb};
+use shoal_model::Axis;
 
 use super::*;
 
@@ -165,6 +166,25 @@ fn split_panes_fill_the_padded_area_and_the_focused_one_is_marked() {
             },
         ]
     );
+    // A point finds its box; the gap and the padding find none.
+    let at = |x, y| pane_at(&chrome.panes, (x, y)).map(|pane| pane.to_string());
+    assert_eq!(at(8.0, 8.0).as_deref(), Some("p3"));
+    assert_eq!(at(396.9, 591.9).as_deref(), Some("p3"));
+    assert_eq!(at(403.0, 300.0).as_deref(), Some("p5"));
+    assert_eq!(at(400.0, 300.0), None);
+    assert_eq!(at(4.0, 300.0), None);
+    assert_eq!(at(300.0, 592.0), None);
+    // The gap between them, x 397..403, drags the split.
+    assert_eq!(
+        chrome.dividers,
+        [Divider {
+            split: "x4".parse().unwrap(),
+            axis: Axis::Row,
+            ratio: 0.5,
+            area: rect(8, 8, 784, 584),
+            gap: rect(397, 8, 6, 584),
+        }]
+    );
 }
 
 #[test]
@@ -193,6 +213,9 @@ fn one_visible_pane_has_no_focus_border() {
         .map(|pane| (pane.pane.to_string(), pane.rect, pane.border_width))
         .collect();
     assert_eq!(shown, [("p11".to_owned(), rect(8, 8, 784, 584), 1.0)]);
+    // Nothing to drag while zoomed, or with one pane.
+    assert!(zoomed.dividers.is_empty());
+    assert!(single.dividers.is_empty());
 }
 
 #[test]

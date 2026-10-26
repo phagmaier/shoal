@@ -7,7 +7,7 @@ mod layout_ops;
 mod validate;
 mod workspace;
 
-pub use geometry::{Rect, neighbor, rects};
+pub use geometry::{Divider, Rect, dividers, neighbor, rects};
 pub use id::{PaneId, ParseIdError, SessionId, SplitId, TabId};
 pub use layout_ops::{
     Direction, LayoutError, SplitDirection, close, resize, set_ratio, split, toggle_zoom,

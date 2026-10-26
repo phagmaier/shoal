@@ -24,8 +24,15 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
 
 - The window shows the session's tabs in the top bar and its panes in their
   boxes, with the terminal content drawn live (T40, T41).
-- The window can't take typing, clicks or scrolling yet. Keyboard and mouse come
-  with T42, layout clicks with T43.
+- Panes follow the window's size, including fullscreen (T43).
+- With the mouse (T43): click a tab to switch to it, middle-click to close it,
+  double-click to rename it (Enter keeps the name, Escape cancels, an empty name
+  goes back to the automatic title). `+` opens a tab; the two buttons at the top
+  right split the focused pane right or down. Click a pane to focus it; drag the
+  gap between panes to resize them.
+- Keys so far: Ctrl+Shift+R renames the current tab, Ctrl+Shift+Enter zooms the
+  focused pane in and out.
+- The window can't take typing or scrolling yet; that comes with T42.
 
 Until then, drive a pane from any other terminal with the `shoal` command:
 

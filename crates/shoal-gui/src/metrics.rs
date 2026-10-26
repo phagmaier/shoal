@@ -2,7 +2,7 @@
 //! font's measurements so the GPUI code only measures. Sizes are logical
 //! pixels; edges land on whole device pixels at the window's scale.
 
-use shoal_model::Rect;
+use shoal_model::{GridSize, Rect};
 
 /// Space between a pane box's edge and its grid.
 pub const GRID_INSET: f32 = 6.0;
@@ -76,16 +76,46 @@ pub fn cell_metrics(
     }
 }
 
+/// The most columns or rows a pane may have (M1 spec §5.5).
+const MAX_CELLS: u32 = 1000;
+
+/// The grid a pane box holds (M1 spec §7.2): whole cells inside the inset,
+/// at most 1000 × 1000. `None` if not even one cell fits, so a box squeezed
+/// to nothing keeps its pane's size rather than reflowing it to 1 × 1.
+pub fn grid_size(pane: Rect, cell: &CellMetrics) -> Option<GridSize> {
+    let fit = |extent, size| match fit(extent, size, cell.scale) {
+        0 => None,
+        cells => Some(cells.min(MAX_CELLS) as u16),
+    };
+    Some(GridSize {
+        cols: fit(pane.width, cell.width)?,
+        rows: fit(pane.height, cell.height)?,
+    })
+}
+
 /// Where a pane's grid starts, relative to the pane area: inside the box's
 /// inset, with the pixels left over after whole cells split evenly.
 pub fn grid_origin(pane: Rect, cell: &CellMetrics) -> (f32, f32) {
-    let inner = |extent: u32| (extent as f32 - 2.0 * GRID_INSET).max(0.0);
-    let leftover = |room: f32, size: f32| room - (room / size).floor() * size;
+    let leftover = |extent, size| room(extent) - fit(extent, size, cell.scale) as f32 * size;
     let half = |value: f32| (value / 2.0 * cell.scale).floor() / cell.scale;
     (
-        pane.x as f32 + GRID_INSET + half(leftover(inner(pane.width), cell.width)),
-        pane.y as f32 + GRID_INSET + half(leftover(inner(pane.height), cell.height)),
+        pane.x as f32 + GRID_INSET + half(leftover(pane.width, cell.width)),
+        pane.y as f32 + GRID_INSET + half(leftover(pane.height, cell.height)),
     )
+}
+
+/// A box's extent less the inset on both sides.
+fn room(extent: u32) -> f32 {
+    (extent as f32 - 2.0 * GRID_INSET).max(0.0)
+}
+
+/// How many whole cells of `size` fit in a box's room, counted in device
+/// pixels, where cells are whole: at a fractional scale the logical sizes
+/// aren't exact, and 88 / 8.8 would floor to 9.
+fn fit(extent: u32, size: f32, scale: f32) -> u32 {
+    let device = |value: f32| (value * scale + 1e-3).floor();
+    let cell = (size * scale).round().max(1.0);
+    (device(room(extent)) / cell).floor() as u32
 }
 
 #[cfg(test)]
@@ -129,6 +159,81 @@ mod tests {
         let tall = cell_metrics(size, measure, 1.5, 1.0);
         assert_eq!(tall.height, 29.0);
         assert_eq!(tall.baseline, 20.0, "(29 - 19.36) / 2 + 14.96 = 19.78");
+    }
+
+    #[test]
+    fn the_grid_holds_whole_cells_inside_the_inset() {
+        let (size, measure) = jetbrains();
+        let cell = cell_metrics(size, measure, 1.0, 1.0);
+        let grid = |width, height| {
+            let size = grid_size(
+                Rect {
+                    x: 8,
+                    y: 8,
+                    width,
+                    height,
+                },
+                &cell,
+            )?;
+            Some((size.cols, size.rows))
+        };
+        // 412 - 12 = 400 holds 44 cells of 9 (396); 212 - 12 = 200 holds
+        // 10 rows of 19 (190).
+        assert_eq!(grid(412, 212), Some((44, 10)));
+        // Exactly 44 cells and 10 rows fit; a pixel less loses one of each.
+        assert_eq!(grid(408, 202), Some((44, 10)));
+        assert_eq!(grid(407, 201), Some((43, 9)));
+        // One cell fits in 21 × 31; a pixel less in either way, none.
+        assert_eq!(grid(21, 31), Some((1, 1)));
+        assert_eq!(grid(20, 31), None);
+        assert_eq!(grid(21, 30), None);
+        assert_eq!(grid(0, 0), None);
+        // A pane never exceeds 1000 × 1000.
+        assert_eq!(grid(20_000, 30_000), Some((1000, 1000)));
+    }
+
+    #[test]
+    fn a_fullscreen_window_fills_with_cells() {
+        // The user's 1920 × 1080 screen: the pane area is 1920 × 1046 below
+        // the 34 px bar, its one box 1904 × 1030 inside the 8 px padding,
+        // and 1892 × 1018 inside the inset: 210 columns of 9 (1890) and 53
+        // rows of 19 (1007).
+        let (size, measure) = jetbrains();
+        let cell = cell_metrics(size, measure, 1.0, 1.0);
+        let pane = Rect {
+            x: 8,
+            y: 8,
+            width: 1904,
+            height: 1030,
+        };
+        assert_eq!(
+            grid_size(pane, &cell),
+            Some(GridSize {
+                cols: 210,
+                rows: 53
+            })
+        );
+        // The 2 and 11 pixels left over split evenly around the grid.
+        assert_eq!(grid_origin(pane, &cell), (15.0, 19.0));
+    }
+
+    #[test]
+    fn cells_are_counted_in_device_pixels_at_fractional_scales() {
+        // At 1.5 an 8.8 px advance is 13 device pixels, so the cell is
+        // 8.667 logical pixels, which f32 holds as slightly more. A 142 px
+        // box has 130 px of room, 195 device pixels: exactly 15 cells, none
+        // left over (130 / 8.667 in f32 floors to 14).
+        let (size, measure) = jetbrains();
+        let cell = cell_metrics(size, measure, 1.0, 1.5);
+        assert_eq!(cell.width * 1.5, 13.0);
+        let pane = Rect {
+            x: 0,
+            y: 0,
+            width: 142,
+            height: 100,
+        };
+        assert_eq!(grid_size(pane, &cell).map(|size| size.cols), Some(15));
+        assert_eq!(grid_origin(pane, &cell).0, 6.0);
     }
 
     #[test]
