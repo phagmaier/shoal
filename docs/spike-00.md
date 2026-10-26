@@ -1,4 +1,6 @@
-# T00 — GPUI + libghostty spike
+# T00 — GPUI + libghostty spike (read-only archive)
+
+> Frozen 2026-10-26. Do not extend. Live attach, rendering, and pin-upgrade rules now live in M1 spec §5/§7.3 and T07; environment lessons moved to `docs/agent-env.md`.
 
 **T00 is complete (2026-10-25).** GPUI is kept, and the spec now records the user's decisions (section "Decisions recorded in the spec"). Evidence comes from two machines, kept apart: the original **laptop** (rounds 1 and 2) and a **desktop** that took over development the same day (section "Second machine"). Never pool the two machines' performance numbers.
 

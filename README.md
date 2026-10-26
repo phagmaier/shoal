@@ -26,7 +26,7 @@ to drive it.
 
 ## Development
 
-T01 provides empty crate skeletons, not a working terminal or daemon yet.
+Milestone 1 is being built task by task (`docs/spec/tasks.md`; T00–T46 done, T47 next). `AGENTS.md` has the canonical check command and the agent runbook (`docs/agent-env.md`, `docs/flakes.md`).
 
 ```sh
 mise exec -- just check        # fmt, clippy -D warnings, tests, dependency gates

@@ -12,7 +12,10 @@ they are what lets one agent change one crate without breaking another.
 - `docs/spec/` is the spec:
   - `decisions.md`: the key technical decisions and the milestone plan.
   - `m1-spec.md`: the milestone 1 spec. Tasks cite it as "M1 spec §N".
-  - `tasks.md`: every M1 task with its **Needs**, **Build** and **Done when**.
+  - `tasks.md`: status table plus full **Needs / Build / Done when** for active tasks only (T47+). Completed work is one row each; verbatim history is in `docs/spec/completed.md` (read-only archive).
+  - `completed.md`: read-only archive of T00–T46. Never extend it with new prose.
+- `docs/agent-env.md`: disposable sandbox, Wayland/Hyprland discovery, tmpfs, fake systemctl. Read before running checks or manual scripts.
+- `docs/flakes.md`: known intermittent failures. Check before re-investigating a flake.
 - The spec wins over intuition. If the spec and the code disagree, or the spec is
   ambiguous, stop and ask. Do not invent behaviour.
 - The "Never build" list at the end of this file is permanent.
@@ -40,6 +43,11 @@ both into its own terminal copy.
 | `shoal-gui` | `shoal-gui` | Window, chrome, pane views, input, rendering |
 | `shoal-testkit` | | Test-only: temp XDG environment, daemon spawning, fixtures |
 
+`deny.toml` is the enforcement for the crate edges below; the M1 spec §2 table
+is the intent (small utility crates like `thiserror`, `tracing`, `clap` in
+binaries are fine without being listed). A crate never depends on a Shoal crate
+that isn't in its column.
+
 ### Hard boundaries (cargo-deny enforces 1, 2, 5 and 6)
 
 1. Only `shoal-term` imports libghostty-vt.
@@ -64,17 +72,27 @@ dependency kind. `just check` runs both gates.
 
 ## Commands
 
+Canonical full check (runtime tmpfs, no core dumps; see `docs/agent-env.md`):
+
 ```sh
-scripts/setup-machine.sh --check   # report what this machine is missing (agents: --check only)
+mkdir -p /run/user/$(id -u)/shoal-check
+ulimit -c 0
+TMPDIR=/run/user/$(id -u)/shoal-check CARGO_BUILD_JOBS=8 mise exec -- just check
+```
+
+Plain `just check` is interactive-only (assumes mise is already entered and tmpfs is set). Other commands:
+
+```sh
 mise install          # pinned Rust, Zig and development tools
-just check            # fmt, clippy -D warnings, tests, cargo-deny; must pass before a commit
-just test             # tests only
+just test             # tests only (same sandbox env as above)
 just dev-daemon       # shoald in a temp XDG sandbox, logging to stderr
 just dev-gui          # a window against the dev daemon
 just fuzz-proto       # fuzz the frame decoder
 cargo test -p shoal-model
 cargo insta review    # accept snapshot changes deliberately, never blindly
 ```
+
+`scripts/setup-machine.sh --check` reports what this machine is missing (agents: `--check` only).
 
 ## Looking things up
 
@@ -128,17 +146,17 @@ cargo insta review    # accept snapshot changes deliberately, never blindly
 
 ## Working on a task
 
-1. Read the task in `tasks.md` and the spec sections it cites.
-2. Check that everything in **Needs** is done.
+1. Read the task in `tasks.md` and the spec sections it cites. Completed work is summarized in the status table; full history is in `docs/spec/completed.md` (read-only, never edit it).
+2. Check that everything in **Needs** is done (rows marked done in the status table).
 3. Stay in scope. Extra work you discover goes in your summary as a proposed new task.
 4. If the task is bigger than one sitting, stop, propose a split, and update `tasks.md`.
 5. Work on a branch named `t<NN>-<short-name>`. Commit when **Done when** passes.
    The one exception is the T00 spike, on `spike/t00`, which is never merged.
-6. Merging needs no approval (the user's standing decision, 2026-10-25): once
-   **Done when** passes, `just check` passes on the commit, any manual checks the
+6. Merging needs no approval (the user's standing decision, 2026-10-25; this supersedes early "with approval" notes in the archive): once
+   **Done when** passes, `just check` passes on the commit (canonical sandboxed command above), any manual checks the
    user ran came back clean and the review found nothing unresolved, fast-forward
-   `main` to the task commit and push it. Then commit `docs: record T<NN>
-   integration and next task` to update `tasks.md`, and push that too. Hold the
+   `main` to the task commit and push it. Then collapse the task to one table row in `tasks.md` and set the new **Next** header, in a commit `docs: record T<NN>
+   integration and next task`, and push that too. Never append `Verified/Review` essays to `tasks.md`. Hold the
    merge and say why if any of these is not true.
 7. Finish with a summary: what changed, how it was tested, manual checks the user must
    run, and follow-ups.
