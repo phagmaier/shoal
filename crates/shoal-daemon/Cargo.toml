@@ -35,5 +35,5 @@ tracing-subscriber = { workspace = true, features = ["fmt", "registry", "std"] }
 
 [dev-dependencies]
 insta.workspace = true
-shoal-testkit = { path = "../shoal-testkit" }
+shoal-testkit.workspace = true
 tempfile.workspace = true

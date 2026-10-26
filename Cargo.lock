@@ -715,6 +715,16 @@ dependencies = [
 [[package]]
 name = "shoal-client"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "shoal-model",
+ "shoal-proto",
+ "shoal-testkit",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "shoal-config"

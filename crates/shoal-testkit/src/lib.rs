@@ -39,6 +39,24 @@ pub fn eventually<T>(what: &str, mut check: impl FnMut() -> Option<T>) -> T {
     }
 }
 
+/// The `shoald` built next to the running test (`target/<profile>/shoald`),
+/// for tests outside `shoal-daemon`, which cannot name its binary. Workspace
+/// test runs (`just test`, `just check`) build it before any test runs.
+pub fn shoald() -> PathBuf {
+    let test = std::env::current_exe().expect("the test binary's path");
+    let path = test
+        .parent()
+        .and_then(Path::parent)
+        .expect("tests run from target/<profile>/deps")
+        .join("shoald");
+    assert!(
+        path.is_file(),
+        "{} is missing; build it with `cargo build -p shoal-daemon` or run `just test`",
+        path.display()
+    );
+    path
+}
+
 /// `HOME` and every XDG folder under one temporary directory, removed on drop.
 pub struct TempEnv {
     root: tempfile::TempDir,
