@@ -149,11 +149,13 @@ impl Actor {
                 if focused {
                     self.size_owner = Some(connection);
                 }
+                let shown = state.shown;
                 if state.focused != focused {
                     state.focused = focused;
+                    self.clear_focused_bells();
                 }
                 if focused
-                    && let Some(session) = state.shown
+                    && let Some(session) = shown
                     && let Some(si) = self.session_index(session)
                 {
                     self.workspace.sessions[si].last_active_at = shoal_model::Timestamp::now();

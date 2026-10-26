@@ -94,6 +94,9 @@ impl Actor {
         for pane in self.panes.values() {
             pane.apply_settings(self.pane_settings.theme, self.pane_settings.scrollback);
         }
+        if self.refresh_metadata_titles() {
+            self.changed();
+        }
         let ids: Vec<_> = self.connections.keys().copied().collect();
         for notice in self.notices.clone() {
             for &id in &ids {
@@ -104,15 +107,27 @@ impl Actor {
 
     pub(super) fn event(&mut self, id: PaneId, event: pane::Event) {
         if self.pending.contains_key(&id) {
-            if matches!(&event, pane::Event::Exited { .. }) {
-                self.early_events.entry(id).or_default().push(event);
+            let events = self.early_events.entry(id).or_default();
+            let mut event = event;
+            // Keep just the newest metadata and any exit while a blocking
+            // spawn finishes. Never lose an initial directory/title/bell.
+            if let pane::Event::Metadata(value) = &mut event {
+                for old in events.iter() {
+                    if let pane::Event::Metadata(old) = old {
+                        value.bell = value.bell.max(old.bell);
+                    }
+                }
+                events.retain(|old| !matches!(old, pane::Event::Metadata(_)));
             }
+            events.push(event);
             return;
         }
         if matches!(&event, pane::Event::Exited { .. }) {
             self.retiring.remove(&id);
         }
-        if let pane::Event::Exited {
+        if let pane::Event::Metadata(value) = event {
+            self.metadata(id, value);
+        } else if let pane::Event::Exited {
             code,
             signal,
             early_failure,
@@ -120,12 +135,12 @@ impl Actor {
             && let Some(record) = self.workspace.panes.get_mut(&id)
         {
             record.status = PaneStatus::Exited { code, signal };
+            record.program = None;
             if self.settings.config.behavior.close_pane_on_exit && !early_failure {
                 self.close_pane(id);
             }
             self.changed();
         }
-        // Terminal metadata is owned by T14, not the workspace actor task.
     }
 
     async fn stop(&mut self, reply: oneshot::Sender<()>) {
@@ -143,7 +158,16 @@ impl Actor {
             .map(|(&id, _)| id)
             .chain(self.retiring.keys().copied())
             .collect();
-        let mut exited: BTreeSet<_> = self.early_events.keys().copied().collect();
+        let mut exited: BTreeSet<_> = self
+            .early_events
+            .iter()
+            .filter(|(_, events)| {
+                events
+                    .iter()
+                    .any(|e| matches!(e, pane::Event::Exited { .. }))
+            })
+            .map(|(&id, _)| id)
+            .collect();
         for pane in self.panes.values().chain(self.retiring.values()) {
             drop(pane.kill_by(cutoff));
         }

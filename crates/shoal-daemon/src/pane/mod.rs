@@ -2,10 +2,10 @@
 //! `shoal-term` terminal, and takes commands from a [`Pane`] handle.
 //!
 //! The thread sleeps in `poll` on the PTY and an eventfd for commands, so a
-//! quiet pane uses no CPU. The only timeouts are the 4 ms batching deadline
-//! while output is held, the 2 s kill escalation while a kill is pending, and
-//! the 2 s ground-point deadline while an attach or resync is waiting.
+//! quiet pane uses no CPU. Timeouts serve pending output, metadata, kill,
+//! attach and resync work only; none recur while idle.
 
+mod metadata;
 mod runtime;
 pub mod spawn;
 pub mod stream;
@@ -17,12 +17,12 @@ use std::{
     io,
     os::fd::OwnedFd,
     path::PathBuf,
-    sync::{Arc, mpsc},
+    sync::{Arc, atomic::Ordering, mpsc},
 };
 
 use rustix::event::{EventfdFlags, eventfd};
 use shoal_model::{GridSize, PaneId};
-use shoal_term::{CaptureFormat, SnapshotError, TermError, TermEvent, Theme};
+use shoal_term::{CaptureFormat, SnapshotError, TermError, Theme};
 use tokio::sync::{Notify, mpsc::UnboundedSender, oneshot};
 
 pub use stream::{Item, Subscribed, SubscriberId};
@@ -68,7 +68,18 @@ pub enum Event {
         signal: Option<i32>,
         early_failure: bool,
     },
-    Terminal(TermEvent),
+    Metadata(Metadata),
+}
+
+/// Coalesced terminal reports and foreground-process information (§4.3).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Metadata {
+    pub cwd: Option<PathBuf>,
+    pub program: Option<String>,
+    pub osc_title: Option<String>,
+    /// The latest bell since the previous update. Its time lets actor focus
+    /// changes clear a bell that is still waiting for the metadata throttle.
+    pub bell: Option<std::time::Instant>,
 }
 
 pub type Events = UnboundedSender<(PaneId, Event)>;
@@ -147,6 +158,7 @@ pub struct Pane {
     pid: u32,
     commands: Option<mpsc::Sender<Command>>,
     wake: Arc<OwnedFd>,
+    metadata_activity: Arc<metadata::Activity>,
 }
 
 /// Start a pane's thread, PTY and shell. Blocks until the shell is started,
@@ -160,10 +172,12 @@ pub fn spawn(spec: PaneSpec, settings: &PaneSettings, events: Events) -> Result<
     let id = spec.id;
     let plan = runtime::Plan::new(spec, settings)?;
     let thread_wake = wake.clone();
+    let metadata_activity = Arc::new(metadata::Activity::default());
+    let thread_activity = metadata_activity.clone();
     std::thread::Builder::new()
         .name(format!("pane-{}", id.get()))
-        .spawn(
-            move || match runtime::Runtime::start(plan, receiver, thread_wake, events) {
+        .spawn(move || {
+            match runtime::Runtime::start(plan, receiver, thread_wake, events, thread_activity) {
                 Ok(runtime) => {
                     let _ = started.send(Ok(runtime.pid()));
                     runtime.run();
@@ -171,8 +185,8 @@ pub fn spawn(spec: PaneSpec, settings: &PaneSettings, events: Events) -> Result<
                 Err(error) => {
                     let _ = started.send(Err(error));
                 }
-            },
-        )?;
+            }
+        })?;
     let pid = result
         .recv()
         .map_err(|_| io::Error::other("the pane thread ended while starting"))??;
@@ -182,6 +196,7 @@ pub fn spawn(spec: PaneSpec, settings: &PaneSettings, events: Events) -> Result<
         pid,
         commands: Some(commands),
         wake,
+        metadata_activity,
     })
 }
 
@@ -193,6 +208,18 @@ impl Pane {
     /// The shell's process id, which is also its process group.
     pub fn pid(&self) -> u32 {
         self.pid
+    }
+
+    /// Internal diagnostic: actual metadata collections, including unchanged
+    /// results. Reading this never wakes the pane or collects metadata.
+    pub fn metadata_samples(&self) -> u64 {
+        self.metadata_activity.samples.load(Ordering::Relaxed)
+    }
+
+    /// Whether event-triggered metadata work is still pending. Like the
+    /// sample counter, this diagnostic does not wake the thread.
+    pub fn metadata_pending(&self) -> bool {
+        self.metadata_activity.pending.load(Ordering::Acquire)
     }
 
     /// Bytes for the shell, in order. Ignored once it has exited.

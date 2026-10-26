@@ -535,6 +535,9 @@ fn the_pane_thread_sleeps_while_the_shell_is_idle() {
         .blocking_recv()
         .unwrap()
         .unwrap();
+    eventually("initial output metadata to settle", || {
+        (pane.metadata_samples() > 0 && !pane.metadata_pending()).then_some(())
+    });
     let name = format!("pane-{}", pane.id().get());
     let task = std::fs::read_dir("/proc/self/task")
         .unwrap()
@@ -566,7 +569,9 @@ fn the_pane_thread_sleeps_while_the_shell_is_idle() {
         let sample = sample();
         (sample.0 == "S").then_some(sample)
     });
+    let samples = pane.metadata_samples();
     // Measuring, not synchronizing: a quiet pane must not wake at all.
-    std::thread::sleep(Duration::from_secs(1));
+    std::thread::sleep(Duration::from_secs(5));
+    assert_eq!(pane.metadata_samples(), samples);
     assert_eq!(sample(), before);
 }

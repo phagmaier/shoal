@@ -9,7 +9,7 @@ use std::{
     os::fd::{AsFd, BorrowedFd, OwnedFd, RawFd},
     path::PathBuf,
     rc::Rc,
-    sync::{Arc, mpsc},
+    sync::{Arc, atomic::Ordering, mpsc},
     time::{Duration, Instant},
 };
 
@@ -123,6 +123,8 @@ pub struct Runtime {
     replies: Rc<RefCell<Vec<u8>>>,
     /// Bytes waiting for the PTY: input and replies, in order.
     input: Vec<u8>,
+    metadata: Rc<RefCell<super::metadata::Tracker>>,
+    metadata_activity: Arc<super::metadata::Activity>,
     events: Events,
     started: Instant,
     kill_deadline: Option<Instant>,
@@ -138,10 +140,14 @@ impl Runtime {
         commands: mpsc::Receiver<Command>,
         wake: Arc<OwnedFd>,
         events: Events,
+        metadata_activity: Arc<super::metadata::Activity>,
     ) -> Result<Self, SpawnError> {
         let replies = Rc::new(RefCell::new(Vec::new()));
         let sink = replies.clone();
-        let (id, term_events) = (plan.id, events.clone());
+        let metadata = Rc::new(RefCell::new(super::metadata::Tracker::new(
+            plan.cwd.clone(),
+        )));
+        let tracker = metadata.clone();
         let terminal = Terminal::pane(
             PaneSetup {
                 cols: plan.size.cols,
@@ -152,12 +158,12 @@ impl Runtime {
             },
             Box::new(move |bytes| sink.borrow_mut().extend_from_slice(bytes)),
             Box::new(move |event| {
-                let _ = term_events.send((id, Event::Terminal(event)));
+                tracker.borrow_mut().event(event, Instant::now());
             }),
         )?;
         let pty = open(&plan)?;
         Ok(Self {
-            id,
+            id: plan.id,
             terminal,
             pty: Some(pty),
             stream: Stream::default(),
@@ -166,6 +172,8 @@ impl Runtime {
             wake,
             replies,
             input: Vec::new(),
+            metadata,
+            metadata_activity,
             events,
             started: Instant::now(),
             kill_deadline: None,
@@ -198,6 +206,17 @@ impl Runtime {
             }
             self.expire_attaches(now);
             self.resync_overflows(now);
+            // Publish pending work before the sample counter can advance, so
+            // diagnostics cannot mistake a first callback for settled output.
+            self.metadata_activity.pending.store(
+                self.metadata.borrow().deadline().is_some(),
+                Ordering::Release,
+            );
+            self.update_metadata(now);
+            self.metadata_activity.pending.store(
+                self.metadata.borrow().deadline().is_some(),
+                Ordering::Release,
+            );
             if self.orphaned && self.pty.is_none() {
                 return;
             }
@@ -229,6 +248,7 @@ impl Runtime {
             self.stream.deadline(),
             self.kill_deadline,
             self.waiting.deadline(),
+            self.metadata.borrow().deadline(),
         ]
         .into_iter()
         .flatten()
@@ -387,6 +407,7 @@ impl Runtime {
             Ok(read) => {
                 let output = &buffer[..read];
                 self.feed(output);
+                self.metadata.borrow_mut().output(Instant::now());
                 let replies = self.replies.take();
                 if !replies.is_empty() {
                     self.input.extend_from_slice(&replies);
@@ -406,6 +427,12 @@ impl Runtime {
         while !self.input.is_empty() {
             match rustix::io::write(pty.fd(), &self.input) {
                 Ok(written) => {
+                    if self.input[..written]
+                        .iter()
+                        .any(|b| matches!(b, b'\r' | b'\n'))
+                    {
+                        self.metadata.borrow_mut().enter(Instant::now());
+                    }
                     self.input.drain(..written);
                 }
                 // The shell isn't reading; poll says when it is.
@@ -428,6 +455,24 @@ impl Runtime {
         }
         // The status is usually ready already; if not, poll the pidfd.
         self.reap();
+    }
+
+    fn update_metadata(&mut self, now: Instant) {
+        let mut metadata = self.metadata.borrow_mut();
+        if !metadata.due(now) {
+            return;
+        }
+        let (foreground, shell) = self.pty.as_ref().map_or((None, 0), |pty| {
+            (
+                pty.master.process_group_leader(),
+                pty.pid.as_raw_nonzero().get(),
+            )
+        });
+        let value = metadata.collect(foreground, shell);
+        self.metadata_activity
+            .samples
+            .fetch_add(1, Ordering::Relaxed);
+        let _ = self.events.send((self.id, Event::Metadata(value)));
     }
 
     fn reap(&mut self) {

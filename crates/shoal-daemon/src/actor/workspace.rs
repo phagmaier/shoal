@@ -90,6 +90,8 @@ impl Actor {
         session.active_tab = session.tabs[ti].id;
         session.last_active_at = Timestamp::now();
         let focused = session.tabs[ti].focused;
+        self.last_pane_focus
+            .insert(focused, std::time::Instant::now());
         self.workspace
             .panes
             .get_mut(&focused)
@@ -148,6 +150,9 @@ impl Actor {
     }
 
     fn remove_pane(&mut self, id: PaneId) {
+        self.osc_titles.remove(&id);
+        self.last_pane_focus.remove(&id);
+        self.focused_panes.remove(&id);
         self.remove_attachments(id);
         let running = self
             .workspace

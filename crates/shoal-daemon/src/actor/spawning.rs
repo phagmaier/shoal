@@ -269,7 +269,9 @@ impl Actor {
                 return;
             }
         };
-        let exited = !events.is_empty();
+        let exited = events
+            .iter()
+            .any(|e| matches!(e, pane::Event::Exited { .. }));
         if !self.connections.contains_key(&spawn.reply.connection) {
             self.retire(runtime, exited);
             return;

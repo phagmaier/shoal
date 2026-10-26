@@ -2,6 +2,7 @@
 
 mod driver;
 mod geometry;
+mod metadata;
 mod methods;
 mod spawning;
 mod streaming;
@@ -135,6 +136,9 @@ pub fn start(
         pending: BTreeMap::new(),
         shutdown_cutoff: Arc::new(OnceLock::new()),
         early_events: BTreeMap::new(),
+        osc_titles: BTreeMap::new(),
+        focused_panes: BTreeSet::new(),
+        last_pane_focus: BTreeMap::new(),
         window_env: BTreeMap::new(),
         pane_settings: settings.pane(
             &paths,
@@ -248,6 +252,9 @@ struct Actor {
     pending: BTreeMap<PaneId, spawning::Spawn>,
     shutdown_cutoff: Arc<OnceLock<std::time::Instant>>,
     early_events: BTreeMap<PaneId, Vec<pane::Event>>,
+    osc_titles: BTreeMap<PaneId, String>,
+    focused_panes: BTreeSet<PaneId>,
+    last_pane_focus: BTreeMap<PaneId, std::time::Instant>,
     window_env: BTreeMap<String, String>,
     pane_settings: pane::PaneSettings,
     settings: Settings,
@@ -337,6 +344,8 @@ impl Actor {
     }
 
     fn changed(&mut self) {
+        self.refresh_metadata_titles();
+        self.clear_focused_bells();
         self.workspace.next_id = self.next_id;
         self.workspace.rev += 1;
         debug_assert!(

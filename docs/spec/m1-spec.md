@@ -226,6 +226,10 @@ Event-driven, never polled on a timer. Triggers: output followed by 300 ms of qu
 - **Title (`tabs.title = "auto"`):** the user's tab name if set; otherwise a running program's name; otherwise the directory's last part (`~` for home). With `tabs.title = "program"`, an OSC 0/2 title wins when present. A tab shows its focused pane's title.
 - **Bell:** sets `bell = true` unless the pane is focused in some window; focusing clears it.
 
+**Runtime details (T14, 2026-10-25).** Metadata is coalesced on the pane thread, with at least 250 ms between collections. Output resets a one-shot 300 ms quiet deadline. A written CR or LF schedules a one-shot collection 250 ms later, giving the shell time to hand off its foreground group even when echo is off. OSC and bell callbacks request the next allowed collection, retaining the latest title/directory and bell time in the burst. The deadlines disappear when the pending work is collected. `/proc` reads stay on the pane thread; the actor applies the results and recomputes titles on user renames and title-policy reloads. Initial reports are retained while a spawn is being committed.
+
+An empty OSC title clears its override. OSC 7 file URIs are decoded bytewise (§8.2); malformed or non-UTF-8 paths are ignored because workspace paths must fit JSON strings. A failed or unrepresentable `/proc` directory lookup retains the last usable directory. Bell suppression considers the active tab's focused pane in any focused window showing that session; returning window/session focus clears its flag too. Bell times and actor focus times ensure that a delayed update cannot restore a bell cleared by focus, or ring for a bell received while focused after the pane/window loses focus.
+
 ### 4.4 Sessions and windows
 
 - A window declares its session with `window.show_session`. The daemon counts windows per session and drops the count when the connection closes.
