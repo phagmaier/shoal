@@ -5,6 +5,8 @@
 mod input;
 mod layout;
 mod mouse;
+mod sessions;
+mod switcher;
 mod text;
 mod topbar;
 
@@ -42,6 +44,7 @@ pub struct ShoalWindow {
     pub(crate) client: Client,
     session: SessionId,
     workspace: Workspace,
+    revisions: session::Revisions,
     config: Config,
     palette: Palette,
     title: String,
@@ -59,6 +62,10 @@ pub struct ShoalWindow {
     /// Sends the dragged ratio once the throttle allows.
     ratio_timer: Option<Task<()>>,
     rename: Option<Rename>,
+    switcher: Option<crate::switcher::Switcher>,
+    switcher_focus: FocusHandle,
+    switcher_scroll: gpui::ScrollHandle,
+    session_busy: bool,
     held_modifiers: gpui::Modifiers,
     caps_lock: bool,
     pressed: std::collections::BTreeMap<String, PaneId>,
@@ -98,6 +105,7 @@ impl ShoalWindow {
         let mut view = Self {
             client,
             session,
+            revisions: session::Revisions::new(workspace.rev),
             workspace,
             panes: Panes::new(mirror::Setup::from_config(&config)),
             config,
@@ -111,6 +119,10 @@ impl ShoalWindow {
             drag: None,
             ratio_timer: None,
             rename: None,
+            switcher: None,
+            switcher_focus: cx.focus_handle(),
+            switcher_scroll: gpui::ScrollHandle::new(),
+            session_busy: false,
             held_modifiers: gpui::Modifiers::none(),
             caps_lock: false,
             pressed: Default::default(),
@@ -145,9 +157,13 @@ impl ShoalWindow {
     pub fn on_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) -> bool {
         match event {
             Event::Notification(Notification::WorkspaceChanged(state)) => {
-                // Always the newest: one connection's notifications arrive in
-                // order, and a restarted daemon may restore an older `rev`.
+                if !self.revisions.accept(state.workspace.rev) {
+                    return true;
+                }
                 self.workspace = state.workspace;
+                if let Some(picker) = &mut self.switcher {
+                    picker.refresh(&self.workspace.sessions, self.session);
+                }
                 if self
                     .selection
                     .as_ref()
@@ -174,6 +190,7 @@ impl ShoalWindow {
             }
             Event::Notification(other) => tracing::debug!(?other, "ignored notification"),
             Event::Connected(_) => {
+                self.revisions.reconnect();
                 // The daemon forgot this window with the old connection. The
                 // answer doesn't matter here: a closed session arrives as a
                 // workspace change.
@@ -406,7 +423,8 @@ impl Render for ShoalWindow {
             dividers,
         };
         let input_view = cx.entity();
-        let input_focus = self.rename.is_none().then(|| self.focus.clone());
+        let input_focus = (self.rename.is_none() && self.switcher.is_none() && !self.session_busy)
+            .then(|| self.focus.clone());
         let selection = self.selection.as_ref().map(|s| {
             (
                 s.pane,
@@ -528,7 +546,9 @@ impl Render for ShoalWindow {
             .children(preedit)
             .children(banners)
             .children(handles);
+        let popover = self.session_popover(window, cx);
         div()
+            .relative()
             .size_full()
             .flex()
             .flex_col()
@@ -545,6 +565,7 @@ impl Render for ShoalWindow {
             .text_size(px(TEXT_SIZE))
             .child(top_bar)
             .child(pane_area)
+            .children(popover)
     }
 }
 

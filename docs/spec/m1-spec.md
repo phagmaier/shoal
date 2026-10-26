@@ -572,7 +572,7 @@ Sizes are logical pixels before scaling.
 
 - T42 dispatches tab/pane actions, clipboard actions and `config.edit`. Bindings
   reload through the config watcher; an invalid file keeps the last good bindings.
-  Session/window actions remain T44, scroll actions T45, confirmations T47 and
+  T44 adds session/window actions. Scroll actions remain T45, confirmations T47 and
   font actions T48. Bindings for those actions are reserved until implemented.
 - **Settled with the user (2026-10-26):** T42 includes basic visible-grid selection
   and copy; history, content anchoring, prompt jumps and links remain T45. A single
@@ -604,6 +604,29 @@ Sizes are logical pixels before scaling.
 ### 7.6 Session switcher
 
 A popover under the session chip: each session with its tab count and an "on screen" marker for sessions shown in another window. Type to filter, Enter to switch, a "New session" row, F2 to rename, Ctrl+Backspace to close (with confirm), Esc to dismiss.
+
+**Switcher details (T44, settled with the user, 2026-10-26).**
+
+- Filtering is case-insensitive fuzzy matching: exact name, prefix, contiguous
+  substring, then a subsequence with the fewest skipped characters. Ties use
+  creation order (`created_at`, then id); next/previous use that same order and
+  wrap. With no filter, the current session starts selected. Arrow keys select
+  rows; `New session` stays last even when nothing matches and creates a session
+  with the daemon's default name and directory, then shows it in this window.
+- A session's `On screen` marker excludes this window; `Current` identifies the
+  shown session. Clicking a row switches or creates. Clicking outside dismisses
+  and consumes that press. Escape cancels an edit/confirmation back to the list;
+  Escape in the list dismisses. Filter and rename use the input-method handler.
+- F2 selects the whole session name for editing. Enter saves a nonempty trimmed
+  name, an unchanged name sends nothing, and a rejected name stays editable with
+  the daemon's error. Ctrl+Backspace always asks `Close session <name>? Enter / Esc`.
+  Closing this window's shown session closes the window as in §7.1. T47 adds the
+  running-program details; it does not remove this session-level confirmation.
+- `window.new` starts a detached window, using the focused pane's directory for
+  smart open's creation case. Smart choice and reservation stay in the daemon.
+  Session actions await replies away from the main thread; a failed switch keeps
+  the previous session. Switching keeps the eight-tab cache (§7.8) and clears
+  selections, preedit, pointer capture and drags, and asks for the new grids.
 
 ### 7.7 Banners and confirmations
 

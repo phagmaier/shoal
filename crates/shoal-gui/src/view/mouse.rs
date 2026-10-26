@@ -19,6 +19,9 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.switcher.is_some() || self.session_busy {
+            return;
+        }
         if event.button == MouseButton::Left {
             self.press(event.position, cx);
             if self.drag.is_some() {
@@ -63,6 +66,9 @@ impl ShoalWindow {
     }
 
     pub(super) fn pointer_move(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) {
+        if self.switcher.is_some() || self.session_busy {
+            return;
+        }
         if self.drag.is_some() {
             return;
         }
@@ -103,6 +109,9 @@ impl ShoalWindow {
     }
 
     pub(super) fn pointer_up(&mut self, event: &MouseUpEvent, cx: &mut Context<Self>) {
+        if self.switcher.is_some() || self.session_busy {
+            return;
+        }
         if let Some(pane) = self.mouse_capture.take() {
             self.report_mouse(
                 pane,
@@ -206,6 +215,9 @@ impl ShoalWindow {
         _: &mut Window,
         _: &mut Context<Self>,
     ) {
+        if self.switcher.is_some() || self.session_busy {
+            return;
+        }
         let Some(pane) = chrome::pane_at(&self.shown.panes, pane_point(event.position)) else {
             return;
         };

@@ -45,9 +45,17 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   Ctrl+Insert copies; Ctrl+Shift+V or Shift+Insert pastes. Pastes use the program's
   bracketed-paste mode. Basic selections clear when the pane changes; content
   anchors, local scrolling, prompt jumps and links come with T45.
+- Sessions: click the session chip or Ctrl+Shift+S. Type a fuzzy filter, use
+  Up/Down and Enter to switch, or choose New session. F2 renames the selected
+  session; Escape cancels. Ctrl+Backspace asks before closing it. Closing the
+  session a window shows closes that window. Other sessions keep running.
+  Counts show each session's tabs; On screen means another window shows it.
+- Ctrl+Alt+PageDown / PageUp cycles sessions in creation order, wrapping.
+  Ctrl+Shift+N opens a window on the most recently active off-screen session,
+  or creates one when all sessions are on screen.
 - Rebind actions in `[keybinds]` in `config.toml`; bindings reload without a restart.
   `"none"` removes a binding. Ctrl+Shift+, opens the file in `$EDITOR` in a new tab
-  (`vi` if unset). Session/window actions are T44; font zoom is T48.
+  (`vi` if unset). Font zoom is T48.
 
 Omarchy's universal copy/paste needs its `terminal` tag to match `dev.shoal.Shoal`;
 packaging and desktop integration are T50. Custom desktop bindings still take
@@ -98,6 +106,11 @@ GUI's timestamp. Failed steps are recorded and later checks continue.
 reports in its own disposable HOME/XDG environment. Its bounded input probe saves
 raw fixture input there for inspection. It stops only the processes it started;
 results go to `target/manual/t42.txt`. Skip input-method checks if none is used.
+
+`just manual t44` checks session filtering, switching, creation, rename,
+confirmation, next/previous and smart new windows in its own disposable HOME/XDG
+sandbox. Results go to `target/manual/t44.txt`; it also cleans up the extra
+windows created during the check.
 
 ## A sandbox for experiments
 

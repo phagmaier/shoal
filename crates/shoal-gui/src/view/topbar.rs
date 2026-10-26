@@ -13,7 +13,7 @@ use shoal_client::{
 };
 use shoal_config::Action;
 
-use super::{ShoalWindow, TEXT_SIZE, rgba};
+use super::{ShoalWindow, rgba};
 use crate::{
     chrome::{self, Chip, Color, TOP_BAR_HEIGHT, TabLabel, UNDERLINE_WIDTH},
     fonts, keys,
@@ -40,6 +40,7 @@ impl ShoalWindow {
             .map(|tab| self.tab_label(tab, cx))
             .collect();
         let session = self.session;
+        let tooltip = self.action_tooltip("Session switcher", Action::SessionSwitcher);
         div()
             .h(px(TOP_BAR_HEIGHT as f32))
             .w_full()
@@ -53,6 +54,10 @@ impl ShoalWindow {
             .bg(rgba(bar))
             .child(
                 div()
+                    .id("session-chip")
+                    .tooltip(move |_, cx| cx.new(|_| tooltip.clone()).into())
+                    .cursor_pointer()
+                    .on_click(cx.listener(|view, _, window, cx| view.toggle_switcher(window, cx)))
                     .flex_none()
                     .mr(px(6.0))
                     .px(px(8.0))
@@ -198,18 +203,7 @@ impl ShoalWindow {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let palette = &self.palette;
-        let tooltip = Tooltip {
-            label,
-            caps: keys::shortcut(&self.config.keybinds, action)
-                .map(|chord| keys::caps(&chord))
-                .unwrap_or_default(),
-            family: SharedString::from(self.config.font.family.clone()),
-            fill: opaque(palette.top_bar),
-            border: opaque(palette.unfocused_border),
-            text: opaque(palette.inactive_text),
-            cap_fill: opaque(palette.unfocused_border),
-            cap_text: opaque(palette.foreground),
-        };
+        let tooltip = self.action_tooltip(label, action);
         let hover_fill = Color {
             rgb: palette.unfocused_border,
             alpha: 0.8,
@@ -238,70 +232,31 @@ impl ShoalWindow {
             }))
     }
 
+    fn action_tooltip(&self, label: &'static str, action: Action) -> Tooltip {
+        let palette = &self.palette;
+        Tooltip {
+            label,
+            caps: keys::shortcut(&self.config.keybinds, action)
+                .map(|chord| keys::caps(&chord))
+                .unwrap_or_default(),
+            family: SharedString::from(self.config.font.family.clone()),
+            fill: opaque(palette.top_bar),
+            border: opaque(palette.unfocused_border),
+            text: opaque(palette.inactive_text),
+            cap_fill: opaque(palette.unfocused_border),
+            cap_text: opaque(palette.foreground),
+        }
+    }
+
     /// The inline rename field in place of a tab's title: the text, its
     /// caret, and the whole label selected until the first key.
     fn rename_field(&self, rename: &Rename, cx: &mut Context<Self>) -> AnyElement {
-        let input = cx.entity();
-        let focus = self.rename_focus.clone();
-        let palette = &self.palette;
-        let (before, after) = rename.parts();
-        let mut before = div()
-            .flex_none()
-            .whitespace_nowrap()
-            .child(SharedString::from(before.to_owned()));
-        if rename.all_selected() {
-            // Themes' selection colors sit too close to the field's fill.
-            before = before.bg(rgba(Color {
-                rgb: palette.accent,
-                alpha: 0.35,
-            }));
-        }
-        div()
-            .id("rename")
-            .relative()
-            .track_focus(&self.rename_focus)
-            .min_w(px(48.0))
-            .flex()
-            .flex_row()
-            .items_center()
-            .overflow_hidden()
-            .px(px(4.0))
-            .rounded(px(4.0))
-            .bg(rgba(opaque(palette.unfocused_border)))
-            .text_color(rgba(opaque(palette.foreground)))
+        self.text_field(&rename.field, &self.rename_focus, "rename", "", cx)
             .on_key_down(cx.listener(Self::rename_key))
             .on_mouse_down_out(cx.listener(|view, _, window, cx| {
                 let name = view.rename.as_ref().and_then(Rename::name);
                 view.finish_rename(name, window, cx);
             }))
-            .child(
-                gpui::canvas(
-                    |_, _, _| (),
-                    move |bounds, (), window, cx| {
-                        window.handle_input(
-                            &focus,
-                            gpui::ElementInputHandler::new(bounds, input),
-                            cx,
-                        );
-                    },
-                )
-                .absolute()
-                .size_full(),
-            )
-            .child(before)
-            .child(
-                div()
-                    .flex_none()
-                    .w(px(1.5))
-                    .h(px(TEXT_SIZE + 3.0))
-                    .bg(rgba(opaque(palette.cursor))),
-            )
-            .child(
-                div()
-                    .flex_none()
-                    .whitespace_nowrap()
-                    .child(SharedString::from(after.to_owned())),
-            )
             .into_any_element()
     }
 
@@ -315,6 +270,7 @@ impl ShoalWindow {
         let label = chrome::tab_title(&self.workspace, found);
         self.rename = Some(Rename::new(tab, &label));
         self.preedit = None;
+        self.sync_terminal_focus();
         window.focus(&self.rename_focus, cx);
         cx.notify();
     }
@@ -327,15 +283,17 @@ impl ShoalWindow {
         match keys::resolve(keystroke, self.held_modifiers, &self.config.keybinds) {
             Some(Action::ClipboardPaste) => {
                 if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
-                    rename.replace(None, &text, None, false);
+                    rename.field.replace(None, &text, None, false);
                     cx.notify();
                 }
                 cx.stop_propagation();
                 return;
             }
             Some(Action::ClipboardCopy) => {
-                if rename.all_selected() {
-                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(rename.text().into()));
+                if rename.field.all_selected() {
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                        rename.field.text().into(),
+                    ));
                 }
                 cx.stop_propagation();
                 return;
@@ -351,7 +309,7 @@ impl ShoalWindow {
         {
             return;
         }
-        match rename.key(&keystroke.key, None) {
+        match rename.field.key(&keystroke.key, None) {
             Outcome::Editing => cx.notify(),
             Outcome::Commit(name) => self.finish_rename(name, window, cx),
             Outcome::Cancel => self.finish_rename(None, window, cx),
@@ -377,6 +335,7 @@ impl ShoalWindow {
             }));
         }
         window.focus(&self.focus, cx);
+        self.sync_terminal_focus();
         cx.notify();
     }
 }

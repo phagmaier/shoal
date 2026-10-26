@@ -39,7 +39,7 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.rename.is_some() {
+        if self.rename.is_some() || self.switcher.is_some() || self.session_busy {
             return;
         }
         if let Some(action) =
@@ -97,6 +97,17 @@ impl ShoalWindow {
 
     fn dispatch(&mut self, action: Action, window: &mut Window, cx: &mut Context<Self>) {
         match action {
+            Action::SessionSwitcher => self.toggle_switcher(window, cx),
+            Action::SessionNext | Action::SessionPrev => {
+                if let Some(target) = crate::switcher::adjacent(
+                    &self.workspace.sessions,
+                    self.session,
+                    action == Action::SessionNext,
+                ) {
+                    self.switch_session(target, window, cx);
+                }
+            }
+            Action::WindowNew => self.new_window(cx),
             Action::TabRename => {
                 if let Some(tab) = self.active_tab() {
                     self.start_rename(tab.id, window, cx);
@@ -155,7 +166,9 @@ impl ShoalWindow {
     }
 
     pub(crate) fn sync_terminal_focus(&mut self) {
-        let desired = self.window_active.then(|| self.focused_pane()).flatten();
+        let desired = (self.window_active && self.rename.is_none() && self.switcher.is_none())
+            .then(|| self.focused_pane())
+            .flatten();
         if desired == self.terminal_focus {
             return;
         }

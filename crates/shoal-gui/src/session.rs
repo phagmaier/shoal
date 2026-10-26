@@ -60,6 +60,26 @@ pub fn options(socket: PathBuf, env: impl IntoIterator<Item = (String, String)>)
     options
 }
 
+/// Orders full states from notifications and explicit reads. An RPC can
+/// overtake a queued notification; only reconnect may lower the revision.
+pub struct Revisions(Option<u64>);
+
+impl Revisions {
+    pub fn new(rev: u64) -> Self {
+        Self(Some(rev))
+    }
+    pub fn reconnect(&mut self) {
+        self.0 = None;
+    }
+    pub fn accept(&mut self, rev: u64) -> bool {
+        if self.0.is_some_and(|last| rev < last) {
+            return false;
+        }
+        self.0 = Some(rev);
+        true
+    }
+}
+
 /// The variables of `env` a window passes on (§4.2).
 fn window_env(env: impl IntoIterator<Item = (String, String)>) -> BTreeMap<String, String> {
     env.into_iter()
@@ -143,6 +163,17 @@ mod tests {
             .iter()
             .map(|session| (session.name.clone(), session.windows))
             .collect()
+    }
+
+    #[test]
+    fn an_explicit_state_read_cannot_be_undone_by_a_queued_notification() {
+        let mut revisions = Revisions::new(4);
+        assert!(revisions.accept(8)); // workspace.get after creating a session
+        assert!(!revisions.accept(5)); // older queued workspace.changed
+        assert!(revisions.accept(8));
+        revisions.reconnect();
+        assert!(revisions.accept(2)); // restored state can have a lower rev
+        assert!(!revisions.accept(1));
     }
 
     #[test]

@@ -6,6 +6,7 @@ mod actions;
 mod chrome;
 mod drag;
 mod draw;
+mod field;
 mod fonts;
 mod glyphs;
 mod input;
@@ -19,6 +20,7 @@ mod selection;
 mod session;
 mod shapes;
 mod sizing;
+mod switcher;
 mod terminal;
 mod view;
 
