@@ -175,6 +175,7 @@ impl EntityInputHandler for ShoalWindow {
             field.replace(range, text, None, false);
         } else if self.available
             && !self.awaiting_workspace
+            && self.close_confirmation.is_none()
             && self.switcher.is_none()
             && !self.session_busy
             && let Some(pane) = self.focused_pane()
@@ -202,7 +203,8 @@ impl EntityInputHandler for ShoalWindow {
     ) {
         if let Some(field) = self.editing_mut() {
             field.replace(range, text, selected, true);
-        } else if self.switcher.is_none() && !self.session_busy {
+        } else if self.close_confirmation.is_none() && self.switcher.is_none() && !self.session_busy
+        {
             if !text.is_empty()
                 && let Some(pane) = self.focused_pane()
                 && let Some(mirror) = self.mirror(pane)
@@ -220,7 +222,8 @@ impl EntityInputHandler for ShoalWindow {
         if let Some(text) = item.text() {
             if self.rename.is_some() || self.switcher.is_some() {
                 self.replace_text_in_range(None, &text, window, cx);
-            } else if self.switcher.is_none()
+            } else if self.close_confirmation.is_none()
+                && self.switcher.is_none()
                 && !self.session_busy
                 && let Some(pane) = self.focused_pane()
             {

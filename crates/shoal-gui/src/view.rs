@@ -2,6 +2,7 @@
 //! each pane's mirror drawn inside its box, following the workspace as the
 //! daemon changes it.
 
+mod closing;
 mod connection;
 mod input;
 mod layout;
@@ -74,6 +75,7 @@ pub struct ShoalWindow {
     /// Sends the dragged ratio once the throttle allows.
     ratio_timer: Option<Task<()>>,
     rename: Option<Rename>,
+    close_confirmation: Option<crate::closing::Confirmation>,
     switcher: Option<crate::switcher::Switcher>,
     switcher_focus: FocusHandle,
     switcher_scroll: gpui::ScrollHandle,
@@ -139,6 +141,7 @@ impl ShoalWindow {
             drag: None,
             ratio_timer: None,
             rename: None,
+            close_confirmation: None,
             switcher: None,
             switcher_focus: cx.focus_handle(),
             switcher_scroll: gpui::ScrollHandle::new(),
@@ -183,6 +186,13 @@ impl ShoalWindow {
                 }
                 self.workspace = state.workspace;
                 self.awaiting_workspace = false;
+                if self
+                    .close_confirmation
+                    .as_ref()
+                    .is_some_and(|pending| pending.target.call(&self.workspace).is_none())
+                {
+                    self.cancel_close(window, cx);
+                }
                 if let Some(picker) = &mut self.switcher {
                     picker.refresh(&self.workspace.sessions, self.session);
                 }
@@ -356,6 +366,11 @@ impl ShoalWindow {
                     .draw(&settings)
                     .inspect_err(|error| tracing::warn!(%error, "can't draw a pane"))
                     .ok()?;
+                if self.workspace.panes.get(&pane_box.pane).is_some_and(|p| {
+                    matches!(p.status, shoal_client::model::PaneStatus::Exited { .. })
+                }) {
+                    list.cursor = None;
+                }
                 if let Some(at) = hover {
                     list.links = mirror
                         .links(at.row)
@@ -384,7 +399,9 @@ impl Render for ShoalWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let viewport = window.viewport_size();
         let width = f32::from(viewport.width).max(0.0) as u32;
-        let height = (f32::from(viewport.height).max(0.0) as u32).saturating_sub(TOP_BAR_HEIGHT);
+        let height = (f32::from(viewport.height).max(0.0) as u32)
+            .saturating_sub(TOP_BAR_HEIGHT)
+            .saturating_sub(self.close_bar_height());
         let Some(mut chrome) = chrome::chrome(
             &self.workspace,
             self.session,
@@ -425,6 +442,7 @@ impl Render for ShoalWindow {
             .filter_map(|pane| self.banner(pane, cx))
             .collect();
         let output_pills = self.output_pills(&panes, cx);
+        let exit_banners = self.exit_banners(&panes, cx);
         let handles = self.divider_handles(&dividers);
         let dragging = self.drag.as_ref().map(|drag| drag.axis);
         let drag_listeners = self.drag_listeners(dragging, cx);
@@ -436,6 +454,7 @@ impl Render for ShoalWindow {
         let input_focus = (self.available
             && !self.awaiting_workspace
             && self.rename.is_none()
+            && self.close_confirmation.is_none()
             && self.switcher.is_none()
             && !self.session_busy)
             .then(|| self.focus.clone());
@@ -531,8 +550,10 @@ impl Render for ShoalWindow {
             .children(preedit)
             .children(banners)
             .children(output_pills)
+            .children(exit_banners)
             .children(handles);
         let popover = self.session_popover(window, cx);
+        let close_bar = self.close_bar();
         div()
             .relative()
             .size_full()
@@ -554,6 +575,7 @@ impl Render for ShoalWindow {
             .text_size(px(TEXT_SIZE))
             .child(top_bar)
             .child(pane_area)
+            .children(close_bar)
             .children(popover)
     }
 }

@@ -12,6 +12,9 @@ use shoal_client::{
 
 impl ShoalWindow {
     pub(super) fn toggle_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.close_confirmation.is_some() {
+            return;
+        }
         if self.switcher.is_some() {
             self.dismiss_switcher(window, cx);
         } else if !self.session_busy {

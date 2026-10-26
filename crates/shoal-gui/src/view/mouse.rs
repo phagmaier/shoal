@@ -18,6 +18,7 @@ impl ShoalWindow {
     ) {
         if !self.available
             || self.awaiting_workspace
+            || self.close_confirmation.is_some()
             || self.switcher.is_some()
             || self.session_busy
         {
@@ -104,7 +105,7 @@ impl ShoalWindow {
                 cx.notify();
             }
         }
-        if self.switcher.is_some() || self.session_busy {
+        if self.close_confirmation.is_some() || self.switcher.is_some() || self.session_busy {
             return;
         }
         if self.drag.is_some() {
@@ -148,7 +149,7 @@ impl ShoalWindow {
     }
 
     pub(super) fn pointer_up(&mut self, event: &MouseUpEvent, cx: &mut Context<Self>) {
-        if self.switcher.is_some() || self.session_busy {
+        if self.close_confirmation.is_some() || self.switcher.is_some() || self.session_busy {
             return;
         }
         if let Some(pane) = self.mouse_capture.take() {
@@ -269,7 +270,7 @@ impl ShoalWindow {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.switcher.is_some() || self.session_busy {
+        if self.close_confirmation.is_some() || self.switcher.is_some() || self.session_busy {
             return;
         }
         let Some(pane) = chrome::pane_at(&self.shown.panes, pane_point(event.position)) else {

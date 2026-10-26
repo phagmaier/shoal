@@ -38,6 +38,10 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.close_confirmation.is_some() {
+            self.close_key(event, window, cx);
+            return;
+        }
         if !self.available
             || self.awaiting_workspace
             || self.rename.is_some()
@@ -169,6 +173,7 @@ impl ShoalWindow {
                 let width = f32::from(viewport.width).max(0.0) as u32;
                 let height = (f32::from(viewport.height).max(0.0) as u32)
                     .saturating_sub(crate::chrome::TOP_BAR_HEIGHT)
+                    .saturating_sub(self.close_bar_height())
                     .saturating_sub(self.banner_height);
                 let area = Rect {
                     x: pad.min(width),
@@ -183,7 +188,7 @@ impl ShoalWindow {
                     .find(|s| s.id == self.session)
                     && let Some(call) = actions::call(action, session, area, self.config.window.gap)
                 {
-                    drop(self.client.send(call));
+                    self.send_action(call, window, cx);
                 }
             }
         }
@@ -201,9 +206,12 @@ impl ShoalWindow {
     }
 
     pub(crate) fn sync_terminal_focus(&mut self) {
-        let desired = (self.window_active && self.rename.is_none() && self.switcher.is_none())
-            .then(|| self.focused_pane())
-            .flatten();
+        let desired = (self.window_active
+            && self.rename.is_none()
+            && self.switcher.is_none()
+            && self.close_confirmation.is_none())
+        .then(|| self.focused_pane())
+        .flatten();
         if desired == self.terminal_focus {
             return;
         }

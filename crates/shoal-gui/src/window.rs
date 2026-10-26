@@ -195,6 +195,8 @@ impl ShoalRoot {
         // good complete config after an invalid edit.
         self.config.keybinds = update.loaded.config.keybinds;
         self.config.selection = update.loaded.config.selection;
+        self.config.behavior.confirm_close_running =
+            update.loaded.config.behavior.confirm_close_running;
         if let Some(content) = &self.content {
             content.update(cx, |view, cx| {
                 view.apply_input_config(&self.config);

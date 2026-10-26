@@ -658,6 +658,21 @@ A popover under the session chip: each session with its tab count and an "on scr
 - If only `daemon_version` differs: a banner with a "Restart daemon" button that runs the same restart steps. Panes still attach.
 - Closing a pane, tab or session where something other than the shell is running shows an inline bar: "nvim is running. Close it? Enter / Esc" (`behavior.confirm_close_running`).
 
+**Close and exit details (T47, 2026-10-26).** The running-program rule uses
+`Pane.program` on running panes (§4.3), including hidden splits and inactive
+tabs within the target; display titles do not identify running programs.
+Keyboard and middle-click tab closes share the same policy. Enter confirms the
+original target, Escape cancels, and other typing/paste/mouse input cannot reach
+the terminal while its confirmation bar is open. If that target disappears,
+the bar is dismissed. `behavior.confirm_close_running` reloads live; disabling
+it skips pane/tab prompts and running-program details, while the session-level
+confirmation in §7.6 remains. Closing a window still only detaches it.
+
+Retained exited panes (§4.2) keep their terminal output and add the exit code
+or signal and a **Close pane** button, with space reserved beneath the grid.
+This includes early failures and panes retained by `close_pane_on_exit = false`.
+An executable that cannot spawn remains a caller error with no pane, as in §4.2.
+
 ### 7.8 Instant tab switching
 
 The window keeps mirrors for the 8 most recently viewed tabs attached. Other tabs are detached and cost the window nothing.

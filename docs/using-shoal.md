@@ -38,7 +38,17 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   the last. Ctrl+Shift+PageUp / PageDown moves a tab. Ctrl+Shift+R renames it.
 - Keyboard panes: Ctrl+Shift+O / E splits right / down; Ctrl+Shift+W closes.
   Ctrl+Alt+Arrow moves focus; add Shift to resize by two cells.
-  Ctrl+Shift+Enter toggles zoom. Close confirmations come with T47.
+  Ctrl+Shift+Enter toggles zoom.
+- Closing a pane or tab with a foreground program asks first (T47), including
+  programs in hidden splits. Enter closes that target; Escape cancels. Typing
+  and pasting stay out of the terminal while the bar is open. Set
+  `behavior.confirm_close_running = false` to disable those prompts; it reloads
+  live. The switcher always confirms a session close and adds running-program
+  details when that setting is enabled. Closing a window still only detaches it.
+- A shell that starts then fails with a nonzero exit code within one second
+  stays visible with its error output, exit status and a **Close pane** button.
+  This also labels panes retained by `behavior.close_pane_on_exit = false`.
+  A program that cannot be started returns a spawn error without creating a pane.
 - Mouse events go to programs that request them. Hold Shift for local selection.
   Otherwise drag selects, double-click selects a word and triple-click a line.
   Selecting sets primary selection; middle-click pastes it. Ctrl+Shift+C or
@@ -145,6 +155,11 @@ errors, notice dismissal, build mismatches and the restart timeout. It uses
 disposable HOME/XDG folders and a fake systemctl, and restarts the crashed
 test daemon itself to stand in for systemd. Results go to
 `target/manual/t46.txt`.
+
+`just manual t47` checks pane, keyboard/middle-click tab and session close
+confirmations, live opt-out, retained shell startup errors and window detach.
+It uses disposable HOME/XDG folders and a fake systemctl. Results go to
+`target/manual/t47.txt`.
 
 ## A sandbox for experiments
 

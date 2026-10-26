@@ -146,6 +146,9 @@ impl ShoalWindow {
             .px(px(8.0))
             .text_color(rgba(tab.text))
             .on_click(cx.listener(move |view, event: &ClickEvent, window, cx| {
+                if view.close_confirmation.is_some() {
+                    return;
+                }
                 if event.click_count() >= 2 {
                     view.start_rename(id, window, cx);
                 } else if !active {
@@ -154,9 +157,8 @@ impl ShoalWindow {
             }))
             .on_mouse_up(
                 MouseButton::Middle,
-                cx.listener(move |view, _, _, _| {
-                    // T47 asks first when something is running.
-                    drop(view.client.send(Call::TabClose { tab: id }));
+                cx.listener(move |view, _, window, cx| {
+                    view.request_close(crate::closing::Target::Tab(id), window, cx);
                 }),
             )
             .child(
@@ -226,6 +228,9 @@ impl ShoalWindow {
             .child(glyph)
             .tooltip(move |_, cx| cx.new(|_| tooltip.clone()).into())
             .on_click(cx.listener(move |view, _, _, _| {
+                if view.close_confirmation.is_some() {
+                    return;
+                }
                 if let Some(call) = call(view) {
                     drop(view.client.send(call));
                 }
@@ -261,6 +266,9 @@ impl ShoalWindow {
     }
 
     pub(super) fn start_rename(&mut self, tab: TabId, window: &mut Window, cx: &mut Context<Self>) {
+        if self.close_confirmation.is_some() {
+            return;
+        }
         if self.rename.as_ref().is_some_and(|rename| rename.tab == tab) {
             return;
         }

@@ -16,16 +16,17 @@ impl ShoalWindow {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let picker = self.switcher.as_ref()?;
+        let top = TOP_BAR_HEIGHT as f32 + self.banner_height as f32;
         let color = |rgb| rgba(Color { rgb, alpha: 1.0 });
         let rows = picker.rows(&self.workspace.sessions, self.session);
         let mut popover = div()
             .id("session-switcher")
             .absolute()
             .left(px(8.0))
-            .top(px(TOP_BAR_HEIGHT as f32))
+            .top(px(top))
             .w(px(360.0))
             .max_w((window.viewport_size().width - px(16.0)).max(px(0.0)))
-            .max_h((window.viewport_size().height - px(TOP_BAR_HEIGHT as f32 + 8.0)).max(px(0.0)))
+            .max_h((window.viewport_size().height - px(top + 8.0)).max(px(0.0)))
             .flex()
             .flex_col()
             .gap(px(6.0))
@@ -146,14 +147,15 @@ impl ShoalWindow {
                         .child("Enter Save · Esc Cancel"),
                 );
             }
-            Mode::Confirm { name, .. } => {
-                popover = popover
-                    .child(SharedString::from(format!("Close session {name}?")))
-                    .child(
-                        div()
-                            .text_color(color(self.palette.inactive_text))
-                            .child("Enter / Esc"),
-                    );
+            Mode::Confirm { session, name } => {
+                let text = crate::closing::Target::Session(*session)
+                    .prompt(&self.workspace, self.config.behavior.confirm_close_running)
+                    .unwrap_or_else(|| format!("Close session {name}?"));
+                popover = popover.child(SharedString::from(text)).child(
+                    div()
+                        .text_color(color(self.palette.inactive_text))
+                        .child("Enter / Esc"),
+                );
             }
         }
         if picker.busy {

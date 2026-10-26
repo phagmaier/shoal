@@ -4,6 +4,7 @@
 
 mod actions;
 mod chrome;
+mod closing;
 mod drag;
 mod draw;
 mod field;

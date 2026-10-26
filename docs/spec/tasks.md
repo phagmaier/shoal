@@ -34,7 +34,7 @@
 | T44 | Session switcher | done 2026-10-26 `87e1f74` |
 | T45 | Scrollback, selection and links | done 2026-10-26 `56df772` |
 | T46 | Reconnect and banners | done 2026-10-26 `ff0f47f` |
-| T47 | Close confirmations and exited panes | ready (next) |
+| T47 | Close confirmations and exited panes | verification pending |
 | T48 | Live theme and font changes | ready |
 | T49 | Polish and hardening pass | ready after T48 (accepted checkpoint, see below) |
 | T50 | Install and packaging | blocked on T22, T30, T48 |
@@ -69,7 +69,7 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 
 ### T47 · Close confirmations and exited panes
 
-- **Status:** ready; next in the safe order after T46. T43 and T14 are complete.
+- **Status:** implemented and reviewed on `t47-close-confirmations`; unit and guided checks passed (`target/manual/t47.txt`); final commit check pending. T43 and T14 are complete.
 - **Needs:** T43, T14.
 - **Build:** the confirm bar for closing over a running program, the error view for panes that exit right after starting.
 - **Done when:** a unit test for the "something is running" rule; manually, closing over `nvim` asks first and a bad `shell.program` shows its error instead of vanishing.

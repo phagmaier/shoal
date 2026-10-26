@@ -23,6 +23,7 @@ impl ShoalWindow {
     pub fn apply_input_config(&mut self, config: &Config) {
         self.config.keybinds = config.keybinds.clone();
         self.config.selection = config.selection.clone();
+        self.config.behavior.confirm_close_running = config.behavior.confirm_close_running;
     }
 
     pub fn set_available(&mut self, available: bool, cx: &mut Context<Self>) {
@@ -39,6 +40,7 @@ impl ShoalWindow {
             self.ratio_timer = None;
             self.size_timer = None;
             self.rename = None;
+            self.close_confirmation = None;
             self.switcher = None;
             self.session_busy = false;
             self.sizer.reset();
