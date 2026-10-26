@@ -129,7 +129,13 @@ cargo insta review    # accept snapshot changes deliberately, never blindly
 4. If the task is bigger than one sitting, stop, propose a split, and update `tasks.md`.
 5. Work on a branch named `t<NN>-<short-name>`. Commit when **Done when** passes.
    The one exception is the T00 spike, on `spike/t00`, which is never merged.
-6. Finish with a summary: what changed, how it was tested, manual checks the user must
+6. Merging needs no approval (the user's standing decision, 2026-10-25): once
+   **Done when** passes, `just check` passes on the commit, any manual checks the
+   user ran came back clean and the review found nothing unresolved, fast-forward
+   `main` to the task commit and push it. Then commit `docs: record T<NN>
+   integration and next task` to update `tasks.md`, and push that too. Hold the
+   merge and say why if any of these is not true.
+7. Finish with a summary: what changed, how it was tested, manual checks the user must
    run, and follow-ups.
 
 ## Gotchas
