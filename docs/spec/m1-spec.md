@@ -543,6 +543,14 @@ Sizes are logical pixels before scaling.
 - **Links.** OSC 8 links and plain URLs on the hovered row underline while Ctrl is held; Ctrl+click opens them with `xdg-open`.
 - **Images** (Kitty graphics) are not drawn in M1.
 
+**Rendering details (T41, 2026-10-26).**
+
+- *Cells:* `font.size` is in points at 96 logical pixels per inch (11 pt is 14.67 px). The cell is the advance of `M` wide and ascent plus descent, times `font.line_height`, tall, each rounded to whole device pixels; extra line height is split above and below the text. The grid starts 6 px inside the pane box, plus half the pixels left over after whole cells; a mirror larger than its box is clipped there.
+- *Cursor:* a mirror sets `cursor.style` as libghostty's default cursor, which applies until a program chooses a shape (DECSCUSR) and again after `CSI 0 SP q` or a reset. The snapshot records whether the program chose. The color is always `cursor.color`; a program's OSC 12 color is not drawn. A filled block draws the text under it in the terminal's background color. Blinking cursors are drawn steady, because blinking needs a timer while idle.
+- *Feeding:* each attached pane's items are fed on the main thread for at most 4 ms per turn before yielding, so a flood still lets frames and input in. Output to a kept mirror whose tab is out of view requests no frame.
+- *Failures:* any attach or decode failure other than mid-sequence counts toward "re-attach once, then a banner". The error banner reads "Couldn't show this pane: <reason>." Retry starts over with a fresh attach and a fresh retry.
+- *Timing:* with `SHOAL_LOG=debug`, every frame that rebuilds all of a pane's rows logs `full redraw` with its size and the milliseconds from building its draw list to the end of its paint.
+
 ### 7.4 Input
 
 - **Keys.** A chord matching a binding runs its action. Anything else goes to the focused pane: committed text (including input-method text) as UTF-8, other keys through `shoal-term`'s key encoder using the mirror's modes, sent as `INPUT` frames.

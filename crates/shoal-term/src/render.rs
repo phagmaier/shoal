@@ -10,6 +10,7 @@ use libghostty_vt::{
     render::{CellIterator, CursorVisualStyle, RenderState, RowIteration, RowIterator, Snapshot},
     screen::{CellContentTag, CellWide},
     style::{self, PaletteIndex, RgbColor, StyleColor},
+    terminal::CursorStyle,
 };
 
 use crate::{TermError, Terminal};
@@ -60,6 +61,24 @@ pub enum CursorShape {
     Bar,
     Underline,
     HollowBlock,
+}
+
+impl Terminal {
+    /// The cursor shown until a program chooses one (DECSCUSR), and again
+    /// when it asks for the default (`CSI 0 SP q`) or resets. A shape the
+    /// program chose, even before a snapshot, stays. `HollowBlock` is drawn
+    /// for unfocused panes and isn't a default; it means `Block` here.
+    pub fn set_default_cursor(&mut self, shape: CursorShape, blink: bool) -> Result<(), TermError> {
+        let style = match shape {
+            CursorShape::Block | CursorShape::HollowBlock => CursorStyle::Block,
+            CursorShape::Bar => CursorStyle::Bar,
+            CursorShape::Underline => CursorStyle::Underline,
+        };
+        self.inner
+            .set_default_cursor_style(Some(style))?
+            .set_default_cursor_blink(Some(blink))?;
+        Ok(())
+    }
 }
 
 /// Where the cursor is on the viewport.

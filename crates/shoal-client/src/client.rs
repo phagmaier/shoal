@@ -11,7 +11,7 @@ use shoal_model::PaneId;
 use shoal_proto::{Call, HelloResult, Notification};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{AttachStream, AutoStart, Error, Options, StreamItem, worker};
+use crate::{AttachStream, AutoStart, Detach, Error, Options, StreamItem, worker};
 
 /// What the connection did, in order.
 #[derive(Debug, Clone, PartialEq)]
@@ -143,10 +143,12 @@ impl Client {
             items,
         });
         AttachStream {
-            pane,
-            id,
             items: receiver,
-            commands: self.commands.clone(),
+            detach: Detach {
+                pane,
+                id,
+                commands: self.commands.clone(),
+            },
         }
     }
 

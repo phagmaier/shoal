@@ -4858,6 +4858,7 @@ dependencies = [
  "futures",
  "gpui",
  "gpui_platform",
+ "insta",
  "serde_json",
  "shoal-client",
  "shoal-config",

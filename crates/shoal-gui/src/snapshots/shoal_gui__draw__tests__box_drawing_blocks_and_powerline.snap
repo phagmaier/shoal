@@ -1,0 +1,32 @@
+---
+source: crates/shoal-gui/src/draw_tests.rs
+expression: "draw(12, 4,\nconcat!(\"\\u{250c}\\u{2500}\\u{252c}\\u{2500}\\u{2510} \\u{2591}\\u{2588}\\r\\n\",\n\"\\u{2502}a\\u{2502}b\\u{2502} \\x1b[2m\\u{2584}\\x1b[0m\\r\\n\",\n\"\\u{2570}\\u{2500}\\u{2534}\\u{2500}\\u{256f}\\r\\n\",\n\"\\x1b[44;30m main \\x1b[0;34m\\u{e0b0}\\x1b[0m\\u{e0b5}\",), true,)"
+---
+12 cols, 4 rows rebuilt
+row 0
+  shape 0 '┌' #c0caf5
+  shape 1 '─' #c0caf5
+  shape 2 '┬' #c0caf5
+  shape 3 '─' #c0caf5
+  shape 4 '┐' #c0caf5
+  shape 6 '░' #c0caf5
+  shape 7 '█' #c0caf5
+row 1
+  text 1 narrow #c0caf5 "a"
+  text 3 narrow #c0caf5 "b"
+  shape 0 '│' #c0caf5
+  shape 2 '│' #c0caf5
+  shape 4 '│' #c0caf5
+  shape 6 '▄' #c0caf5@0.6
+row 2
+  shape 0 '╰' #c0caf5
+  shape 1 '─' #c0caf5
+  shape 2 '┴' #c0caf5
+  shape 3 '─' #c0caf5
+  shape 4 '╯' #c0caf5
+row 3
+  bg 0+6 #81a2be@0.88
+  text 1 narrow #1d1f21 "main"
+  shape 6 '\u{e0b0}' #81a2be
+  shape 7 '\u{e0b5}' #c0caf5
+cursor 8,3 Block 1 cells #7aa2f7 text #1a1b26

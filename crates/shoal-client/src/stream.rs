@@ -41,15 +41,13 @@ pub enum StreamItem {
 /// A pane's stream. Dropping it detaches.
 #[derive(Debug)]
 pub struct AttachStream {
-    pub(crate) pane: PaneId,
-    pub(crate) id: u64,
     pub(crate) items: Receiver<StreamItem>,
-    pub(crate) commands: UnboundedSender<Command>,
+    pub(crate) detach: Detach,
 }
 
 impl AttachStream {
     pub fn pane(&self) -> PaneId {
-        self.pane
+        self.detach.pane
     }
 
     /// The next item, waiting for it. `None` once the stream has ended.
@@ -75,9 +73,30 @@ impl AttachStream {
             Err(TryRecvError::Disconnected) => Err(Error::Stopped),
         }
     }
+
+    /// The items and the stream's lifetime, apart: one thread can wait for
+    /// items while another decides when to stop. Dropping the [`Detach`]
+    /// detaches, which ends the items.
+    pub fn split(self) -> (Receiver<StreamItem>, Detach) {
+        (self.items, self.detach)
+    }
 }
 
-impl Drop for AttachStream {
+/// Keeps a pane's stream attached; dropping it detaches.
+#[derive(Debug)]
+pub struct Detach {
+    pub(crate) pane: PaneId,
+    pub(crate) id: u64,
+    pub(crate) commands: UnboundedSender<Command>,
+}
+
+impl Detach {
+    pub fn pane(&self) -> PaneId {
+        self.pane
+    }
+}
+
+impl Drop for Detach {
     fn drop(&mut self) {
         let _ = self.commands.send(Command::Detach {
             pane: self.pane,

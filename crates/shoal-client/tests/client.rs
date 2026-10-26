@@ -339,6 +339,35 @@ fn attach_streams_a_snapshot_then_numbered_output_and_resizes() {
 }
 
 #[test]
+fn dropping_a_split_streams_detach_ends_its_items() {
+    let env = fixture();
+    let _daemon = env.spawn_daemon(shoald());
+    let Connected { client, .. } = gui(&env);
+    let pane = new_pane(&client);
+    let (items, detach) = client.attach(pane).split();
+    assert_eq!(detach.pane(), pane);
+    let (forward, forwarded) = std::sync::mpsc::channel();
+    // Blocks on the items, with nothing else to wake it, until they end.
+    std::thread::spawn(move || {
+        while let Ok(item) = items.recv() {
+            let _ = forward.send(item);
+        }
+    });
+    assert!(matches!(
+        forwarded.recv_timeout(TIMEOUT),
+        Ok(StreamItem::Snapshot { .. })
+    ));
+    drop(detach);
+    loop {
+        match forwarded.recv_timeout(TIMEOUT) {
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Ok(StreamItem::Output { .. }) => {}
+            other => panic!("expected the items to end, got {other:?}"),
+        }
+    }
+}
+
+#[test]
 fn attach_failures_end_the_stream() {
     let env = fixture();
     let _daemon = env.spawn_daemon(shoald());

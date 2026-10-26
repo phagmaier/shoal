@@ -190,6 +190,41 @@ fn the_cursor_matches_the_terminal() {
 }
 
 #[test]
+fn the_default_cursor_gives_way_to_a_programs_choice() {
+    let shape = |t: &mut Terminal| {
+        let cursor = t.frame().unwrap().cursor().unwrap();
+        (cursor.shape, cursor.blinking)
+    };
+    let mut t = Terminal::new(10, 3, 100).unwrap();
+    t.set_default_cursor(CursorShape::Bar, false).unwrap();
+    assert_eq!(shape(&mut t), (CursorShape::Bar, false));
+    // A program's choice wins, even over a later default.
+    t.feed(b"\x1b[3 q");
+    t.set_default_cursor(CursorShape::Bar, false).unwrap();
+    assert_eq!(shape(&mut t), (CursorShape::Underline, true));
+    // Asking for the default brings it back.
+    t.feed(b"\x1b[0 q");
+    assert_eq!(shape(&mut t), (CursorShape::Bar, false));
+
+    // A snapshot keeps whether the program chose: a mirror's default
+    // replaces only a cursor nobody chose.
+    let mut chose = Terminal::new(10, 3, 100).unwrap();
+    chose.feed(b"\x1b[2 q");
+    let mut never = Terminal::new(10, 3, 100).unwrap();
+    for (pane, expected) in [
+        (&mut chose, CursorShape::Block),
+        (&mut never, CursorShape::Underline),
+    ] {
+        let bytes = pane.snapshot().unwrap();
+        let mut mirror = Terminal::restore(&bytes, 10, 3, 100).unwrap();
+        mirror
+            .set_default_cursor(CursorShape::Underline, false)
+            .unwrap();
+        assert_eq!(shape(&mut mirror).0, expected);
+    }
+}
+
+#[test]
 fn colors_report_the_defaults_a_program_set() {
     let mut t = Terminal::new(4, 1, 100).unwrap();
     // OSC 10, 11 and 12 set the foreground, background and cursor colors.

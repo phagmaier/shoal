@@ -3,8 +3,16 @@
 //! `shoal attach` start it detached.
 
 mod chrome;
+mod draw;
 mod fonts;
+mod glyphs;
+mod metrics;
+mod mirror;
+mod panes;
+mod retention;
 mod session;
+mod shapes;
+mod terminal;
 mod view;
 
 use std::{ffi::OsString, io, process::ExitCode, sync::mpsc::Receiver};
@@ -128,8 +136,8 @@ fn open_window(opened: Opened, config: Config, palette: shoal_config::Palette, c
         window_decorations: Some(WindowDecorations::Server),
         ..Default::default()
     };
-    let window = match cx.open_window(options, |_, cx| {
-        cx.new(|_| ShoalWindow::new(client, session, workspace, config, palette))
+    let window = match cx.open_window(options, |window, cx| {
+        cx.new(|cx| ShoalWindow::new(client, session, workspace, config, palette, window, cx))
     }) {
         Ok(window) => window,
         Err(error) => {

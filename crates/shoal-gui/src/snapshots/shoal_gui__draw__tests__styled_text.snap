@@ -1,0 +1,32 @@
+---
+source: crates/shoal-gui/src/draw_tests.rs
+expression: "draw(40, 6,\nconcat!(\"plain words here\\r\\n\",\n\"\\x1b[1mbold\\x1b[0m \\x1b[3mitalic\\x1b[0m \\x1b[1;3mboth\\x1b[0m \\x1b[2mdim\\x1b[0m\\r\\n\",\n\"\\x1b[31mred\\x1b[0m \\x1b[38;2;10;20;30mrgb\\x1b[0m \\x1b[41;37m on red \\x1b[0m\\x1b[44m  \\x1b[0m\\r\\n\",\n\"\\x1b[7minverse\\x1b[0m \\x1b[8msecret\\x1b[0m \\x1b[9mstrike\\x1b[0m \\x1b[53mover\\x1b[0m\\r\\n\",\n\"\\x1b[4msingle\\x1b[0m \\x1b[4:3;58:2::255:0:0mcurly\\x1b[0m \\x1b[21mdouble\\x1b[0m\\r\\n\",\n\"\\x1b[42m\\x1b[K\",), true,)"
+---
+40 cols, 6 rows rebuilt
+row 0
+  text 0 narrow #c0caf5 "plain words here"
+row 1
+  text 0 narrow bold #c0caf5 "bold"
+  text 5 narrow italic #c0caf5 "italic"
+  text 12 narrow bold italic #c0caf5 "both"
+  text 17 narrow #c0caf5@0.6 "dim"
+row 2
+  bg 8+8 #cc6666@0.88
+  bg 16+2 #81a2be@0.88
+  text 0 narrow #cc6666 "red"
+  text 4 narrow #0a141e "rgb"
+  text 9 narrow #c5c8c6 "on red"
+row 3
+  bg 0+7 #c0caf5@0.88
+  text 0 narrow #1a1b26 "inverse"
+  text 15 narrow #c0caf5 "strike over"
+  line Strike 15+6 #c0caf5
+  line Overline 22+4 #c0caf5
+row 4
+  text 0 narrow #c0caf5 "single curly double"
+  line Underline(Single) 0+6 #c0caf5
+  line Underline(Curly) 7+5 #ff0000
+  line Underline(Double) 13+6 #c0caf5
+row 5
+  bg 0+40 #b5bd68@0.88
+cursor 0,5 Block 1 cells #7aa2f7 text #1a1b26

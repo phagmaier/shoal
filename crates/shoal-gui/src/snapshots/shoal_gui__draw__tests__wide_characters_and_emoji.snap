@@ -1,0 +1,20 @@
+---
+source: crates/shoal-gui/src/draw_tests.rs
+expression: "draw(20, 3,\nconcat!(\"\\x1b[?2027h\", \"a\\u{4e2d}\\u{6587}b\\r\\n\",\n\"\\u{1f600}x\\u{1f44d}\\u{1f3fd}y\\r\\n\",\n\"\\u{1f468}\\u{200d}\\u{1f469}\\u{200d}\\u{1f467}z e\\u{301}\\x1b[3;1H\",), true,)"
+---
+20 cols, 3 rows rebuilt
+row 0
+  text 0 narrow #c0caf5 "a"
+  text 1 wide #c0caf5 "中"
+  text 3 wide #c0caf5 "文"
+  text 5 narrow #c0caf5 "b"
+row 1
+  text 0 wide #c0caf5 "😀"
+  text 2 narrow #c0caf5 "x"
+  text 3 cluster/2 #c0caf5 "👍🏽"
+  text 5 narrow #c0caf5 "y"
+row 2
+  text 0 cluster/2 #c0caf5 "👨\u{200d}👩\u{200d}👧"
+  text 2 narrow #c0caf5 "z"
+  text 4 cluster/1 #c0caf5 "e\u{301}"
+cursor 0,2 Block 2 cells #7aa2f7 text #1a1b26

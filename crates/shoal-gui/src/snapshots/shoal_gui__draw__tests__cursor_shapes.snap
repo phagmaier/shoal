@@ -1,0 +1,11 @@
+---
+source: crates/shoal-gui/src/draw_tests.rs
+expression: out
+---
+block: cursor 1,0 Block 1 cells #7aa2f7 text #1a1b26
+bar: cursor 1,0 Bar 1 cells #7aa2f7
+underline: cursor 1,0 Underline 1 cells #7aa2f7
+unfocused: cursor 1,0 HollowBlock 1 cells #7aa2f7
+hidden: no cursor
+wide head: cursor 0,0 Block 2 cells #7aa2f7 text #1a1b26
+wide tail: cursor 0,0 Block 2 cells #7aa2f7 text #1a1b26

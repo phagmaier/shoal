@@ -25,4 +25,5 @@ tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["fmt", "std"] }
 
 [dev-dependencies]
+insta.workspace = true
 shoal-testkit.workspace = true
