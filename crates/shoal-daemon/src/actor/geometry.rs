@@ -70,8 +70,8 @@ fn resize_extent(
     })
 }
 
-// Before T13 reports window cell geometry, leaf grids are the authoritative
-// sizes: add siblings on the split axis and take their maximum across it.
+// Leaf grids, confirmed by their pane threads, are authoritative: add
+// siblings on the split axis and take their maximum across it.
 fn dimensions(layout: &Layout, panes: &BTreeMap<PaneId, Pane>) -> (f64, f64) {
     match layout {
         Layout::Pane(id) => {

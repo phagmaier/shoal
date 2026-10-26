@@ -9,7 +9,9 @@ use std::{
 };
 
 use shoal_model::GridSize;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::Notify;
+
+use super::subscriber::{self, Delivery, Receiver, Sender};
 
 /// The most output in one item.
 pub const BATCH_BYTES: usize = 64 * 1024;
@@ -47,7 +49,7 @@ pub struct Stream {
     seq: u64,
     pending: Vec<u8>,
     last_flush: Option<Instant>,
-    subscribers: Vec<(SubscriberId, UnboundedSender<Item>)>,
+    subscribers: Vec<(SubscriberId, Sender)>,
     next_subscriber: u64,
 }
 
@@ -106,7 +108,12 @@ impl Stream {
         self.send(Item::Resized { seq, size });
     }
 
-    pub fn subscribe(&mut self, sink: UnboundedSender<Item>, now: Instant) -> Subscribed {
+    pub fn subscribe(&mut self, notify: Arc<Notify>, now: Instant) -> (Subscribed, Receiver) {
+        let (sink, receiver) = subscriber::channel(notify);
+        (self.register(sink, now), receiver)
+    }
+
+    pub(super) fn register(&mut self, sink: Sender, now: Instant) -> Subscribed {
         self.flush(now);
         self.next_subscriber += 1;
         let id = SubscriberId(self.next_subscriber);
@@ -118,28 +125,44 @@ impl Stream {
         self.subscribers.retain(|(subscriber, _)| *subscriber != id);
     }
 
+    pub fn resyncs(&self) -> Vec<SubscriberId> {
+        self.subscribers
+            .iter()
+            .filter(|(_, sink)| sink.needs_resync())
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
+    pub fn replace(&mut self, id: SubscriberId, delivery: Delivery) {
+        if let Some((_, sink)) = self
+            .subscribers
+            .iter()
+            .find(|(candidate, _)| *candidate == id)
+        {
+            sink.replace(delivery);
+        }
+    }
+
     fn send(&mut self, item: Item) {
         // A subscriber whose receiver is gone is dropped.
-        self.subscribers
-            .retain(|(_, sink)| sink.send(item.clone()).is_ok());
+        self.subscribers.retain(|(_, sink)| !sink.closed());
+        for (_, sink) in &self.subscribers {
+            sink.push(item.clone());
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
-
     use super::*;
 
-    fn subscribed(stream: &mut Stream, now: Instant) -> UnboundedReceiver<Item> {
-        let (sink, items) = unbounded_channel();
-        stream.subscribe(sink, now);
-        items
+    fn subscribed(stream: &mut Stream, now: Instant) -> Receiver {
+        stream.subscribe(Arc::new(Notify::new()), now).1
     }
 
-    fn drain(items: &mut UnboundedReceiver<Item>) -> Vec<(u64, Vec<u8>)> {
+    fn drain(items: &mut Receiver) -> Vec<(u64, Vec<u8>)> {
         let mut got = Vec::new();
-        while let Ok(item) = items.try_recv() {
+        while let Ok(Delivery::Item(item)) = items.try_recv() {
             match item {
                 Item::Output { seq, bytes } => got.push((seq, bytes.to_vec())),
                 Item::Resized { seq, size } => {
@@ -224,9 +247,8 @@ mod tests {
         let mut stream = Stream::default();
         stream.push(b"a", start);
         stream.push(b"b", start + ms(1));
-        let (sink, mut late) = unbounded_channel();
-        // Subscribing numbers the held "b", so it is not lost or doubled.
-        assert_eq!(stream.subscribe(sink, start + ms(2)).seq, 2);
+        let (subscribed, mut late) = stream.subscribe(Arc::new(Notify::new()), start + ms(2));
+        assert_eq!(subscribed.seq, 2);
         stream.push(b"c", start + ms(10));
         assert_eq!(drain(&mut late), [(3, b"c".to_vec())]);
     }
@@ -235,8 +257,8 @@ mod tests {
     fn unsubscribed_and_dropped_subscribers_get_nothing_more() {
         let start = Instant::now();
         let mut stream = Stream::default();
-        let (sink, mut first) = unbounded_channel();
-        let id = stream.subscribe(sink, start).id;
+        let (registration, mut first) = stream.subscribe(Arc::new(Notify::new()), start);
+        let id = registration.id;
         let second = subscribed(&mut stream, start);
         let mut third = subscribed(&mut stream, start);
         drop(second);

@@ -89,6 +89,14 @@ impl Actor {
             });
             return;
         }
+        if let Call::PaneAttach { pane } = call {
+            self.attach(reply, pane);
+            return;
+        }
+        if let Call::PaneSetSize { pane, cols, rows } = call {
+            self.set_size(reply, pane, cols, rows);
+            return;
+        }
         let shutdown = matches!(&call, Call::DaemonShutdown(_));
         let result = self.execute(connection, call);
         let enqueued = self.finish(reply, result);
@@ -138,6 +146,9 @@ impl Actor {
                     .connections
                     .get_mut(&connection)
                     .expect("invariant: connected request");
+                if focused {
+                    self.size_owner = Some(connection);
+                }
                 if state.focused != focused {
                     state.focused = focused;
                 }
@@ -242,15 +253,9 @@ impl Actor {
                 .expect("invariant: daemon status is serializable"));
             }
             Call::DaemonShutdown(_) => {}
-            Call::PaneAttach { .. } => {
-                return Err(boundary("pane.attach", "T13 attach and streaming"));
-            }
-            Call::PaneDetach { .. } => {
-                return Err(boundary("pane.detach", "T13 attach and streaming"));
-            }
-            Call::PaneSetSize { .. } => {
-                return Err(boundary("pane.set_size", "T13 size arbitration"));
-            }
+            Call::PaneAttach { .. } => unreachable!("attach dispatched first"),
+            Call::PaneDetach { pane } => self.detach(connection, pane)?,
+            Call::PaneSetSize { .. } => unreachable!("size dispatched first"),
             Call::DaemonPersist(_) => {
                 return Err(boundary("daemon.persist", "T15 persistence and restore"));
             }

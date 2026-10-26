@@ -148,6 +148,7 @@ impl Actor {
     }
 
     fn remove_pane(&mut self, id: PaneId) {
+        self.remove_attachments(id);
         let running = self
             .workspace
             .panes

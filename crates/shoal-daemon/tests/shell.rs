@@ -9,12 +9,12 @@ use shoal_daemon::{
 use shoal_model::{GridSize, PaneId};
 use shoal_term::CaptureFormat;
 use shoal_testkit::{TempEnv, eventually};
-use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
+use tokio::sync::mpsc::unbounded_channel;
 
 struct Shell {
     // Drop the pane before its files.
     pane: Pane,
-    items: UnboundedReceiver<Item>,
+    items: pane::Receiver,
     _env: TempEnv,
 }
 
@@ -121,7 +121,7 @@ impl Shell {
     fn drain(&mut self) -> Vec<u8> {
         let mut bytes = Vec::new();
         while let Ok(item) = self.items.try_recv() {
-            if let Item::Output { bytes: output, .. } = item {
+            if let pane::Delivery::Item(Item::Output { bytes: output, .. }) = item {
                 bytes.extend_from_slice(&output);
             }
         }

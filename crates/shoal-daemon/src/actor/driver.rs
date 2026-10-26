@@ -36,14 +36,14 @@ impl Actor {
             let deadline = self.notification_deadline();
             tokio::select! {
                 message = self.receiver.recv() => match message {
-                    Some(Message::Connect { client, env, outgoing, reply }) => {
+                    Some(Message::Connect { client, env, core, outgoing, reply }) => {
                         let id = self.next_connection;
                         self.next_connection += 1;
                         if client == ClientKind::Gui {
                             self.window_env = env.into_iter().filter(|(key, _)| pane::spawn::WINDOW_ENV.contains(&key.as_str())).collect();
                         }
                         self.connections.insert(id, Connection {
-                            outgoing, shown: None, focused: false, reservations: BTreeSet::new(), subscribed: false,
+                            outgoing, core, attachments: Default::default(), shown: None, focused: false, reservations: BTreeSet::new(), subscribed: false,
                             dirty: false, last_notification: None, busy: false, requests: VecDeque::new(),
                         });
                         let registration = Registration { id, sender: self.sender.clone(), active: true };
@@ -58,6 +58,13 @@ impl Actor {
                         }
                     }
                     Some(Message::Disconnect(id)) => self.disconnect(id),
+                    Some(Message::Input { connection, pane, bytes, done }) => {
+                        if self.connections.contains_key(&connection)
+                            && let Some(runtime) = self.panes.get(&pane) { runtime.write(bytes); }
+                        let _ = done.send(());
+                    }
+                    Some(Message::Attached { reply, pane, result }) => self.attached(reply, pane, result),
+                    Some(Message::Sized { reply, pane, result }) => self.sized(reply, pane, result),
                     Some(Message::Spawned { pane, result }) => self.spawned(pane, result),
                     Some(Message::Captured { reply, result }) => { self.finish(reply, result); }
                     Some(Message::Stop(reply)) => {

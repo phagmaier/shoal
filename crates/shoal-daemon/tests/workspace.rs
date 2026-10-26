@@ -244,14 +244,6 @@ fn missing_targets_and_rejected_edits_leave_existing_structure_intact() {
     assert_eq!(state["sessions"][1]["name"], "other");
     assert_eq!(state["panes"].as_object().unwrap().len(), 2);
     rpc.error("daemon.persist", json!({}), -32601);
-    for method in ["pane.attach", "pane.detach"] {
-        rpc.error(method, json!({"pane": pane}), -32601);
-    }
-    rpc.error(
-        "pane.set_size",
-        json!({"pane": pane, "cols": 90, "rows": 30}),
-        -32601,
-    );
 }
 
 #[test]

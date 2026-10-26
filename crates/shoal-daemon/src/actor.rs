@@ -4,6 +4,7 @@ mod driver;
 mod geometry;
 mod methods;
 mod spawning;
+mod streaming;
 mod workspace;
 
 use std::{
@@ -30,8 +31,20 @@ use tokio::{
 
 pub type ConnectionId = u64;
 pub struct Outgoing {
-    pub frames: mpsc::Sender<Arc<[u8]>>,
+    pub frames: mpsc::Sender<OutgoingFrame>,
+    pub streams: Arc<tokio::sync::Notify>,
     pub close: watch::Sender<bool>,
+}
+
+pub enum OutgoingFrame {
+    Wire(Arc<[u8]>),
+    Attach {
+        pane: PaneId,
+        snapshot: Arc<[u8]>,
+        response: Arc<[u8]>,
+        items: pane::Receiver,
+    },
+    Detach(PaneId),
 }
 
 #[derive(Clone)]
@@ -44,12 +57,14 @@ impl Handle {
         &self,
         client: ClientKind,
         env: BTreeMap<String, String>,
+        core: Option<String>,
         outgoing: Outgoing,
     ) -> ConnectionId {
         let (reply, result) = oneshot::channel();
         let _ = self.sender.send(Message::Connect {
             client,
             env,
+            core,
             outgoing,
             reply,
         });
@@ -67,6 +82,17 @@ impl Handle {
         let _ = self.sender.send(Message::Request {
             connection,
             request,
+            done,
+        });
+        let _ = result.await;
+    }
+
+    pub async fn input(&self, connection: ConnectionId, pane: PaneId, bytes: Vec<u8>) {
+        let (done, result) = oneshot::channel();
+        let _ = self.sender.send(Message::Input {
+            connection,
+            pane,
+            bytes,
             done,
         });
         let _ = result.await;
@@ -100,6 +126,8 @@ pub fn start(
         },
         next_id: 1,
         next_connection: 1,
+        size_owner: None,
+        size_sequences: BTreeMap::new(),
         connections: BTreeMap::new(),
         ready: VecDeque::new(),
         panes: BTreeMap::new(),
@@ -132,6 +160,8 @@ pub fn start(
 
 struct Connection {
     outgoing: Outgoing,
+    core: Option<String>,
+    attachments: BTreeMap<PaneId, pane::SubscriberId>,
     shown: Option<SessionId>,
     focused: bool,
     reservations: BTreeSet<SessionId>,
@@ -168,6 +198,7 @@ enum Message {
     Connect {
         client: ClientKind,
         env: BTreeMap<String, String>,
+        core: Option<String>,
         outgoing: Outgoing,
         reply: oneshot::Sender<Registration>,
     },
@@ -177,6 +208,22 @@ enum Message {
         done: oneshot::Sender<()>,
     },
     Disconnect(ConnectionId),
+    Input {
+        connection: ConnectionId,
+        pane: PaneId,
+        bytes: Vec<u8>,
+        done: oneshot::Sender<()>,
+    },
+    Sized {
+        reply: Reply,
+        pane: PaneId,
+        result: Result<(u64, shoal_model::GridSize), String>,
+    },
+    Attached {
+        reply: Reply,
+        pane: PaneId,
+        result: Result<pane::Attachment, RpcError>,
+    },
     Spawned {
         pane: PaneId,
         result: Result<(pane::Pane, std::path::PathBuf), String>,
@@ -192,6 +239,8 @@ struct Actor {
     workspace: Workspace,
     next_id: u64,
     next_connection: u64,
+    size_owner: Option<ConnectionId>,
+    size_sequences: BTreeMap<PaneId, u64>,
     connections: BTreeMap<ConnectionId, Connection>,
     ready: VecDeque<ConnectionId>,
     panes: BTreeMap<PaneId, pane::Pane>,
@@ -217,11 +266,11 @@ impl Actor {
     fn finish(&mut self, reply: Reply, result: Result<Value, RpcError>) -> bool {
         let response = match result {
             Ok(result) => Response::Success {
-                id: reply.id,
+                id: reply.id.clone(),
                 result,
             },
             Err(error) => Response::Error {
-                id: Some(reply.id),
+                id: Some(reply.id.clone()),
                 error,
             },
         };
@@ -243,6 +292,11 @@ impl Actor {
             self.disconnect(reply.connection);
             false
         };
+        self.release(reply);
+        enqueued
+    }
+
+    fn release(&mut self, reply: Reply) {
         let _ = reply.done.send(());
         if let Some(connection) = self.connections.get_mut(&reply.connection) {
             connection.busy = false;
@@ -250,10 +304,13 @@ impl Actor {
                 self.ready.push_back(reply.connection);
             }
         }
-        enqueued
     }
 
     fn send(&mut self, id: ConnectionId, frame: Arc<[u8]>) -> bool {
+        self.send_frame(id, OutgoingFrame::Wire(frame))
+    }
+
+    fn send_frame(&mut self, id: ConnectionId, frame: OutgoingFrame) -> bool {
         let enqueued = self
             .connections
             .get(&id)
@@ -347,15 +404,22 @@ impl Actor {
     }
 
     fn disconnect(&mut self, id: ConnectionId) {
-        if let Some(connection) = self.connections.get(&id) {
-            let _ = connection.outgoing.close.send(true);
+        if self.size_owner == Some(id) {
+            self.size_owner = None;
         }
-        if let Some(connection) = self.connections.remove(&id)
-            && let Some(session) = connection.shown
-            && let Some(index) = self.session_index(session)
-        {
-            self.workspace.sessions[index].windows -= 1;
-            self.changed();
+        if let Some(connection) = self.connections.remove(&id) {
+            let _ = connection.outgoing.close.send(true);
+            for (pane, subscriber) in connection.attachments {
+                if let Some(runtime) = self.panes.get(&pane) {
+                    runtime.unsubscribe(subscriber);
+                }
+            }
+            if let Some(session) = connection.shown
+                && let Some(index) = self.session_index(session)
+            {
+                self.workspace.sessions[index].windows -= 1;
+                self.changed();
+            }
         }
     }
 }

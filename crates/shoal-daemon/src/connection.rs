@@ -1,5 +1,7 @@
 //! Ordered control requests with independent socket readers and writers (§5).
 
+mod streams;
+
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use serde::Serialize;
@@ -9,12 +11,12 @@ use shoal_proto::{
     ProtocolMismatchData, Request, RequestError, RequestId, Response, RpcError, error_code,
 };
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::{UnixStream, unix::OwnedReadHalf},
     sync::{mpsc, watch},
 };
 
-use crate::actor::{ConnectionId, Handle, Outgoing};
+use crate::actor::{ConnectionId, Handle, Outgoing, OutgoingFrame};
 
 /// What `hello` reports about this daemon.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,26 +28,23 @@ pub struct Daemon {
 
 enum Incoming {
     Json(Result<Message, EnvelopeError>),
-    Input,
+    Input(shoal_model::PaneId, Vec<u8>),
 }
 
 /// A slow socket never blocks the workspace actor or another connection.
 pub async fn run(stream: UnixStream, daemon: Arc<Daemon>, actor: Handle) {
-    let (reader, mut writer) = stream.into_split();
+    let (reader, writer) = stream.into_split();
     let (incoming, mut frames) = mpsc::channel(32);
-    let (output, mut replies) = mpsc::channel::<Arc<[u8]>>(64);
+    let (output, replies) = mpsc::channel(64);
+    let streams = Arc::new(tokio::sync::Notify::new());
     let (close, mut closed) = watch::channel(false);
     let outgoing = Outgoing {
         frames: output,
+        streams: streams.clone(),
         close,
     };
     let mut reading = tokio::spawn(read_frames(reader, incoming));
-    let mut writing = tokio::spawn(async move {
-        while let Some(bytes) = replies.recv().await {
-            writer.write_all(&bytes).await?;
-        }
-        std::io::Result::Ok(())
-    });
+    let mut writing = tokio::spawn(streams::write(writer, replies, streams));
     let mut connection = None;
     // EOF is observed even while a pane is starting or a capture is pending.
     tokio::select! {
@@ -77,7 +76,7 @@ async fn read_frames(mut reader: OwnedReadHalf, incoming: mpsc::Sender<Incoming>
             Ok(Some((frame, used))) => {
                 let event = match frame {
                     Frame::Json(object) => Incoming::Json(Message::from_object(object)),
-                    Frame::Input(_) => Incoming::Input, // T13 routes window input.
+                    Frame::Input(input) => Incoming::Input(input.pane, input.bytes.to_vec()),
                     Frame::Output(_) | Frame::Snapshot(_) | Frame::Resized(_) => {
                         tracing::warn!("closing a connection that sent a daemon-only frame");
                         return;
@@ -123,12 +122,17 @@ async fn serve_frames(
             match frame {
                 Incoming::Json(Ok(Message::Request(request))) if request.method == "hello" => {
                     match hello(&request, &daemon) {
-                        Ok((client, env, result)) => {
+                        Ok(Greeting {
+                            client,
+                            env,
+                            core,
+                            result,
+                        }) => {
                             if !send(&sink, success(&request.id, result)) {
                                 return;
                             }
                             let outgoing = initial_sink.take().expect("invariant: first hello");
-                            *connection = Some(actor.connect(client, env, outgoing).await);
+                            *connection = Some(actor.connect(client, env, core, outgoing).await);
                         }
                         Err(error) => {
                             send(&sink, error_response(Some(request.id), error));
@@ -169,26 +173,40 @@ async fn serve_frames(
                     return;
                 }
             }
-            // Clients send no notifications in M1; INPUT is wired in T13.
-            Incoming::Json(Ok(Message::Notification(_) | Message::Response(_)))
-            | Incoming::Input => {}
+            Incoming::Input(pane, bytes) => {
+                actor
+                    .input(
+                        connection.expect("invariant: greeted input has an id"),
+                        pane,
+                        bytes,
+                    )
+                    .await;
+            }
+            // Clients send no notifications in M1.
+            Incoming::Json(Ok(Message::Notification(_) | Message::Response(_))) => {}
         }
     }
 }
 
-fn hello(
-    request: &Request,
-    daemon: &Daemon,
-) -> Result<(ClientKind, BTreeMap<String, String>, HelloResult), RpcError> {
-    let (protocol, client, env) = match request.call().map_err(|error| request_error(&error))? {
-        Call::Hello {
-            protocol,
-            client,
-            env,
-            ..
-        } => (protocol, client, env),
-        _ => unreachable!("invariant: request named hello parses as Call::Hello"),
-    };
+struct Greeting {
+    client: ClientKind,
+    env: BTreeMap<String, String>,
+    core: Option<String>,
+    result: HelloResult,
+}
+
+fn hello(request: &Request, daemon: &Daemon) -> Result<Greeting, RpcError> {
+    let (protocol, client, env, core) =
+        match request.call().map_err(|error| request_error(&error))? {
+            Call::Hello {
+                protocol,
+                client,
+                env,
+                core,
+                ..
+            } => (protocol, client, env, core),
+            _ => unreachable!("invariant: request named hello parses as Call::Hello"),
+        };
     if protocol != PROTOCOL_VERSION {
         return Err(RpcError {
             code: error_code::VERSION_MISMATCH,
@@ -200,16 +218,17 @@ fn hello(
             .ok(),
         });
     }
-    Ok((
+    Ok(Greeting {
         client,
         env,
-        HelloResult {
+        core,
+        result: HelloResult {
             protocol: PROTOCOL_VERSION,
             daemon_version: daemon.version.to_owned(),
             core: daemon.core.to_owned(),
             pid: daemon.pid,
         },
-    ))
+    })
 }
 
 fn request_error(error: &RequestError) -> RpcError {
@@ -248,7 +267,7 @@ fn encode(message: &impl Serialize) -> Vec<u8> {
         .expect("invariant: small control response fits a frame")
 }
 
-fn send(sink: &mpsc::WeakSender<Arc<[u8]>>, bytes: Vec<u8>) -> bool {
+fn send(sink: &mpsc::WeakSender<OutgoingFrame>, bytes: Vec<u8>) -> bool {
     sink.upgrade()
-        .is_some_and(|sink| sink.try_send(bytes.into()).is_ok())
+        .is_some_and(|sink| sink.try_send(OutgoingFrame::Wire(bytes.into())).is_ok())
 }

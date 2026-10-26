@@ -1,5 +1,7 @@
 //! The pane thread: its `poll` loop, the PTY, the shell's exit and kill.
 
+mod attach;
+
 use std::{
     cell::RefCell,
     collections::BTreeMap,
@@ -114,6 +116,7 @@ pub struct Runtime {
     /// `None` once the shell has exited.
     pty: Option<Pty>,
     stream: Stream,
+    waiting: attach::Waiting,
     commands: mpsc::Receiver<Command>,
     wake: Arc<OwnedFd>,
     /// Filled by the terminal's reply callback while it is fed.
@@ -158,6 +161,7 @@ impl Runtime {
             terminal,
             pty: Some(pty),
             stream: Stream::default(),
+            waiting: attach::Waiting::default(),
             commands,
             wake,
             replies,
@@ -192,6 +196,8 @@ impl Runtime {
             {
                 self.stream.flush(now);
             }
+            self.expire_attaches(now);
+            self.resync_overflows(now);
             if self.orphaned && self.pty.is_none() {
                 return;
             }
@@ -219,10 +225,14 @@ impl Runtime {
 
     /// Sleep until something is ready or a deadline passes.
     fn wait(&self, now: Instant) -> rustix::io::Result<Ready> {
-        let deadline = [self.stream.deadline(), self.kill_deadline]
-            .into_iter()
-            .flatten()
-            .min();
+        let deadline = [
+            self.stream.deadline(),
+            self.kill_deadline,
+            self.waiting.deadline(),
+        ]
+        .into_iter()
+        .flatten()
+        .min();
         let timeout = deadline.map(|deadline| {
             Timespec::try_from(deadline.saturating_duration_since(now))
                 .expect("invariant: a deadline within seconds fits a timespec")
@@ -287,6 +297,12 @@ impl Runtime {
                 }
             }
             Command::Resize(size) => self.resize(size, now),
+            Command::SetSize { size, reply } => {
+                if let Some(size) = size {
+                    self.resize(size, now);
+                }
+                let _ = reply.send((self.stream.seq(), self.size()));
+            }
             Command::ApplySettings { theme, scrollback } => {
                 if let Err(error) = self.terminal.set_theme(&theme) {
                     tracing::error!(pane = %self.id, %error, "could not update pane colors");
@@ -306,10 +322,20 @@ impl Runtime {
                 });
                 let _ = reply.send(snapshot);
             }
+            Command::Attach {
+                notify,
+                deadline,
+                reply,
+            } => self.begin_attach(notify, deadline, reply),
             Command::Subscribe(sink, reply) => {
-                let _ = reply.send(self.stream.subscribe(sink, now));
+                let _ = reply.send(self.stream.register(sink, now));
             }
-            Command::Unsubscribe(id) => self.stream.unsubscribe(id),
+            Command::Unsubscribe(id) => {
+                self.stream.unsubscribe(id);
+                self.waiting
+                    .resyncs
+                    .retain(|(candidate, _)| *candidate != id);
+            }
             Command::Capture {
                 format,
                 scrollback,
@@ -360,8 +386,7 @@ impl Runtime {
             Ok(0) | Err(Errno::IO) => self.end_of_output(),
             Ok(read) => {
                 let output = &buffer[..read];
-                self.terminal.feed(output);
-                self.stream.push(output, Instant::now());
+                self.feed(output);
                 let replies = self.replies.take();
                 if !replies.is_empty() {
                     self.input.extend_from_slice(&replies);

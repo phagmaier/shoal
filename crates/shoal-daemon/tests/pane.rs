@@ -1,6 +1,9 @@
 //! The pane runtime (M1 spec §4.2) with real shells in a temporary
 //! environment, driven through the daemon's internal pane API.
 
+#[path = "pane/attaching.rs"]
+mod attaching;
+
 use std::{
     collections::BTreeMap,
     sync::atomic::{AtomicU64, Ordering},
@@ -141,8 +144,13 @@ fn echo_round_trip_in_bash_and_zsh() {
 fn stty_size_follows_a_resize() {
     let mut harness = Harness::new();
     let pane = harness.spawn(&["bash"]);
-    let (subscribed, mut items) = pane.subscribe();
-    let subscribed = subscribed.blocking_recv().unwrap();
+    let attachment = pane
+        .attach(std::sync::Arc::new(tokio::sync::Notify::new()))
+        .blocking_recv()
+        .unwrap()
+        .unwrap();
+    let subscribed = attachment.subscribed;
+    let mut items = attachment.items;
     wait_for(&pane, "bash$");
     type_line(&pane, "stty size");
     wait_for(&pane, "24 80");
@@ -171,7 +179,7 @@ fn stty_size_follows_a_resize() {
     // Subscribers saw consecutive items up to the snapshot, one resize among them.
     let mut seqs = Vec::new();
     let mut resizes = Vec::new();
-    while let Ok(item) = items.try_recv() {
+    while let Ok(pane::Delivery::Item(item)) = items.try_recv() {
         if let Item::Resized { size, .. } = &item {
             resizes.push(*size);
         }
@@ -522,6 +530,11 @@ fn the_pane_thread_sleeps_while_the_shell_is_idle() {
     let mut harness = Harness::new();
     let pane = harness.spawn(&["bash"]);
     wait_for(&pane, "bash$");
+    let _attachment = pane
+        .attach(std::sync::Arc::new(tokio::sync::Notify::new()))
+        .blocking_recv()
+        .unwrap()
+        .unwrap();
     let name = format!("pane-{}", pane.id().get());
     let task = std::fs::read_dir("/proc/self/task")
         .unwrap()

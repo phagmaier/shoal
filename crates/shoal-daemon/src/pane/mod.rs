@@ -3,11 +3,13 @@
 //!
 //! The thread sleeps in `poll` on the PTY and an eventfd for commands, so a
 //! quiet pane uses no CPU. The only timeouts are the 4 ms batching deadline
-//! while output is held and the 2 s kill escalation while a kill is pending.
+//! while output is held, the 2 s kill escalation while a kill is pending, and
+//! the 2 s ground-point deadline while an attach or resync is waiting.
 
 mod runtime;
 pub mod spawn;
 pub mod stream;
+pub mod subscriber;
 
 use std::{
     collections::BTreeMap,
@@ -21,12 +23,10 @@ use std::{
 use rustix::event::{EventfdFlags, eventfd};
 use shoal_model::{GridSize, PaneId};
 use shoal_term::{CaptureFormat, SnapshotError, TermError, TermEvent, Theme};
-use tokio::sync::{
-    mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
-    oneshot,
-};
+use tokio::sync::{Notify, mpsc::UnboundedSender, oneshot};
 
 pub use stream::{Item, Subscribed, SubscriberId};
+pub use subscriber::{Delivery, Receiver};
 
 /// What every pane is started with, from config and the daemon's startup.
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +81,24 @@ pub struct Snapshot {
     pub bytes: Vec<u8>,
 }
 
+/// The initial snapshot and the subscriber registered immediately after it.
+#[derive(Debug)]
+pub struct Attachment {
+    pub snapshot: Snapshot,
+    pub subscribed: Subscribed,
+    pub items: Receiver,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AttachError {
+    #[error("the terminal is in the middle of an escape sequence")]
+    MidSequence,
+    #[error("snapshot exceeds the protocol frame limit")]
+    TooLarge,
+    #[error(transparent)]
+    Encode(#[from] TermError),
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SpawnError {
     #[error("cannot set up the pane: {0}")]
@@ -96,12 +114,21 @@ pub enum SpawnError {
 enum Command {
     Write(Vec<u8>),
     Resize(GridSize),
+    SetSize {
+        size: Option<GridSize>,
+        reply: oneshot::Sender<(u64, GridSize)>,
+    },
     ApplySettings {
         theme: Theme,
         scrollback: u32,
     },
     Snapshot(oneshot::Sender<Result<Snapshot, SnapshotError>>),
-    Subscribe(UnboundedSender<Item>, oneshot::Sender<Subscribed>),
+    Attach {
+        notify: Arc<Notify>,
+        deadline: std::time::Instant,
+        reply: oneshot::Sender<Result<Attachment, AttachError>>,
+    },
+    Subscribe(subscriber::Sender, oneshot::Sender<Subscribed>),
     Unsubscribe(SubscriberId),
     Capture {
         format: CaptureFormat,
@@ -178,6 +205,14 @@ impl Pane {
         self.send(Command::Resize(size));
     }
 
+    /// Apply an authorized size (or query it) and acknowledge the actual grid
+    /// on-thread, after the resize item is numbered.
+    pub fn set_size(&self, size: Option<GridSize>) -> oneshot::Receiver<(u64, GridSize)> {
+        let (reply, result) = oneshot::channel();
+        self.send(Command::SetSize { size, reply });
+        result
+    }
+
     /// Change terminal defaults and the history limit on the pane's thread.
     /// Application-set colors stay in force until the application resets them.
     /// Shell and prompt settings only affect subsequently spawned panes.
@@ -191,12 +226,27 @@ impl Pane {
         receiver
     }
 
-    /// Every item after the answer's `seq` goes to the returned channel.
-    pub fn subscribe(&self) -> (oneshot::Receiver<Subscribed>, UnboundedReceiver<Item>) {
-        let (sink, items) = unbounded_channel();
-        let (reply, subscribed) = oneshot::channel();
+    /// Capture and subscribe atomically on the pane thread. If continuation
+    /// tracking overflowed, wait at most two seconds for the first ground point.
+    pub fn attach(
+        &self,
+        notify: Arc<Notify>,
+    ) -> oneshot::Receiver<Result<Attachment, AttachError>> {
+        let (reply, result) = oneshot::channel();
+        self.send(Command::Attach {
+            notify,
+            deadline: std::time::Instant::now() + std::time::Duration::from_secs(2),
+            reply,
+        });
+        result
+    }
+
+    /// Subscribe without a snapshot (internal runtime fixtures).
+    pub fn subscribe(&self) -> (oneshot::Receiver<Subscribed>, Receiver) {
+        let (sink, items) = subscriber::channel(Arc::new(Notify::new()));
+        let (reply, result) = oneshot::channel();
         self.send(Command::Subscribe(sink, reply));
-        (subscribed, items)
+        (result, items)
     }
 
     pub fn unsubscribe(&self, id: SubscriberId) {
