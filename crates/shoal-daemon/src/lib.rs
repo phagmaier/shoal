@@ -2,4 +2,5 @@
 //! else depends on this library.
 
 pub mod pane;
+pub mod persist;
 pub mod settings;

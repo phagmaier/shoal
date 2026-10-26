@@ -4,6 +4,7 @@ mod driver;
 mod geometry;
 mod metadata;
 mod methods;
+mod persistence;
 mod spawning;
 mod streaming;
 mod workspace;
@@ -140,6 +141,10 @@ pub fn start(
         focused_panes: BTreeSet::new(),
         last_pane_focus: BTreeMap::new(),
         window_env: BTreeMap::new(),
+        persistence: persistence::Persistence::new(
+            shoal_daemon::persist::Store::new(&paths),
+            settings.config.scrollback.persist,
+        ),
         pane_settings: settings.pane(
             &paths,
             paths
@@ -236,6 +241,7 @@ enum Message {
         reply: Reply,
         result: Result<Value, RpcError>,
     },
+    Persistence(persistence::Done),
     Stop(oneshot::Sender<()>),
 }
 
@@ -256,6 +262,7 @@ struct Actor {
     focused_panes: BTreeSet<PaneId>,
     last_pane_focus: BTreeMap<PaneId, std::time::Instant>,
     window_env: BTreeMap<String, String>,
+    persistence: persistence::Persistence,
     pane_settings: pane::PaneSettings,
     settings: Settings,
     updates: mpsc::UnboundedReceiver<settings::Update>,
@@ -352,6 +359,7 @@ impl Actor {
             shoal_model::validate(&self.workspace).is_ok(),
             "invalid workspace after actor change"
         );
+        self.observe_persistence();
         for connection in self.connections.values_mut() {
             connection.dirty |= connection.subscribed;
         }

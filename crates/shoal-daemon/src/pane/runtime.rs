@@ -1,6 +1,7 @@
 //! The pane thread: its `poll` loop, the PTY, the shell's exit and kill.
 
 mod attach;
+mod persist;
 
 use std::{
     cell::RefCell,
@@ -45,6 +46,7 @@ pub struct Plan {
     env: BTreeMap<OsString, OsString>,
     cwd: PathBuf,
     scrollback: u32,
+    persist: bool,
     theme: shoal_term::Theme,
 }
 
@@ -70,6 +72,7 @@ impl Plan {
             env,
             cwd: spawn::directory(spec.cwd.as_deref(), &settings.home),
             scrollback: settings.scrollback,
+            persist: settings.persist,
             theme: settings.theme,
         })
     }
@@ -125,6 +128,7 @@ pub struct Runtime {
     input: Vec<u8>,
     metadata: Rc<RefCell<super::metadata::Tracker>>,
     metadata_activity: Arc<super::metadata::Activity>,
+    persist: persist::Schedule,
     events: Events,
     started: Instant,
     kill_deadline: Option<Instant>,
@@ -174,6 +178,7 @@ impl Runtime {
             input: Vec::new(),
             metadata,
             metadata_activity,
+            persist: persist::Schedule::new(plan.persist),
             events,
             started: Instant::now(),
             kill_deadline: None,
@@ -217,6 +222,7 @@ impl Runtime {
                 self.metadata.borrow().deadline().is_some(),
                 Ordering::Release,
             );
+            self.save_due(now);
             if self.orphaned && self.pty.is_none() {
                 return;
             }
@@ -249,6 +255,7 @@ impl Runtime {
             self.kill_deadline,
             self.waiting.deadline(),
             self.metadata.borrow().deadline(),
+            self.persist.deadline(),
         ]
         .into_iter()
         .flatten()
@@ -323,7 +330,12 @@ impl Runtime {
                 }
                 let _ = reply.send((self.stream.seq(), self.size()));
             }
-            Command::ApplySettings { theme, scrollback } => {
+            Command::ApplySettings {
+                theme,
+                scrollback,
+                persist,
+            } => {
+                self.persist.set_enabled(persist, now);
                 if let Err(error) = self.terminal.set_theme(&theme) {
                     tracing::error!(pane = %self.id, %error, "could not update pane colors");
                 }
@@ -355,6 +367,9 @@ impl Runtime {
                 self.waiting
                     .resyncs
                     .retain(|(candidate, _)| *candidate != id);
+            }
+            Command::Persist(reply) => {
+                let _ = reply.send(self.capture_scrollback(now));
             }
             Command::Capture {
                 format,
@@ -407,7 +422,9 @@ impl Runtime {
             Ok(read) => {
                 let output = &buffer[..read];
                 self.feed(output);
-                self.metadata.borrow_mut().output(Instant::now());
+                let now = Instant::now();
+                self.metadata.borrow_mut().output(now);
+                self.persist.output(now);
                 let replies = self.replies.take();
                 if !replies.is_empty() {
                     self.input.extend_from_slice(&replies);

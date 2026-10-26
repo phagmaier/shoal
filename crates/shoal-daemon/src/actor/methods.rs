@@ -97,6 +97,11 @@ impl Actor {
             self.set_size(reply, pane, cols, rows);
             return;
         }
+        if let Call::DaemonPersist(_) = call {
+            // Replies once everything is written (§5.4).
+            self.flush(Some(reply));
+            return;
+        }
         let shutdown = matches!(&call, Call::DaemonShutdown(_));
         let result = self.execute(connection, call);
         let enqueued = self.finish(reply, result);
@@ -250,7 +255,7 @@ impl Actor {
                     uptime_s: self.started.elapsed().as_secs(),
                     sessions: self.workspace.sessions.len() as u64,
                     panes: self.workspace.panes.len() as u64,
-                    last_persist_at: None,
+                    last_persist_at: self.persistence.last_persist_at,
                 })
                 .expect("invariant: daemon status is serializable"));
             }
@@ -258,9 +263,7 @@ impl Actor {
             Call::PaneAttach { .. } => unreachable!("attach dispatched first"),
             Call::PaneDetach { pane } => self.detach(connection, pane)?,
             Call::PaneSetSize { .. } => unreachable!("size dispatched first"),
-            Call::DaemonPersist(_) => {
-                return Err(boundary("daemon.persist", "T15 persistence and restore"));
-            }
+            Call::DaemonPersist(_) => unreachable!("persist dispatched first"),
             Call::Hello { .. } => {
                 return Err(error(error_code::INVALID_STATE, "hello was already sent"));
             }
@@ -272,11 +275,4 @@ impl Actor {
         }
         Ok(json!({}))
     }
-}
-
-fn boundary(method: &str, task: &str) -> RpcError {
-    error(
-        error_code::UNKNOWN_METHOD,
-        format!("{method} is not implemented yet ({task})"),
-    )
 }

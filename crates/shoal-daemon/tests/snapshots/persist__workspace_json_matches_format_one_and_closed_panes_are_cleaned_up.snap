@@ -1,0 +1,93 @@
+---
+source: crates/shoal-daemon/tests/persist.rs
+expression: "text.replace(env.home().to_str().unwrap(), \"~\")"
+---
+{
+  "format": 1,
+  "saved_at": "[time]",
+  "shoal_version": "0.1.0",
+  "next_id": 8,
+  "sessions": [
+    {
+      "id": "s1",
+      "name": "main",
+      "created_at": "[time]",
+      "last_active_at": "[time]",
+      "active_tab": "t6",
+      "tabs": [
+        {
+          "id": "t2",
+          "name": null,
+          "focused": "p5",
+          "zoomed": "p5",
+          "layout": {
+            "split": {
+              "id": "x4",
+              "axis": "row",
+              "ratio": 0.6,
+              "first": {
+                "pane": "p3"
+              },
+              "second": {
+                "pane": "p5"
+              }
+            }
+          }
+        },
+        {
+          "id": "t6",
+          "name": "waiting",
+          "focused": "p7",
+          "zoomed": null,
+          "layout": {
+            "pane": "p7"
+          }
+        }
+      ]
+    }
+  ],
+  "panes": {
+    "p3": {
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "cwd": "~/project",
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "program": null,
+      "scrollback": "panes/p3/scrollback.vt.zst"
+    },
+    "p5": {
+      "kind": {
+        "kind": "shell",
+        "argv": []
+      },
+      "cwd": "~/project",
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "program": null,
+      "scrollback": "panes/p5/scrollback.vt.zst"
+    },
+    "p7": {
+      "kind": {
+        "kind": "shell",
+        "argv": [
+          "sleep",
+          "1000"
+        ]
+      },
+      "cwd": "~/project",
+      "size": {
+        "cols": 80,
+        "rows": 24
+      },
+      "program": null,
+      "scrollback": "panes/p7/scrollback.vt.zst"
+    }
+  }
+}

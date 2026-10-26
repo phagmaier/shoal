@@ -20,8 +20,8 @@ use crate::{
 
 const ACCEPT_RETRY: Duration = Duration::from_millis(100);
 
-/// Stop accepting, end panes concurrently, close clients, then release the
-/// socket and lock. T15 adds persistence before pane termination.
+/// Stop accepting, save, end panes concurrently, close clients, then release
+/// the socket and lock.
 pub async fn serve(
     bound: Bound,
     daemon: Daemon,

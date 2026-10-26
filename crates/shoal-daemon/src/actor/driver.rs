@@ -34,6 +34,7 @@ impl Actor {
                 }
             }
             let deadline = self.notification_deadline();
+            let layout = self.persistence.layout_deadline();
             tokio::select! {
                 message = self.receiver.recv() => match message {
                     Some(Message::Connect { client, env, core, outgoing, reply }) => {
@@ -67,6 +68,7 @@ impl Actor {
                     Some(Message::Sized { reply, pane, result }) => self.sized(reply, pane, result),
                     Some(Message::Spawned { pane, result }) => self.spawned(pane, result),
                     Some(Message::Captured { reply, result }) => { self.finish(reply, result); }
+                    Some(Message::Persistence(done)) => self.persistence_done(done),
                     Some(Message::Stop(reply)) => {
                         self.stop(reply).await;
                         return;
@@ -79,6 +81,7 @@ impl Actor {
                     None => self.updates_open = false,
                 },
                 () = async { match deadline { Some(deadline) => tokio::time::sleep_until(deadline).await, None => pending::<()>().await } } => self.flush_notifications(),
+                () = async { match layout { Some(layout) => tokio::time::sleep_until(layout).await, None => pending::<()>().await } } => self.write_layout(),
             }
         }
     }
@@ -90,10 +93,16 @@ impl Actor {
         self.pane_settings.shell_integration = self.settings.config.shell.integration;
         self.pane_settings.prompt_mode = self.settings.config.prompt.mode;
         self.pane_settings.scrollback = self.settings.config.scrollback.lines;
+        self.pane_settings.persist = self.settings.config.scrollback.persist;
         self.pane_settings.theme = settings::theme(&self.settings.palette);
         for pane in self.panes.values() {
-            pane.apply_settings(self.pane_settings.theme, self.pane_settings.scrollback);
+            pane.apply_settings(
+                self.pane_settings.theme,
+                self.pane_settings.scrollback,
+                self.pane_settings.persist,
+            );
         }
+        self.set_persist_enabled(self.pane_settings.persist);
         if self.refresh_metadata_titles() {
             self.changed();
         }
@@ -119,13 +128,18 @@ impl Actor {
                 }
                 events.retain(|old| !matches!(old, pane::Event::Metadata(_)));
             }
+            if let pane::Event::Scrollback(_) = &event {
+                events.retain(|old| !matches!(old, pane::Event::Scrollback(_)));
+            }
             events.push(event);
             return;
         }
         if matches!(&event, pane::Event::Exited { .. }) {
             self.retiring.remove(&id);
         }
-        if let pane::Event::Metadata(value) = event {
+        if let pane::Event::Scrollback(persisted) = event {
+            self.scheduled_scrollback(id, persisted);
+        } else if let pane::Event::Metadata(value) = event {
             self.metadata(id, value);
         } else if let pane::Event::Exited {
             code,
@@ -168,6 +182,10 @@ impl Actor {
             })
             .map(|(&id, _)| id)
             .collect();
+        // Save before termination (§4.5): each pane captures its scrollback
+        // ahead of the hangup queued behind it on the same command channel.
+        // Compressing and writing overlap the hangup grace.
+        self.flush(None);
         for pane in self.panes.values().chain(self.retiring.values()) {
             drop(pane.kill_by(cutoff));
         }
@@ -175,7 +193,7 @@ impl Actor {
             started + Duration::from_millis(2500),
         ));
         tokio::pin!(deadline);
-        while !running.is_empty() || !self.pending.is_empty() {
+        while !running.is_empty() || !self.pending.is_empty() || self.persistence.busy() {
             tokio::select! {
                 () = &mut deadline => break,
                 Some((id, event)) = self.event_receiver.recv() => {
@@ -194,6 +212,7 @@ impl Actor {
                             self.panes.insert(id, pane);
                         }
                     }
+                    Some(Message::Persistence(done)) => self.persistence_done(done),
                     Some(Message::Stop(other)) => waiters.push(other),
                     Some(_) => {}
                     None => break,

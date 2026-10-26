@@ -359,7 +359,7 @@ fn live_settings_change_color_answers_without_replacing_program_colors() {
         g: 0x34,
         b: 0x56,
     };
-    pane.apply_settings(theme, settings.scrollback);
+    pane.apply_settings(theme, settings.scrollback, settings.persist);
     pane.write(b"\n".to_vec());
     let text = wait_for(&pane, "ready-second");
     assert!(text.contains("first rgb:1212/3434/5656|"), "{text}");
@@ -368,7 +368,7 @@ fn live_settings_change_color_answers_without_replacing_program_colors() {
         g: 0xcd,
         b: 0xef,
     };
-    pane.apply_settings(theme, settings.scrollback);
+    pane.apply_settings(theme, settings.scrollback, settings.persist);
     pane.write(b"\n".to_vec());
     assert_eq!(harness.exited(&pane).0, Some(0));
     let text = screen(&pane);
@@ -389,7 +389,7 @@ fn live_settings_limit_future_scrollback() {
     spec.size = GridSize { cols: 40, rows: 3 };
     let pane = harness.start(spec);
     wait_for(&pane, "ready");
-    pane.apply_settings(harness.settings().theme, 0);
+    pane.apply_settings(harness.settings().theme, 0, true);
     pane.write(b"\n".to_vec());
     assert_eq!(harness.exited(&pane).0, Some(0));
     let capture = pane
@@ -535,9 +535,13 @@ fn the_pane_thread_sleeps_while_the_shell_is_idle() {
         .blocking_recv()
         .unwrap()
         .unwrap();
-    eventually("initial output metadata to settle", || {
-        (pane.metadata_samples() > 0 && !pane.metadata_pending()).then_some(())
-    });
+    eventually(
+        "initial output metadata and scrollback saving to settle",
+        || {
+            (pane.metadata_samples() > 0 && !pane.metadata_pending() && !pane.persist_pending())
+                .then_some(())
+        },
+    );
     let name = format!("pane-{}", pane.id().get());
     let task = std::fs::read_dir("/proc/self/task")
         .unwrap()

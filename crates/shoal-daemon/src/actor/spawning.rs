@@ -280,7 +280,11 @@ impl Actor {
         let result = self.commit_spawn(&spawn);
         match result {
             Ok(result) => {
-                runtime.apply_settings(self.pane_settings.theme, self.pane_settings.scrollback);
+                runtime.apply_settings(
+                    self.pane_settings.theme,
+                    self.pane_settings.scrollback,
+                    self.pane_settings.persist,
+                );
                 self.panes.insert(id, runtime);
                 self.workspace.panes.insert(id, spawn.record);
                 self.changed();

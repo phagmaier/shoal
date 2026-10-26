@@ -13,10 +13,13 @@ use super::Metadata;
 const QUIET: Duration = Duration::from_millis(300);
 const INTERVAL: Duration = Duration::from_millis(250);
 
+/// Non-waking diagnostics the pane thread publishes for its handle.
 #[derive(Debug, Default)]
 pub(super) struct Activity {
     pub samples: AtomicU64,
     pub pending: AtomicBool,
+    /// A scrollback save is scheduled (`runtime::persist`).
+    pub persist_pending: AtomicBool,
 }
 
 #[derive(Default)]

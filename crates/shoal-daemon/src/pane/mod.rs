@@ -22,7 +22,7 @@ use std::{
 
 use rustix::event::{EventfdFlags, eventfd};
 use shoal_model::{GridSize, PaneId};
-use shoal_term::{CaptureFormat, SnapshotError, TermError, Theme};
+use shoal_term::{CaptureFormat, Persisted, SnapshotError, TermError, Theme};
 use tokio::sync::{Notify, mpsc::UnboundedSender, oneshot};
 
 pub use stream::{Item, Subscribed, SubscriberId};
@@ -36,6 +36,8 @@ pub struct PaneSettings {
     pub shell_integration: shoal_config::schema::ShellIntegration,
     pub prompt_mode: shoal_config::schema::PromptMode,
     pub scrollback: u32,
+    /// `scrollback.persist`: whether the pane schedules scrollback saves.
+    pub persist: bool,
     pub theme: Theme,
     /// `SHOAL_SOCKET`.
     pub socket: PathBuf,
@@ -69,6 +71,8 @@ pub enum Event {
         early_failure: bool,
     },
     Metadata(Metadata),
+    /// Output has been quiet long enough: scrollback for the writer (§6.3).
+    Scrollback(Persisted),
 }
 
 /// Coalesced terminal reports and foreground-process information (§4.3).
@@ -132,7 +136,9 @@ enum Command {
     ApplySettings {
         theme: Theme,
         scrollback: u32,
+        persist: bool,
     },
+    Persist(oneshot::Sender<Result<Persisted, SnapshotError>>),
     Snapshot(oneshot::Sender<Result<Snapshot, SnapshotError>>),
     Attach {
         notify: Arc<Notify>,
@@ -222,6 +228,13 @@ impl Pane {
         self.metadata_activity.pending.load(Ordering::Acquire)
     }
 
+    /// Whether a scrollback save is scheduled. Does not wake the thread.
+    pub fn persist_pending(&self) -> bool {
+        self.metadata_activity
+            .persist_pending
+            .load(Ordering::Acquire)
+    }
+
     /// Bytes for the shell, in order. Ignored once it has exited.
     pub fn write(&self, bytes: Vec<u8>) {
         self.send(Command::Write(bytes));
@@ -240,11 +253,24 @@ impl Pane {
         result
     }
 
-    /// Change terminal defaults and the history limit on the pane's thread.
-    /// Application-set colors stay in force until the application resets them.
-    /// Shell and prompt settings only affect subsequently spawned panes.
-    pub fn apply_settings(&self, theme: Theme, scrollback: u32) {
-        self.send(Command::ApplySettings { theme, scrollback });
+    /// Change terminal defaults, the history limit and scrollback saving on
+    /// the pane's thread. Application-set colors stay in force until the
+    /// application resets them. Shell and prompt settings only affect
+    /// subsequently spawned panes.
+    pub fn apply_settings(&self, theme: Theme, scrollback: u32, persist: bool) {
+        self.send(Command::ApplySettings {
+            theme,
+            scrollback,
+            persist,
+        });
+    }
+
+    /// Capture scrollback for saving now, ahead of any later command (such as
+    /// a shutdown's hangup) on the same thread.
+    pub fn persist(&self) -> oneshot::Receiver<Result<Persisted, SnapshotError>> {
+        let (reply, result) = oneshot::channel();
+        self.send(Command::Persist(reply));
+        result
     }
 
     pub fn snapshot(&self) -> oneshot::Receiver<Result<Snapshot, SnapshotError>> {

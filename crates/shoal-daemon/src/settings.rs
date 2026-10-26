@@ -63,6 +63,7 @@ impl Settings {
             shell_integration: self.config.shell.integration,
             prompt_mode: self.config.prompt.mode,
             scrollback: self.config.scrollback.lines,
+            persist: self.config.scrollback.persist,
             theme: theme(&self.palette),
             socket,
             home: paths.home().to_owned(),

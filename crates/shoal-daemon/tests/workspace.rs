@@ -159,7 +159,8 @@ fn session_tab_and_pane_methods_update_the_shared_workspace() {
     assert_eq!(status["pid"], _daemon.pid());
     assert_eq!(status["version"], "0.1.0");
     assert!(status["uptime_s"].is_u64());
-    assert!(status["last_persist_at"].is_null());
+    // The layout was saved after the first change (§6.3).
+    assert!(status["last_persist_at"].is_string(), "{status}");
 }
 
 #[test]
@@ -243,7 +244,7 @@ fn missing_targets_and_rejected_edits_leave_existing_structure_intact() {
     );
     assert_eq!(state["sessions"][1]["name"], "other");
     assert_eq!(state["panes"].as_object().unwrap().len(), 2);
-    rpc.error("daemon.persist", json!({}), -32601);
+    assert_eq!(rpc.ok("daemon.persist", json!({})), json!({}));
 }
 
 #[test]
@@ -395,7 +396,7 @@ fn exit_policy_retains_early_errors_but_closes_successful_last_panes() {
 }
 
 #[test]
-fn shutdown_requests_and_signals_end_shells_and_remove_the_socket_without_a_fake_save() {
+fn shutdown_requests_and_signals_end_shells_and_remove_the_socket() {
     for signal in [None, Some(Signal::TERM), Some(Signal::INT)] {
         let env = fixture(false);
         let daemon = env.spawn_daemon(SHOALD);
@@ -420,7 +421,8 @@ fn shutdown_requests_and_signals_end_shells_and_remove_the_socket_without_a_fake
         }
         assert!(daemon.wait().status.success());
         assert!(!env.socket().exists());
-        assert!(!env.state_home().join("shoal/workspace.json").exists());
+        // Saved first; tests/persist.rs checks what.
+        assert!(env.state_home().join("shoal/workspace.json").exists());
         eventually("shell process gone", || {
             (!std::path::Path::new(&process).exists()).then_some(())
         });
