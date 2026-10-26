@@ -36,6 +36,7 @@
 | T46 | Reconnect and banners | done 2026-10-26 `ff0f47f` |
 | T47 | Close confirmations and exited panes | ready (next) |
 | T48 | Live theme and font changes | ready |
+| T49 | Polish and hardening pass | ready after T48 (accepted checkpoint, see below) |
 | T50 | Install and packaging | blocked on T22, T30, T48 |
 | T51 | Performance harness | blocked on T13, T41 |
 | T52 | Acceptance pass | blocked on everything above |
@@ -62,7 +63,7 @@ Phase 4  Window           T40..T48          (needs Phase 2)
 Phase 5  Ship             T50..T52          (needs everything)
 ```
 
-A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T43, T42, T44, T45, T46, T47, T48, T50, T51, T52.
+A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11, T30, T12, T13, T14, T15, T16, T20, T21, T22, T40, T41, T43, T42, T44, T45, T46, T47, T48, T49, T50, T51, T52.
 
 ## Phase 4 · The window (remaining)
 
@@ -79,13 +80,24 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 - **Build:** recolor on theme reload without re-attaching; per-window font zoom that resizes grids; applying `window.*`, `cursor.*` and `font.*` changes from config reloads, clearing the glyph and row caches on any font change (§7.3).
 - **Done when:** manually, `omarchy-theme-set` recolors in under a second, and Ctrl+= grows the font while `stty size` in the pane shrinks to match.
 
+### T49 · Polish and hardening pass
+
+- **Status:** accepted checkpoint (2026-10-26, with the user): runs after T48, before T50 packaging. Scoped below; not started.
+- **Needs:** T47, T48.
+- **Build:**
+  - *Visual polish, M1 surfaces only* (top bar, panes, prompt, banners, switcher), guided by the "M1 polish checkpoint" section of `docs/design/tern-vs-shoal.md`: typography, spacing, colors, chrome, banners, interaction consistency. No M2+ features: no command palette, settings screen, theme picker, or new block kinds.
+  - *Hardening review:* lifecycle races, recovery paths, resource cleanup, test gaps, unnecessary complexity. Fix concrete issues as they arise; no speculative broad refactor and no extra product features.
+  - Informed by actual everyday use: the user dogfoods the window and reports friction; each finding becomes a focused fix, not a redesign.
+  - If bigger than one sitting, split (e.g. visual vs hardening) and write the split back into this file, per AGENTS.md.
+- **Done when:** draw-list/chrome golden tests cover the changed rendering; `just check` passes; a guided manual check (new `scripts/manual/t49.sh`) walks the reference doc side by side and the user signs off; review finds nothing unresolved.
+
 ## Phase 5 · Ship it
 
 ### T50 · Install and packaging
 
 - **Desktop integration follow-up from T42:** Omarchy's terminal classification must include the app id `dev.shoal.Shoal`, so universal copy/paste chooses Ctrl+Insert / Shift+Insert. These shortcuts passed in T42 with a transient terminal tag on only the test window; no desktop config was changed.
 
-- **Needs:** T22, T30, T48.
+- **Needs:** T22, T30, T48, T49 (the polish/hardening checkpoint runs before packaging).
 - **Build:** `just install PREFIX=~/.local` (binaries, systemd unit, shell scripts, `dev.shoal.Shoal.desktop`, icon, the bundled font's license texts), `just uninstall`, a draft `PKGBUILD`, and `docs/omarchy.md` explaining how to make Super+Enter open Shoal (check Omarchy 4's current default-terminal mechanism first; don't guess). The bundled Symbols Nerd Font has mixed licenses and an unlicensed icon set (Font Logos); ask the user whether to subset those glyphs out or obtain terms before shipping it (`docs/spike-00.md`, "Font provenance").
 - **Done when:** a clean install works on the user's machine, uninstall leaves nothing but config and state, and the installed font ships with the license texts for every icon set it contains.
 
