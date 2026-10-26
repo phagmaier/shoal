@@ -215,7 +215,7 @@ pub enum PaneStatus {
 - *Stream:* sequence numbers start at 1 and number output items and resizes alike. Output that arrives 4 ms or more after the last item goes out at once, so echo isn't delayed. Otherwise it waits until 4 ms have passed, and an item never holds more than 64 KiB. A snapshot or a new subscriber first numbers any output still waiting, so the snapshot at `N` holds exactly the items up to `N`. A resize to the current size is ignored.
 - *Input:* the PTY is non-blocking. Input and replies queue in order and are written as the shell reads, so a shell that stops reading never stalls output.
 - *Kill:* `SIGHUP` goes to the shell's process group and the PTY's foreground group, as a hangup does, and `SIGKILL` follows to both after 2 s. Dropping a pane's handle kills it the same way, and the thread ends once the shell has.
-- *Exit:* after EOF (`EIO`), the thread waits on a pidfd for the status, so a slow exit never blocks it. A process outside those groups that keeps the terminal open keeps the pane running. The guard counts only a non-zero exit code; a death by signal is not an early failure. An exited pane's thread keeps answering snapshots and captures, ignores input, and resizes only its terminal.
+- *Exit:* after EOF (`EIO`), the thread waits on a pidfd for the status, so a slow exit never blocks it. A process outside those groups that keeps the terminal open, such as a disowned background job, keeps the pane running (decided 2026-10-25: the end of output, not the shell's exit, ends a pane). The guard counts only a non-zero exit code; a death by signal is not an early failure. An exited pane's thread keeps answering snapshots and captures, ignores input, and resizes only its terminal.
 
 ### 4.3 Pane metadata
 
