@@ -11,7 +11,10 @@ unit="$config/systemd/user/shoald.service"
 case ${1:-} in
 install)
     cargo build --locked --release --quiet --manifest-path "$repo/Cargo.toml" \
-        --package shoal-daemon --package shoal-cli
+        --package shoal-daemon --package shoal-cli --package shoal-gui
+    # Release builds find their shell integration in <prefix>/share, beside
+    # bin (M1 spec §8.2); make target/ that prefix.
+    ln -sfn ../share "$repo/target/share"
     mkdir -p "$(dirname "$unit")"
     sed "s|@BINDIR@|$repo/target/release|" "$repo/share/systemd/user/shoald.service.in" >"$unit"
     systemctl --user daemon-reload
@@ -20,6 +23,7 @@ install)
 uninstall)
     systemctl --user stop shoald.service 2>/dev/null || true
     rm -f "$unit"
+    [[ -L $repo/target/share ]] && rm "$repo/target/share"
     systemctl --user daemon-reload
     echo "Removed $unit."
     ;;
