@@ -15,6 +15,7 @@ mod links;
 mod metrics;
 mod mirror;
 mod panes;
+mod recovery;
 mod rename;
 mod retention;
 mod selection;
@@ -24,10 +25,11 @@ mod sizing;
 mod switcher;
 mod terminal;
 mod view;
+mod window;
 
 use std::{ffi::OsString, io, process::ExitCode, sync::mpsc::Receiver};
 
-use futures::{StreamExt as _, channel::mpsc};
+use futures::channel::mpsc;
 use gpui::{
     App, AppContext as _, Bounds, TitlebarOptions, WindowBackgroundAppearance, WindowBounds,
     WindowDecorations, WindowOptions, px, size,
@@ -37,7 +39,7 @@ use shoal_config::{Config, ThemeSource, XdgPaths};
 use tracing_subscriber::filter::LevelFilter;
 
 use session::{Choice, Opened};
-use view::ShoalWindow;
+use window::ShoalRoot;
 
 const USAGE: &str = "usage: shoal-gui [--session <id>]";
 const APP_ID: &str = "dev.shoal.Shoal";
@@ -102,7 +104,7 @@ fn run(choice: Choice) -> Result<(), String> {
     let config = match Config::load(&paths.config_file()) {
         Ok(loaded) => loaded.config,
         Err(error) => {
-            // T46 shows this as a banner; the window still opens.
+            // The root watcher reports the error after the window opens.
             tracing::warn!(%error, "config is invalid; using defaults");
             Config::default()
         }
@@ -115,27 +117,31 @@ fn run(choice: Choice) -> Result<(), String> {
     let socket = paths.socket_file().map_err(|e| e.to_string())?;
     let env = std::env::vars_os()
         .filter_map(|(key, value)| Some((key.into_string().ok()?, value.into_string().ok()?)));
-    let opened = session::open(session::options(socket, env), SystemdOrSpawn::new(), choice)
-        .map_err(|error| error.to_string())?;
-    for event in &opened.early {
-        tracing::info!(?event, "before the first workspace");
+    let options = session::options(socket, env);
+    let opened = session::open(options.clone(), SystemdOrSpawn::new(), choice.clone());
+    if let Err(error) = &opened {
+        match error {
+            session::OpenError::Client(error)
+                if shoal_client::lifecycle::Mismatch::of_error(error).is_some() => {}
+            _ => return Err(error.to_string()),
+        }
     }
-    tracing::info!(session = %opened.session, daemon = opened.hello.pid, "connected");
-    gpui_platform::application().run(move |cx: &mut App| open_window(opened, config, palette, cx));
+    gpui_platform::application()
+        .run(move |cx: &mut App| open_window(opened, options, choice, config, palette, cx));
     Ok(())
 }
 
-fn open_window(opened: Opened, config: Config, palette: shoal_config::Palette, cx: &mut App) {
+fn open_window(
+    opened: Result<Opened, session::OpenError>,
+    options: shoal_client::Options,
+    choice: Choice,
+    config: Config,
+    palette: shoal_config::Palette,
+    cx: &mut App,
+) {
     fonts::load(cx);
-    let Opened {
-        client,
-        session,
-        workspace,
-        events,
-        ..
-    } = opened;
     let bounds = Bounds::centered(None, size(px(900.0), px(600.0)), cx);
-    let options = WindowOptions {
+    let window_options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(bounds)),
         titlebar: Some(TitlebarOptions {
             title: Some("Shoal".into()),
@@ -146,36 +152,19 @@ fn open_window(opened: Opened, config: Config, palette: shoal_config::Palette, c
         window_decorations: Some(WindowDecorations::Server),
         ..Default::default()
     };
-    let window = match cx.open_window(options, |window, cx| {
-        cx.new(|cx| ShoalWindow::new(client, session, workspace, config, palette, window, cx))
+    match cx.open_window(window_options, |window, cx| {
+        cx.new(|cx| ShoalRoot::new(opened, options, choice, config, palette, window, cx))
     }) {
-        Ok(window) => window,
+        Ok(_) => {}
         Err(error) => {
             tracing::error!(%error, "can't open a window");
             cx.quit();
             return;
         }
-    };
+    }
     cx.on_window_closed(|cx, _| {
         if cx.windows().is_empty() {
             cx.quit();
-        }
-    })
-    .detach();
-    let mut events = forward(events);
-    cx.spawn(async move |cx| {
-        while let Some(event) = events.next().await {
-            let open = window.update(cx, |view, window, cx| {
-                let shown = view.on_event(event, window, cx);
-                if !shown {
-                    tracing::info!("the session closed; closing the window");
-                    window.remove_window();
-                }
-                shown
-            });
-            if !matches!(open, Ok(true)) {
-                break;
-            }
         }
     })
     .detach();

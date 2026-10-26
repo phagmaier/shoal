@@ -173,7 +173,9 @@ impl EntityInputHandler for ShoalWindow {
     ) {
         if let Some(field) = self.editing_mut() {
             field.replace(range, text, None, false);
-        } else if self.switcher.is_none()
+        } else if self.available
+            && !self.awaiting_workspace
+            && self.switcher.is_none()
             && !self.session_busy
             && let Some(pane) = self.focused_pane()
         {

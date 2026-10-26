@@ -60,6 +60,12 @@ impl Panes {
         self.attached.get_mut(&pane)
     }
 
+    /// Drop streams and terminals at a connection boundary. The next sync
+    /// attaches from fresh snapshots, including retained hidden tabs.
+    pub fn clear(&mut self) {
+        self.attached.clear();
+    }
+
     /// Attach the panes of the recently viewed tabs, the session's active
     /// tab first, and detach the rest.
     pub fn sync(
@@ -107,6 +113,12 @@ impl Panes {
         let started = Instant::now();
         let mut item = first;
         loop {
+            if let StreamItem::Failed(error) = &item
+                && shoal_client::lifecycle::Mismatch::of_error(error).is_some()
+            {
+                cx.emit(error.clone());
+                return true;
+            }
             if attached.state.apply(item, &self.setup) == Next::Reattach {
                 // The new stream replaces this one, which ends with this turn.
                 attached._stream = attach(pane, client, cx);

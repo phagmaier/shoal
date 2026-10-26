@@ -68,6 +68,17 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
 - Rebind actions in `[keybinds]` in `config.toml`; bindings reload without a restart.
   `"none"` removes a binding. Ctrl+Shift+, opens the file in `$EDITOR` in a new tab
   (`vi` if unset). Font zoom is T48.
+- A lost daemon connection blanks the panes and shows **Reconnecting to shoald…**.
+  When the daemon returns, the window rebuilds panes from fresh snapshots.
+  Reconnecting never starts the daemon: systemd restarts a crashed managed
+  daemon; after `shoal daemon stop`, use `shoal daemon start` to resume.
+- Config errors and daemon notices appear above the panes with **Dismiss**.
+  An invalid config names the file, line and reason and keeps the last good
+  settings. A different daemon build offers **Restart daemon**, explaining
+  that running programs end and layout/scrollback return. Protocol/core
+  mismatches leave panes blank; a version-only mismatch still shows panes.
+  Restart happens only when clicked. If stopping takes over five seconds,
+  the window reports the failure and leaves the daemon alone.
 
 Omarchy's universal copy/paste needs its `terminal` tag to match `dev.shoal.Shoal`;
 packaging and desktop integration are T50. Custom desktop bindings still take
@@ -128,6 +139,12 @@ windows created during the check.
 pill, clipboard/primary paste, prompt jumps and links in an isolated HOME/XDG
 environment. Its substitute `xdg-open` records the exact URI instead of opening
 a browser. Results go to `target/manual/t45.txt`.
+
+`just manual t46` checks recovery after a crash, intentional stops, config
+errors, notice dismissal, build mismatches and the restart timeout. It uses
+disposable HOME/XDG folders and a fake systemctl, and restarts the crashed
+test daemon itself to stand in for systemd. Results go to
+`target/manual/t46.txt`.
 
 ## A sandbox for experiments
 

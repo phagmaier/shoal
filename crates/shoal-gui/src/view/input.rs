@@ -1,12 +1,11 @@
 //! Keyboard dispatch, clipboard input and terminal focus reports (§7.4).
 
-use futures::{StreamExt as _, channel::mpsc};
 use gpui::{ClipboardItem, Context, KeyDownEvent, KeyUpEvent, Window};
 use shoal_client::{
     model::{PaneId, Rect},
     proto::Call,
 };
-use shoal_config::{Action, ConfigWatcher, XdgPaths};
+use shoal_config::{Action, XdgPaths};
 use shoal_term::{KeyAction, TermError};
 
 use super::ShoalWindow;
@@ -39,7 +38,12 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.rename.is_some() || self.switcher.is_some() || self.session_busy {
+        if !self.available
+            || self.awaiting_workspace
+            || self.rename.is_some()
+            || self.switcher.is_some()
+            || self.session_busy
+        {
             return;
         }
         if let Some(action) =
@@ -164,10 +168,11 @@ impl ShoalWindow {
                 let pad = self.config.window.padding;
                 let width = f32::from(viewport.width).max(0.0) as u32;
                 let height = (f32::from(viewport.height).max(0.0) as u32)
-                    .saturating_sub(crate::chrome::TOP_BAR_HEIGHT);
+                    .saturating_sub(crate::chrome::TOP_BAR_HEIGHT)
+                    .saturating_sub(self.banner_height);
                 let area = Rect {
                     x: pad.min(width),
-                    y: pad.min(height),
+                    y: pad.min(height) + self.banner_height,
                     width: width.saturating_sub(pad.saturating_mul(2)),
                     height: height.saturating_sub(pad.saturating_mul(2)),
                 };
@@ -216,38 +221,6 @@ impl ShoalWindow {
             self.terminal_focus = Some(pane);
         }
         self.preedit = None;
-    }
-
-    /// Bindings and selection policy reload here; theme/font/window is T48.
-    pub(super) fn watch_keymap(&mut self, cx: &mut Context<Self>) {
-        let Ok(paths) = XdgPaths::from_env() else {
-            return;
-        };
-        let (sender, mut receiver) = mpsc::unbounded();
-        match ConfigWatcher::new(&paths.config_file(), move |update| {
-            let _ = sender.unbounded_send(update);
-        }) {
-            Ok((watcher, initial)) => {
-                self.config.keybinds = initial.loaded.config.keybinds;
-                self.config.selection = initial.loaded.config.selection;
-                self.config_watcher = Some(watcher);
-                self.config_task = Some(cx.spawn(async move |view, cx| {
-                    while let Some(update) = receiver.next().await {
-                        view.update(cx, |view, cx| {
-                            if let Some(error) = update.error {
-                                tracing::warn!(%error, "can't reload keybindings");
-                            }
-                            view.config.keybinds = update.loaded.config.keybinds;
-                            view.config.selection = update.loaded.config.selection;
-                            tracing::debug!("keybindings reloaded");
-                            cx.notify();
-                        })
-                        .ok();
-                    }
-                }));
-            }
-            Err(error) => tracing::warn!(%error, "can't watch keybindings"),
-        }
     }
 
     fn edit_config(&self, cx: &mut Context<Self>) {

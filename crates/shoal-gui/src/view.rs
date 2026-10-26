@@ -2,6 +2,7 @@
 //! each pane's mirror drawn inside its box, following the workspace as the
 //! daemon changes it.
 
+mod connection;
 mod input;
 mod layout;
 mod mouse;
@@ -14,8 +15,8 @@ mod topbar;
 use std::time::Instant;
 
 use gpui::{
-    AnyElement, BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, MouseButton, Rgba,
-    SharedString, Subscription, Task, Window, canvas, div, point, prelude::*, px, quad, size,
+    BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, MouseButton, Rgba, SharedString,
+    Subscription, Task, Window, canvas, div, point, prelude::*, px, quad, size,
 };
 use shoal_client::{
     Client, Event,
@@ -41,12 +42,22 @@ use crate::{
 /// Chrome text size in logical pixels.
 const TEXT_SIZE: f32 = 13.0;
 
+pub struct Initial {
+    pub client: Client,
+    pub session: SessionId,
+    pub workspace: Workspace,
+    pub available: bool,
+}
+
 pub struct ShoalWindow {
     pub(crate) client: Client,
     session: SessionId,
     workspace: Workspace,
     revisions: session::Revisions,
     config: Config,
+    available: bool,
+    awaiting_workspace: bool,
+    banner_height: u32,
     palette: Palette,
     title: String,
     pub(crate) panes: Panes,
@@ -78,24 +89,28 @@ pub struct ShoalWindow {
     mouse_capture: Option<PaneId>,
     wheel_pending: std::collections::BTreeMap<PaneId, (f32, f32)>,
     pub(crate) selection: Option<crate::selection::Selection>,
-    config_watcher: Option<shoal_config::ConfigWatcher>,
-    config_task: Option<Task<()>>,
     /// The window's keys go here; the rename field's go to its own.
     focus: FocusHandle,
     rename_focus: FocusHandle,
     _activation: Subscription,
 }
 
+impl gpui::EventEmitter<shoal_client::Error> for ShoalWindow {}
+
 impl ShoalWindow {
     pub fn new(
-        client: Client,
-        session: SessionId,
-        workspace: Workspace,
+        initial: Initial,
         config: Config,
         palette: Palette,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let Initial {
+            client,
+            session,
+            workspace,
+            available,
+        } = initial;
         // An inactive window draws its cursors hollow, and the daemon
         // follows the focused window's sizes.
         let activation = cx.observe_window_activation(window, |view, window, cx| {
@@ -111,6 +126,9 @@ impl ShoalWindow {
             workspace,
             panes: Panes::new(mirror::Setup::from_config(&config)),
             config,
+            available,
+            awaiting_workspace: false,
+            banner_height: 0,
             palette,
             title: String::new(),
             glyphs: GlyphCache::default(),
@@ -136,8 +154,6 @@ impl ShoalWindow {
             mouse_capture: None,
             wheel_pending: Default::default(),
             selection: None,
-            config_watcher: None,
-            config_task: None,
             focus,
             rename_focus: cx.focus_handle(),
             _activation: activation,
@@ -146,11 +162,13 @@ impl ShoalWindow {
             view.report_focus(window);
         }
         view.sync_panes(cx);
-        view.watch_keymap(cx);
         view
     }
 
     fn sync_panes(&mut self, cx: &mut Context<Self>) {
+        if !self.available || self.awaiting_workspace {
+            return;
+        }
         self.panes
             .sync(&self.workspace, self.session, &self.client, cx);
     }
@@ -164,6 +182,7 @@ impl ShoalWindow {
                     return true;
                 }
                 self.workspace = state.workspace;
+                self.awaiting_workspace = false;
                 if let Some(picker) = &mut self.switcher {
                     picker.refresh(&self.workspace.sessions, self.session);
                 }
@@ -187,13 +206,11 @@ impl ShoalWindow {
                 cx.notify();
                 return self.shows_session();
             }
-            Event::Notification(Notification::DaemonNotice { level, message, .. }) => {
-                // T46 shows these as banners.
-                tracing::info!(?level, %message, "daemon notice");
-            }
+            Event::Notification(Notification::DaemonNotice { .. }) => {}
             Event::Notification(other) => tracing::debug!(?other, "ignored notification"),
             Event::Connected(_) => {
                 self.revisions.reconnect();
+                self.awaiting_workspace = true;
                 // The daemon forgot this window with the old connection. The
                 // answer doesn't matter here: a closed session arrives as a
                 // workspace change.
@@ -204,7 +221,6 @@ impl ShoalWindow {
             Event::Disconnected(error) => {
                 self.terminal_focus = None;
                 self.pressed.clear();
-                // T46 shows the reconnecting overlay.
                 tracing::warn!(%error, "lost shoald; reconnecting");
             }
         }
@@ -362,52 +378,6 @@ impl ShoalWindow {
             })
             .collect()
     }
-
-    /// A pane's banner, with Retry, laid over its box.
-    fn banner(&mut self, pane_box: &PaneBox, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let State::Stopped(banner) = &self.panes.get_mut(pane_box.pane)?.state else {
-            return None;
-        };
-        let pane = pane_box.pane;
-        let rect = pane_box.rect;
-        let retry = div()
-            .id(SharedString::from(format!("retry-{pane}")))
-            .px(px(10.0))
-            .py(px(3.0))
-            .rounded(px(6.0))
-            .cursor_pointer()
-            .bg(rgba(Color {
-                rgb: self.palette.unfocused_border,
-                alpha: 1.0,
-            }))
-            .child("Retry")
-            .on_click(cx.listener(move |view, _, _, cx| {
-                let ShoalWindow { panes, client, .. } = view;
-                panes.retry(pane, client, cx);
-                cx.notify();
-            }));
-        Some(
-            div()
-                .absolute()
-                .left(px(rect.x as f32))
-                .top(px(rect.y as f32))
-                .w(px(rect.width as f32))
-                .h(px(rect.height as f32))
-                .flex()
-                .flex_col()
-                .items_center()
-                .justify_center()
-                .gap(px(10.0))
-                .p(px(12.0))
-                .text_color(rgba(Color {
-                    rgb: self.palette.foreground,
-                    alpha: 1.0,
-                }))
-                .child(SharedString::from(banner.text()))
-                .child(retry)
-                .into_any_element(),
-        )
-    }
 }
 
 impl Render for ShoalWindow {
@@ -415,16 +385,23 @@ impl Render for ShoalWindow {
         let viewport = window.viewport_size();
         let width = f32::from(viewport.width).max(0.0) as u32;
         let height = (f32::from(viewport.height).max(0.0) as u32).saturating_sub(TOP_BAR_HEIGHT);
-        let Some(chrome) = chrome::chrome(
+        let Some(mut chrome) = chrome::chrome(
             &self.workspace,
             self.session,
             &self.palette,
             &self.config.window,
             width,
-            height,
+            height.saturating_sub(self.banner_height),
         ) else {
             return div().size_full();
         };
+        for pane in &mut chrome.panes {
+            pane.rect.y += self.banner_height;
+        }
+        for divider in &mut chrome.dividers {
+            divider.area.y += self.banner_height;
+            divider.gap.y += self.banner_height;
+        }
         if chrome.title != self.title {
             window.set_window_title(&chrome.title);
             self.title = chrome.title.clone();
@@ -439,7 +416,9 @@ impl Render for ShoalWindow {
         } = chrome;
         let top_bar = self.top_bar(bar, chip, tabs, cx);
         let cell = self.cell_metrics(window);
-        self.request_sizes(&panes, &cell, cx);
+        if self.available && !self.awaiting_workspace {
+            self.request_sizes(&panes, &cell, cx);
+        }
         let frames = self.pane_frames(&panes, cell, window);
         let banners: Vec<_> = panes
             .iter()
@@ -454,7 +433,11 @@ impl Render for ShoalWindow {
             dividers,
         };
         let input_view = cx.entity();
-        let input_focus = (self.rename.is_none() && self.switcher.is_none() && !self.session_busy)
+        let input_focus = (self.available
+            && !self.awaiting_workspace
+            && self.rename.is_none()
+            && self.switcher.is_none()
+            && !self.session_busy)
             .then(|| self.focus.clone());
         let boxes = canvas(
             |_, _, _| (),
@@ -579,7 +562,7 @@ pub(crate) fn hsla(color: Color) -> Hsla {
     rgba(color).into()
 }
 
-fn rgba(color: Color) -> Rgba {
+pub(crate) fn rgba(color: Color) -> Rgba {
     let [r, g, b] = color.rgb.0.map(|channel| f32::from(channel) / 255.0);
     Rgba {
         r,

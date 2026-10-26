@@ -16,7 +16,11 @@ impl ShoalWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.switcher.is_some() || self.session_busy {
+        if !self.available
+            || self.awaiting_workspace
+            || self.switcher.is_some()
+            || self.session_busy
+        {
             return;
         }
         if event.button == MouseButton::Left {

@@ -11,7 +11,7 @@ use std::{
 };
 
 use shoal_client::{
-    AutoStart, Client, Event, Options,
+    AutoStart, Client, Connected, Event, Options,
     model::{SessionId, Workspace},
     proto::{Call, ClientKind, HelloResult, Notification, WINDOW_ENV},
 };
@@ -95,6 +95,11 @@ pub fn open(
     choice: Choice,
 ) -> Result<Opened, OpenError> {
     let connected = Client::connect(options, auto_start)?;
+    finish(connected, choice)
+}
+
+/// Finish opening after either the initial connect or an explicit restart.
+pub fn finish(connected: Connected, choice: Choice) -> Result<Opened, OpenError> {
     let client = connected.client;
     let session = match choice {
         Choice::Smart { cwd } => {
