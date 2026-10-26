@@ -568,6 +568,33 @@ Sizes are logical pixels before scaling.
 - **Mouse.** If the program turned on mouse reporting, events are encoded and sent (hold Shift to select locally instead). Otherwise: click focuses, drag selects, double-click selects a word, triple-click a line, the wheel scrolls 3 lines per notch, touchpads scroll by pixel, middle-click pastes the primary selection.
 - **Focus reports** are sent when a program asked for them and pane or window focus changes.
 
+**Input details (T42).**
+
+- T42 dispatches tab/pane actions, clipboard actions and `config.edit`. Bindings
+  reload through the config watcher; an invalid file keeps the last good bindings.
+  Session/window actions remain T44, scroll actions T45, confirmations T47 and
+  font actions T48. Bindings for those actions are reserved until implemented.
+- **Settled with the user (2026-10-26):** T42 includes basic visible-grid selection
+  and copy; history, content anchoring, prompt jumps and links remain T45. A single
+  left click focuses; with reporting enabled the same click also reaches the
+  program. Shift bypasses reporting for local selection or primary paste. New
+  pane output or a resize clears the visible-grid selection; its copied text
+  remains in primary selection. Double-click selects an alphanumeric/underscore
+  word (or a run of spaces/punctuation); triple-click selects a visible row.
+- GPUI exposes logical key names and layout text, without hardware codes or a
+  consumed-modifier mask. Preserve layout text and infer encoder key identities
+  from the names. Retain actual Shift from modifier-change events, because the
+  pinned Linux backend drops it for punctuation; resolve a bound literal symbol
+  first, then the Shift+key spelling for US punctuation. Key releases go to the
+  pane that received the press; releases of action shortcuts do not reach panes.
+- Preedit stays in the window until commit; terminal commits send UTF-8 once.
+  The inline rename field uses GPUI's input handler and UTF-16 replacement ranges.
+  Clipboard paste is encoded and queued before subsequent keys. `config.edit`
+  uses the pane environment's `$EDITOR` and options, falling back to `vi`.
+- Omarchy must classify the app id `dev.shoal.Shoal` as a terminal before its
+  universal shortcuts send the Insert chords. Desktop tagging is T50; custom
+  compositor bindings take precedence over the defaults in §10.
+
 ### 7.5 Scrollback and selection
 
 - Scrolling is smooth (fractional rows). New output while scrolled up doesn't move the view; a "new output" pill appears bottom right. Typing jumps to the bottom.

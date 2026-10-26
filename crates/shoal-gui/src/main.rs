@@ -2,17 +2,20 @@
 //! session and mirrors the workspace as the daemon changes it. `shoal` and
 //! `shoal attach` start it detached.
 
+mod actions;
 mod chrome;
 mod drag;
 mod draw;
 mod fonts;
 mod glyphs;
+mod input;
 mod keys;
 mod metrics;
 mod mirror;
 mod panes;
 mod rename;
 mod retention;
+mod selection;
 mod session;
 mod shapes;
 mod sizing;

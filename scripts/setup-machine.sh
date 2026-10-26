@@ -29,7 +29,7 @@ packages=(
     wayland libxkbcommon libxkbcommon-x11 libxcb fontconfig freetype2
     vulkan-icd-loader vulkan-headers alsa-lib openssl zstd
     ttf-jetbrains-mono noto-fonts-emoji
-    sysstat hyperfine socat jq
+    sysstat hyperfine socat jq python
 )
 
 problems=()

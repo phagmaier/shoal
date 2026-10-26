@@ -1,11 +1,17 @@
 //! Keystrokes as config chords, and chords as key caps (M1 spec §7.2, §10).
-//! Until T42's dispatcher, the window acts on only the few bindings T43
-//! needs, and a keystroke is just its modifiers and key name: a shifted
-//! symbol arrives as the symbol (Ctrl+Shift+, as `ctrl+shift+<`), which
-//! T42 sorts out.
 
 use gpui::Keystroke;
 use shoal_config::{Action, Chord, Key, Keymap};
+
+pub fn resolve(stroke: &Keystroke, held: gpui::Modifiers, keymap: &Keymap) -> Option<Action> {
+    // Honor an explicitly bound symbol first, then try its Shift+key form.
+    if let Some(action) = chord(stroke).and_then(|c| keymap.get(&c)) {
+        return Some(action);
+    }
+    let mut stroke = stroke.clone();
+    stroke.modifiers.shift |= held.shift;
+    chord(&stroke).and_then(|c| keymap.get(&c))
+}
 
 /// The chord a keystroke spells, if the config could name it.
 pub fn chord(keystroke: &Keystroke) -> Option<Chord> {
@@ -21,8 +27,42 @@ pub fn chord(keystroke: &Keystroke) -> Option<Chord> {
             spelled.push_str(name);
         }
     }
-    spelled.push_str(&keystroke.key);
+    let key = if modifiers.shift {
+        unshift(&keystroke.key)
+    } else {
+        &keystroke.key
+    };
+    spelled.push_str(key);
     spelled.parse().ok()
+}
+
+/// GPUI's Linux backend names shifted punctuation by its symbol, but
+/// config chords name the key along with Shift. Letters are already lower case.
+pub fn unshift(key: &str) -> &str {
+    match key {
+        "~" => "`",
+        "!" => "1",
+        "@" => "2",
+        "#" => "3",
+        "$" => "4",
+        "%" => "5",
+        "^" => "6",
+        "&" => "7",
+        "*" => "8",
+        "(" => "9",
+        ")" => "0",
+        "_" => "-",
+        "+" => "=",
+        "{" => "[",
+        "}" => "]",
+        "|" => "\\",
+        ":" => ";",
+        "\"" => "'",
+        "<" => ",",
+        ">" => ".",
+        "?" => "/",
+        _ => key,
+    }
 }
 
 /// The first chord bound to `action`, for a button's tooltip.
@@ -112,6 +152,56 @@ mod tests {
         assert_eq!(action("r", Modifiers::control()), None);
         // A key the config can't name is no chord.
         assert_eq!(chord(&keystroke("back", Modifiers::none())), None);
+    }
+
+    #[test]
+    fn shifted_punctuation_resolves_the_config_chord() {
+        let keymap = Keymap::default();
+        // Actual Linux event: GPUI removed Shift, but the modifier-change
+        // event retained it. Both must participate in dispatch.
+        assert_eq!(
+            resolve(&keystroke("<", Modifiers::control()), ctrl_shift(), &keymap),
+            Some(Action::ConfigEdit)
+        );
+        assert_eq!(
+            resolve(
+                &keystroke("insert", Modifiers::control()),
+                Modifiers::none(),
+                &keymap
+            ),
+            Some(Action::ClipboardCopy)
+        );
+        assert_eq!(
+            resolve(
+                &keystroke("insert", Modifiers::shift()),
+                Modifiers::none(),
+                &keymap
+            ),
+            Some(Action::ClipboardPaste)
+        );
+        assert_eq!(
+            chord(&keystroke("<", ctrl_shift())).and_then(|c| keymap.get(&c)),
+            Some(Action::ConfigEdit)
+        );
+        let remapped = Config::parse(
+            Path::new("config.toml"),
+            "[keybinds]\n\"ctrl+shift+r\" = \"none\"\n\"ctrl+shift+;\" = \"tab.rename\"\n",
+        )
+        .unwrap()
+        .config
+        .keybinds;
+        assert_eq!(
+            chord(&keystroke("r", ctrl_shift())).and_then(|c| remapped.get(&c)),
+            None
+        );
+        assert_eq!(
+            chord(&keystroke(":", ctrl_shift())).and_then(|c| remapped.get(&c)),
+            Some(Action::TabRename)
+        );
+        assert_eq!(
+            chord(&keystroke("<", Modifiers::none())).unwrap().key,
+            Key::Character('<')
+        );
     }
 
     #[test]

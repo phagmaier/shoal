@@ -32,7 +32,7 @@ start)
     # directly so its log (debug level, with redraw timings) is kept.
     SHOAL_LOG=${SHOAL_LOG:-debug} setsid "$bin/shoal-gui" "${@:2}" >"$log" 2>&1 </dev/null &
     echo "Opened a window. Its log: $log"
-    echo "It can't take typing until T42; type into it with: scripts/shoal.sh send <session> 'text\\n'"
+    echo "The window takes keyboard and mouse input. See docs/using-shoal.md for shortcuts."
     ;;
 stop)
     pkill -f "^$bin/shoal-gui" && echo "Closed the windows." || true

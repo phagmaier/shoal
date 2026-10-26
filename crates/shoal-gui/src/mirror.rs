@@ -6,7 +6,9 @@
 
 use shoal_client::{Error, StreamItem, model::GridSize, proto::DetachReason};
 use shoal_config::schema::{Config, CursorStyle};
-use shoal_term::{CursorShape, RestoreError, TermError, Terminal};
+use shoal_term::{
+    CellSize, CellWidth, CursorShape, KeyEvent, MouseEvent, RestoreError, Rows, TermError, Terminal,
+};
 
 use crate::draw::{self, DrawList};
 
@@ -55,6 +57,58 @@ impl Mirror {
 
     pub fn draw(&mut self, settings: &draw::Settings) -> Result<DrawList, TermError> {
         self.builder.build(&mut self.terminal, settings)
+    }
+
+    pub fn key(&mut self, event: &KeyEvent<'_>) -> Result<Vec<u8>, TermError> {
+        let mut bytes = Vec::new();
+        self.terminal.encode_key(event, &mut bytes)?;
+        Ok(bytes)
+    }
+
+    pub fn paste(&self, text: &str) -> Result<Vec<u8>, TermError> {
+        let mut bytes = Vec::new();
+        self.terminal.encode_paste(text, &mut bytes)?;
+        Ok(bytes)
+    }
+
+    pub fn focus(&self, focused: bool) -> Result<Vec<u8>, TermError> {
+        let mut bytes = Vec::new();
+        self.terminal.encode_focus(focused, &mut bytes)?;
+        Ok(bytes)
+    }
+
+    pub fn mouse_reporting(&self) -> Result<bool, TermError> {
+        self.terminal.mouse_reporting()
+    }
+
+    pub fn mouse(&mut self, event: &MouseEvent, cell: CellSize) -> Result<Vec<u8>, TermError> {
+        let mut bytes = Vec::new();
+        self.terminal.encode_mouse(event, cell, &mut bytes)?;
+        Ok(bytes)
+    }
+
+    pub fn screen(&mut self) -> Result<Vec<Vec<String>>, TermError> {
+        let mut screen = Vec::new();
+        self.terminal.frame()?.read_rows(Rows::All, |row| {
+            screen.push(
+                row.cells()
+                    .iter()
+                    .map(|cell| {
+                        if cell.width == CellWidth::SpacerTail {
+                            String::new()
+                        } else {
+                            let text = row.text(cell);
+                            if text.is_empty() {
+                                " ".into()
+                            } else {
+                                text.into()
+                            }
+                        }
+                    })
+                    .collect(),
+            );
+        })?;
+        Ok(screen)
     }
 }
 
@@ -304,6 +358,47 @@ mod tests {
         assert_eq!(
             Banner::MidSequence.text(),
             "This pane is in the middle of an escape sequence."
+        );
+    }
+
+    #[test]
+    fn live_input_uses_snapshot_modes_and_subsequent_mode_changes() {
+        let mut state = State::new();
+        state.apply(snapshot_of(b"\x1b[?2004h\x1b[?1h\x1b[?1004h"), &SETUP);
+        let State::Live(mirror) = &mut state else {
+            panic!()
+        };
+        assert_eq!(mirror.paste("a\nb").unwrap(), b"\x1b[200~a\nb\x1b[201~");
+        assert_eq!(mirror.focus(true).unwrap(), b"\x1b[I");
+        assert_eq!(
+            mirror
+                .key(&KeyEvent {
+                    key: shoal_term::Key::ArrowUp,
+                    ..KeyEvent::default()
+                })
+                .unwrap(),
+            b"\x1bOA"
+        );
+        state.apply(
+            StreamItem::Output {
+                seq: 8,
+                bytes: b"\x1b[?2004l\x1b[?1l\x1b[?1004l".to_vec(),
+            },
+            &SETUP,
+        );
+        let State::Live(mirror) = &mut state else {
+            panic!()
+        };
+        assert_eq!(mirror.paste("a\nb").unwrap(), b"a\rb");
+        assert_eq!(mirror.focus(false).unwrap(), b"");
+        assert_eq!(
+            mirror
+                .key(&KeyEvent {
+                    key: shoal_term::Key::ArrowUp,
+                    ..KeyEvent::default()
+                })
+                .unwrap(),
+            b"\x1b[A"
         );
     }
 }

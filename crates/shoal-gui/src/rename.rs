@@ -4,6 +4,7 @@
 //! tab's name, giving it back its automatic title.
 
 use shoal_model::TabId;
+use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rename {
@@ -15,6 +16,7 @@ pub struct Rename {
     all: bool,
     /// The label when editing began.
     original: String,
+    marked: Option<Range<usize>>,
 }
 
 /// What a key did.
@@ -35,6 +37,7 @@ impl Rename {
             caret: label.len(),
             all: true,
             original: label.to_owned(),
+            marked: None,
         }
     }
 
@@ -46,6 +49,54 @@ impl Rename {
 
     pub fn all_selected(&self) -> bool {
         self.all && !self.text.is_empty()
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn selected_utf16(&self) -> Range<usize> {
+        if self.all {
+            0..self.text.encode_utf16().count()
+        } else {
+            let at = self.text[..self.caret].encode_utf16().count();
+            at..at
+        }
+    }
+
+    pub fn marked_utf16(&self) -> Option<Range<usize>> {
+        self.marked.as_ref().map(|r| {
+            self.text[..r.start].encode_utf16().count()..self.text[..r.end].encode_utf16().count()
+        })
+    }
+
+    pub fn unmark(&mut self) {
+        self.marked = None;
+    }
+
+    /// Input-method ranges are UTF-16 offsets; the field stores UTF-8.
+    pub fn replace(
+        &mut self,
+        range: Option<Range<usize>>,
+        text: &str,
+        selected: Option<Range<usize>>,
+        mark: bool,
+    ) {
+        let range = range
+            .map(|r| byte_offset(&self.text, r.start)..byte_offset(&self.text, r.end))
+            .or_else(|| self.marked.clone())
+            .unwrap_or({
+                if self.all {
+                    0..self.text.len()
+                } else {
+                    self.caret..self.caret
+                }
+            });
+        let text: String = text.chars().filter(|c| !c.is_control()).collect();
+        self.text.replace_range(range.clone(), &text);
+        self.caret = range.start + selected.map_or(text.len(), |r| byte_offset(&text, r.end));
+        self.marked = (mark && !text.is_empty()).then_some(range.start..range.start + text.len());
+        self.all = false;
     }
 
     /// Apply a key: GPUI's key name and the text it types, which is `None`
@@ -117,6 +168,17 @@ impl Rename {
     }
 }
 
+pub fn byte_offset(text: &str, utf16: usize) -> usize {
+    let mut offset = 0;
+    for (byte, ch) in text.char_indices() {
+        if offset + ch.len_utf16() > utf16 {
+            return byte;
+        }
+        offset += ch.len_utf16();
+    }
+    text.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,6 +206,23 @@ mod tests {
             field.key("enter", None),
             Outcome::Commit(Some(Some("logs".into())))
         );
+    }
+
+    #[test]
+    fn input_method_preedit_is_replaced_on_commit_with_utf16_ranges() {
+        let mut field = rename("old name");
+        field.replace(None, "に", Some(1..1), true);
+        assert_eq!(field.text(), "に");
+        assert_eq!(field.marked_utf16(), Some(0..1));
+        field.replace(None, "日本", None, false);
+        assert_eq!(field.text(), "日本");
+        assert_eq!(field.marked_utf16(), None);
+        field.replace(None, "😀x", None, false);
+        // 日本 takes two UTF-16 code units; the emoji takes another two.
+        field.replace(Some(2..4), "界", None, false);
+        assert_eq!(field.text(), "日本界x");
+        assert_eq!(field.selected_utf16(), 3..3);
+        assert_eq!(field.name(), Some(Some("日本界x".into())));
     }
 
     #[test]

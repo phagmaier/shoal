@@ -14,7 +14,7 @@ use shoal_client::{
 
 use super::ShoalWindow;
 use crate::{
-    chrome::{self, PaneBox, TOP_BAR_HEIGHT},
+    chrome::{PaneBox, TOP_BAR_HEIGHT},
     drag::{self, Drag, Grab},
     metrics::{self, CellMetrics},
 };
@@ -95,9 +95,8 @@ impl ShoalWindow {
             .collect()
     }
 
-    /// While a divider is dragged: its cursor everywhere, and the pointer
-    /// followed wherever it goes until the button comes up. Painted with
-    /// the frame.
+    /// Window-wide pointer listeners, including releases outside a pane.
+    /// During a divider drag, keep its cursor and follow it to release.
     pub(super) fn drag_listeners(
         &self,
         dragging: Option<Axis>,
@@ -105,36 +104,41 @@ impl ShoalWindow {
     ) -> impl FnOnce(&mut Window, &mut App) + 'static {
         let view = cx.entity();
         move |window, _| {
-            let Some(axis) = dragging else {
-                return;
-            };
-            window.set_window_cursor_style(resize_cursor(axis));
+            if let Some(axis) = dragging {
+                window.set_window_cursor_style(resize_cursor(axis));
+            }
             let moved = view.clone();
             window.on_mouse_event(move |event: &MouseMoveEvent, phase, _, cx| {
                 if phase == DispatchPhase::Bubble {
-                    moved.update(cx, |view, cx| view.drag_to(event, cx));
+                    moved.update(cx, |view, cx| {
+                        if view.drag.is_some() {
+                            view.drag_to(event, cx);
+                        } else {
+                            view.pointer_move(event, cx);
+                        }
+                    });
                 }
             });
             window.on_mouse_event(move |event: &MouseUpEvent, phase, _, cx| {
-                if phase == DispatchPhase::Bubble && event.button == MouseButton::Left {
-                    view.update(cx, |view, cx| view.end_drag(cx));
+                if phase == DispatchPhase::Bubble {
+                    view.update(cx, |view, cx| {
+                        if event.button == MouseButton::Left && view.drag.is_some() {
+                            view.end_drag(cx);
+                        } else {
+                            view.pointer_up(event, cx);
+                        }
+                    });
                 }
             });
         }
     }
 
-    /// A left press in the pane area: grab a divider, or focus a pane.
+    /// A left press in the pane area: grab a divider.
     pub(super) fn press(&mut self, position: Point<Pixels>, cx: &mut Context<Self>) {
         let point = pane_point(position);
         if let Some(divider) = self.shown.dividers.iter().find(|d| drag::grabs(d, point)) {
             self.drag = Some(Drag::new(divider, point));
             cx.notify();
-            return;
-        }
-        if let Some(pane) = chrome::pane_at(&self.shown.panes, point)
-            && self.focused_pane() != Some(pane)
-        {
-            drop(self.client.send(Call::PaneFocus { pane }));
         }
     }
 
@@ -219,7 +223,7 @@ impl ShoalWindow {
 
 /// A window position in pane-area pixels: the pane area is the window
 /// below the top bar.
-fn pane_point(position: Point<Pixels>) -> (f32, f32) {
+pub(super) fn pane_point(position: Point<Pixels>) -> (f32, f32) {
     (
         f32::from(position.x),
         f32::from(position.y) - TOP_BAR_HEIGHT as f32,

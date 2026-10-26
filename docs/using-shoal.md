@@ -30,11 +30,31 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   goes back to the automatic title). `+` opens a tab; the two buttons at the top
   right split the focused pane right or down. Click a pane to focus it; drag the
   gap between panes to resize them.
-- Keys so far: Ctrl+Shift+R renames the current tab, Ctrl+Shift+Enter zooms the
-  focused pane in and out.
-- Shell typing and scrolling come with T42. The tab rename box already takes text.
+- Type directly into panes, including Unicode and committed input-method text.
+  Terminal keys follow the program's modes, including application arrows and
+  Kitty key events. The tab rename field also accepts input-method composition.
+- Keyboard tabs: Ctrl+Shift+T creates, Ctrl+Alt+W closes; Ctrl+Tab / Ctrl+Shift+Tab
+  (or Ctrl+PageDown / Ctrl+PageUp) cycle. Alt+1…8 selects by position; Alt+9 selects
+  the last. Ctrl+Shift+PageUp / PageDown moves a tab. Ctrl+Shift+R renames it.
+- Keyboard panes: Ctrl+Shift+O / E splits right / down; Ctrl+Shift+W closes.
+  Ctrl+Alt+Arrow moves focus; add Shift to resize by two cells.
+  Ctrl+Shift+Enter toggles zoom. Close confirmations come with T47.
+- Mouse events go to programs that request them. Hold Shift for local selection.
+  Otherwise drag selects, double-click selects a word and triple-click a line.
+  Selecting sets primary selection; middle-click pastes it. Ctrl+Shift+C or
+  Ctrl+Insert copies; Ctrl+Shift+V or Shift+Insert pastes. Pastes use the program's
+  bracketed-paste mode. Basic selections clear when the pane changes; content
+  anchors, local scrolling, prompt jumps and links come with T45.
+- Rebind actions in `[keybinds]` in `config.toml`; bindings reload without a restart.
+  `"none"` removes a binding. Ctrl+Shift+, opens the file in `$EDITOR` in a new tab
+  (`vi` if unset). Session/window actions are T44; font zoom is T48.
 
-Until then, drive a pane from any other terminal with the `shoal` command:
+Omarchy's universal copy/paste needs its `terminal` tag to match `dev.shoal.Shoal`;
+packaging and desktop integration are T50. Custom desktop bindings still take
+precedence over those defaults.
+Shoal itself never binds Super.
+
+You can also drive a pane from another terminal with the `shoal` command:
 
 ```sh
 scripts/shoal.sh ls                       # sessions, tabs and panes, with ids
@@ -73,6 +93,11 @@ the answers to `target/manual/t41.txt`. When it finishes, tell the agent; it
 reads that file. `just manual t43` checks layout interactions. It closes this
 checkout's previous windows and stops its daemon first, then prints the rebuilt
 GUI's timestamp. Failed steps are recorded and later checks continue.
+
+`just manual t42` checks keys, live rebinding, text, clipboard, mouse and focus
+reports in its own disposable HOME/XDG environment. Its bounded input probe saves
+raw fixture input there for inspection. It stops only the processes it started;
+results go to `target/manual/t42.txt`. Skip input-method checks if none is used.
 
 ## A sandbox for experiments
 

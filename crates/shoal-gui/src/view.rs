@@ -2,29 +2,30 @@
 //! each pane's mirror drawn inside its box, following the workspace as the
 //! daemon changes it.
 
+mod input;
 mod layout;
+mod mouse;
+mod text;
 mod topbar;
 
 use std::time::Instant;
 
 use gpui::{
-    AnyElement, BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, KeyDownEvent,
-    MouseButton, MouseDownEvent, Rgba, SharedString, Subscription, Task, Window, canvas, div,
-    point, prelude::*, px, quad, size,
+    AnyElement, BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, MouseButton, Rgba,
+    SharedString, Subscription, Task, Window, canvas, div, point, prelude::*, px, quad, size,
 };
 use shoal_client::{
     Client, Event,
     model::{PaneId, SessionId, Tab, TabId, Workspace},
     proto::{Call, Notification},
 };
-use shoal_config::{Action, Config, Palette};
+use shoal_config::{Config, Palette};
 
 use crate::{
     chrome::{self, Chrome, Color, PaneBox, TOP_BAR_HEIGHT},
     drag::Drag,
     draw,
     glyphs::{self, GlyphCache},
-    keys,
     metrics::{self, CellMetrics},
     mirror::{self, State},
     panes::Panes,
@@ -58,6 +59,18 @@ pub struct ShoalWindow {
     /// Sends the dragged ratio once the throttle allows.
     ratio_timer: Option<Task<()>>,
     rename: Option<Rename>,
+    held_modifiers: gpui::Modifiers,
+    caps_lock: bool,
+    pressed: std::collections::BTreeMap<String, PaneId>,
+    preedit: Option<String>,
+    input_cursor: Option<(u16, u16)>,
+    window_active: bool,
+    terminal_focus: Option<PaneId>,
+    mouse_capture: Option<PaneId>,
+    wheel_pending: std::collections::BTreeMap<PaneId, (f32, f32)>,
+    pub(crate) selection: Option<crate::selection::Selection>,
+    config_watcher: Option<shoal_config::ConfigWatcher>,
+    config_task: Option<Task<()>>,
     /// The window's keys go here; the rename field's go to its own.
     focus: FocusHandle,
     rename_focus: FocusHandle,
@@ -98,6 +111,18 @@ impl ShoalWindow {
             drag: None,
             ratio_timer: None,
             rename: None,
+            held_modifiers: gpui::Modifiers::none(),
+            caps_lock: false,
+            pressed: Default::default(),
+            preedit: None,
+            input_cursor: None,
+            window_active: window.is_window_active(),
+            terminal_focus: None,
+            mouse_capture: None,
+            wheel_pending: Default::default(),
+            selection: None,
+            config_watcher: None,
+            config_task: None,
             focus,
             rename_focus: cx.focus_handle(),
             _activation: activation,
@@ -106,6 +131,7 @@ impl ShoalWindow {
             view.report_focus(window);
         }
         view.sync_panes(cx);
+        view.watch_keymap(cx);
         view
     }
 
@@ -122,6 +148,16 @@ impl ShoalWindow {
                 // Always the newest: one connection's notifications arrive in
                 // order, and a restarted daemon may restore an older `rev`.
                 self.workspace = state.workspace;
+                if self
+                    .selection
+                    .as_ref()
+                    .is_some_and(|s| !self.shows(s.pane) || self.focused_pane() != Some(s.pane))
+                {
+                    self.selection = None;
+                }
+                self.wheel_pending
+                    .retain(|pane, _| self.workspace.panes.contains_key(pane));
+                self.sync_terminal_focus();
                 self.follow_drag();
                 if let Some(rename) = &self.rename
                     && self.tab(rename.tab).is_none()
@@ -146,6 +182,8 @@ impl ShoalWindow {
                 cx.notify();
             }
             Event::Disconnected(error) => {
+                self.terminal_focus = None;
+                self.pressed.clear();
                 // T46 shows the reconnecting overlay.
                 tracing::warn!(%error, "lost shoald; reconnecting");
             }
@@ -158,39 +196,13 @@ impl ShoalWindow {
     /// pane's size again.
     fn report_focus(&mut self, window: &Window) {
         let focused = window.is_window_active();
+        self.window_active = focused;
+        self.sync_terminal_focus();
         tracing::debug!(focused, "window focus");
         drop(self.client.send(Call::WindowSetFocused { focused }));
         if focused {
             self.sizer.reset();
         }
-    }
-
-    /// The window's own keys. Until T42 it acts only on renaming and
-    /// zooming.
-    fn key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(action) =
-            keys::chord(&event.keystroke).and_then(|chord| self.config.keybinds.get(&chord))
-        else {
-            return;
-        };
-        let Some(tab) = self.active_tab() else {
-            return;
-        };
-        match action {
-            Action::TabRename => {
-                let tab = tab.id;
-                self.start_rename(tab, window, cx);
-            }
-            Action::PaneZoom => {
-                let call = Call::PaneZoom {
-                    pane: tab.focused,
-                    zoomed: tab.zoomed.is_none(),
-                };
-                drop(self.client.send(call));
-            }
-            _ => return,
-        }
-        cx.stop_propagation();
     }
 
     fn shows_session(&self) -> bool {
@@ -290,6 +302,9 @@ impl ShoalWindow {
                     .draw(&settings)
                     .inspect_err(|error| tracing::warn!(%error, "can't draw a pane"))
                     .ok()?;
+                if focused == Some(pane_box.pane) {
+                    self.input_cursor = list.cursor.as_ref().map(|c| (c.col, c.row));
+                }
                 Some(attached.painter.prepare(
                     &list,
                     cell,
@@ -390,9 +405,30 @@ impl Render for ShoalWindow {
             panes: panes.clone(),
             dividers,
         };
+        let input_view = cx.entity();
+        let input_focus = self.rename.is_none().then(|| self.focus.clone());
+        let selection = self.selection.as_ref().map(|s| {
+            (
+                s.pane,
+                (0..1000)
+                    .filter_map(|row| s.span(row).map(|span| (row, span)))
+                    .collect::<Vec<_>>(),
+            )
+        });
+        let selection_color = rgba(Color {
+            rgb: self.palette.selection_background,
+            alpha: 0.65,
+        });
         let boxes = canvas(
             |_, _, _| (),
             move |bounds, (), window, cx| {
+                if let Some(input_focus) = input_focus {
+                    window.handle_input(
+                        &input_focus,
+                        gpui::ElementInputHandler::new(bounds, input_view),
+                        cx,
+                    );
+                }
                 drag_listeners(window, cx);
                 for (pane, frame) in panes.iter().zip(&frames) {
                     let origin =
@@ -422,21 +458,74 @@ impl Render for ShoalWindow {
                     let (x, y) = metrics::grid_origin(pane.rect, &cell);
                     let grid = bounds.origin + point(px(x), px(y));
                     window.with_content_mask(Some(ContentMask { bounds: inner }), |window| {
-                        window.paint_layer(inner, |window| terminal::paint(frame, grid, window));
+                        window.paint_layer(inner, |window| {
+                            terminal::paint(frame, grid, window);
+                            if let Some((selected_pane, spans)) = &selection
+                                && *selected_pane == pane.pane
+                            {
+                                for (row, span) in spans {
+                                    let bounds = Bounds::new(
+                                        grid + point(
+                                            px(f32::from(span.start) * cell.width),
+                                            px(f32::from(*row) * cell.height),
+                                        ),
+                                        size(
+                                            px(f32::from(span.end - span.start) * cell.width),
+                                            px(cell.height),
+                                        ),
+                                    );
+                                    window.paint_quad(gpui::fill(bounds, selection_color));
+                                }
+                            }
+                        });
                     });
                 }
             },
         )
         .size_full();
+        let preedit = self.preedit.as_ref().and_then(|text| {
+            let pane = self
+                .shown
+                .panes
+                .iter()
+                .find(|p| Some(p.pane) == self.focused_pane())?;
+            let (x, y) = metrics::grid_origin(pane.rect, &cell);
+            let (col, row) = self.input_cursor.unwrap_or((0, 0));
+            Some(
+                div()
+                    .absolute()
+                    .left(px(x + f32::from(col) * cell.width))
+                    .top(px(y + f32::from(row) * cell.height))
+                    .bg(rgba(Color {
+                        rgb: self.palette.background,
+                        alpha: 1.0,
+                    }))
+                    .text_color(rgba(Color {
+                        rgb: self.palette.foreground,
+                        alpha: 1.0,
+                    }))
+                    .text_size(px(cell.font_size))
+                    .child(SharedString::from(text.clone())),
+            )
+        });
         let pane_area = div()
             .relative()
             .flex_1()
             .w_full()
+            .on_mouse_down(MouseButton::Left, cx.listener(Self::pointer_down))
+            .on_mouse_down(MouseButton::Middle, cx.listener(Self::pointer_down))
+            .on_mouse_down(MouseButton::Right, cx.listener(Self::pointer_down))
             .on_mouse_down(
-                MouseButton::Left,
-                cx.listener(|view, event: &MouseDownEvent, _, cx| view.press(event.position, cx)),
+                MouseButton::Navigate(gpui::NavigationDirection::Back),
+                cx.listener(Self::pointer_down),
             )
+            .on_mouse_down(
+                MouseButton::Navigate(gpui::NavigationDirection::Forward),
+                cx.listener(Self::pointer_down),
+            )
+            .on_scroll_wheel(cx.listener(Self::wheel))
             .child(boxes)
+            .children(preedit)
             .children(banners)
             .children(handles);
         div()
@@ -445,6 +534,13 @@ impl Render for ShoalWindow {
             .flex_col()
             .track_focus(&self.focus)
             .on_key_down(cx.listener(Self::key_down))
+            .on_key_up(cx.listener(Self::key_up))
+            .on_modifiers_changed(
+                cx.listener(|view, event: &gpui::ModifiersChangedEvent, _, _| {
+                    view.held_modifiers = event.modifiers;
+                    view.caps_lock = event.capslock.on;
+                }),
+            )
             .font_family(SharedString::from(self.config.font.family.clone()))
             .text_size(px(TEXT_SIZE))
             .child(top_bar)

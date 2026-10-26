@@ -241,6 +241,8 @@ impl ShoalWindow {
     /// The inline rename field in place of a tab's title: the text, its
     /// caret, and the whole label selected until the first key.
     fn rename_field(&self, rename: &Rename, cx: &mut Context<Self>) -> AnyElement {
+        let input = cx.entity();
+        let focus = self.rename_focus.clone();
         let palette = &self.palette;
         let (before, after) = rename.parts();
         let mut before = div()
@@ -256,6 +258,7 @@ impl ShoalWindow {
         }
         div()
             .id("rename")
+            .relative()
             .track_focus(&self.rename_focus)
             .min_w(px(48.0))
             .flex()
@@ -271,6 +274,20 @@ impl ShoalWindow {
                 let name = view.rename.as_ref().and_then(Rename::name);
                 view.finish_rename(name, window, cx);
             }))
+            .child(
+                gpui::canvas(
+                    |_, _, _| (),
+                    move |bounds, (), window, cx| {
+                        window.handle_input(
+                            &focus,
+                            gpui::ElementInputHandler::new(bounds, input),
+                            cx,
+                        );
+                    },
+                )
+                .absolute()
+                .size_full(),
+            )
             .child(before)
             .child(
                 div()
@@ -297,6 +314,7 @@ impl ShoalWindow {
         };
         let label = chrome::tab_title(&self.workspace, found);
         self.rename = Some(Rename::new(tab, &label));
+        self.preedit = None;
         window.focus(&self.rename_focus, cx);
         cx.notify();
     }
@@ -306,13 +324,34 @@ impl ShoalWindow {
             return;
         };
         let keystroke = &event.keystroke;
+        match keys::resolve(keystroke, self.held_modifiers, &self.config.keybinds) {
+            Some(Action::ClipboardPaste) => {
+                if let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) {
+                    rename.replace(None, &text, None, false);
+                    cx.notify();
+                }
+                cx.stop_propagation();
+                return;
+            }
+            Some(Action::ClipboardCopy) => {
+                if rename.all_selected() {
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(rename.text().into()));
+                }
+                cx.stop_propagation();
+                return;
+            }
+            _ => {}
+        }
         let modifiers = keystroke.modifiers;
-        let typed = if modifiers.control || modifiers.alt || modifiers.platform {
-            None
-        } else {
-            keystroke.key_char.as_deref()
-        };
-        match rename.key(&keystroke.key, typed) {
+        // Text, including composition, arrives through EntityInputHandler.
+        if keystroke.key_char.is_some()
+            && !modifiers.control
+            && !modifiers.alt
+            && !modifiers.platform
+        {
+            return;
+        }
+        match rename.key(&keystroke.key, None) {
             Outcome::Editing => cx.notify(),
             Outcome::Commit(name) => self.finish_rename(name, window, cx),
             Outcome::Cancel => self.finish_rename(None, window, cx),
