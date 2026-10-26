@@ -13,6 +13,7 @@ check:
     mise exec -- cargo test --locked --workspace --all-features
     mise exec -- cargo deny --locked --all-features check bans
     mise exec -- scripts/check-boundaries.sh
+    bash scripts/tests/manual-t43.sh
 
 # Run the workspace tests.
 test:

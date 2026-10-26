@@ -32,7 +32,7 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   gap between panes to resize them.
 - Keys so far: Ctrl+Shift+R renames the current tab, Ctrl+Shift+Enter zooms the
   focused pane in and out.
-- The window can't take typing or scrolling yet; that comes with T42.
+- Shell typing and scrolling come with T42. The tab rename box already takes text.
 
 Until then, drive a pane from any other terminal with the `shoal` command:
 
@@ -70,7 +70,9 @@ just manual t41
 
 It opens what it needs, asks yes/no questions, measures what it can, and saves
 the answers to `target/manual/t41.txt`. When it finishes, tell the agent; it
-reads that file.
+reads that file. `just manual t43` checks layout interactions. It closes this
+checkout's previous windows and stops its daemon first, then prints the rebuilt
+GUI's timestamp. Failed steps are recorded and later checks continue.
 
 ## A sandbox for experiments
 
