@@ -55,7 +55,7 @@ pub struct PaneSpec {
     pub argv: Vec<String>,
     /// The requested directory, or the source pane's for splits and new tabs.
     pub cwd: Option<PathBuf>,
-    /// The latest connected window's values; only [`spawn::WINDOW_ENV`] apply.
+    /// The latest connected window's values; only [`shoal_proto::WINDOW_ENV`] apply.
     pub window_env: BTreeMap<String, String>,
     /// Old output to show above the fresh shell, for a restored pane.
     pub restore: Option<Restore>,

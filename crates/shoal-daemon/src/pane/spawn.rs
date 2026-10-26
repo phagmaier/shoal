@@ -8,18 +8,7 @@ use std::{
 };
 
 use shoal_model::PaneId;
-
-/// Variables a window's values replace, because a daemon started by systemd
-/// may hold stale session values.
-pub const WINDOW_ENV: [&str; 7] = [
-    "WAYLAND_DISPLAY",
-    "DISPLAY",
-    "HYPRLAND_INSTANCE_SIGNATURE",
-    "SSH_AUTH_SOCK",
-    "DBUS_SESSION_BUS_ADDRESS",
-    "XDG_CURRENT_DESKTOP",
-    "XDG_SESSION_ID",
-];
+use shoal_proto::WINDOW_ENV;
 
 const FALLBACK_SHELL: &str = "/bin/bash";
 

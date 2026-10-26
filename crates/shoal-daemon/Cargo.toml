@@ -22,7 +22,7 @@ zstd = { version = "0.13.3", default-features = false }
 shoal-config.workspace = true
 shoal-model.workspace = true
 shoal-proto.workspace = true
-shoal-term = { path = "../shoal-term" }
+shoal-term.workspace = true
 jiff = { workspace = true, features = ["tz-system", "tzdb-zoneinfo"] }
 portable-pty.workspace = true
 rustix = { workspace = true, features = ["event", "fs", "process"] }

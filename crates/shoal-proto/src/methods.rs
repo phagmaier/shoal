@@ -131,6 +131,19 @@ impl<'de> Deserialize<'de> for Empty {
     }
 }
 
+/// The variables a window sends in `hello`'s `env` (M1 spec §4.2). The
+/// daemon overlays them on new panes' environment, because a daemon started
+/// by systemd may hold stale session values; it ignores any others.
+pub const WINDOW_ENV: [&str; 7] = [
+    "WAYLAND_DISPLAY",
+    "DISPLAY",
+    "HYPRLAND_INSTANCE_SIGNATURE",
+    "SSH_AUTH_SOCK",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "XDG_CURRENT_DESKTOP",
+    "XDG_SESSION_ID",
+];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClientKind {

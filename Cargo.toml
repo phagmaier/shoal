@@ -21,9 +21,11 @@ publish = false
 
 [workspace.dependencies]
 base64 = "0.22.1"
+shoal-client = { path = "crates/shoal-client" }
 shoal-config = { path = "crates/shoal-config" }
 shoal-model = { path = "crates/shoal-model" }
 shoal-proto = { path = "crates/shoal-proto" }
+shoal-term = { path = "crates/shoal-term" }
 shoal-testkit = { path = "crates/shoal-testkit" }
 insta = "1.49.0"
 jiff = { version = "0.2.38", default-features = false, features = ["std", "serde"] }

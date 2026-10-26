@@ -41,7 +41,7 @@ impl Actor {
                         let id = self.next_connection;
                         self.next_connection += 1;
                         if client == ClientKind::Gui {
-                            self.window_env = env.into_iter().filter(|(key, _)| pane::spawn::WINDOW_ENV.contains(&key.as_str())).collect();
+                            self.window_env = env.into_iter().filter(|(key, _)| shoal_proto::WINDOW_ENV.contains(&key.as_str())).collect();
                         }
                         self.connections.insert(id, Connection {
                             outgoing, core, attachments: Default::default(), shown: None, focused: false, reservations: BTreeSet::new(), subscribed: false,

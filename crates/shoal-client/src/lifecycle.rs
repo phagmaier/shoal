@@ -68,8 +68,22 @@ impl AutoStart for SystemdOrSpawn {
 
 fn spawn_detached(shoald: &Path) -> io::Result<()> {
     let mut command = Command::new(shoald);
+    command.current_dir("/");
+    let mut child = detach(&mut command).spawn()?;
+    // Reap it whenever it exits, so a long-lived window keeps no zombie.
+    std::thread::Builder::new()
+        .name("shoald-reaper".into())
+        .spawn(move || {
+            let _ = child.wait();
+        })?;
+    Ok(())
+}
+
+/// Make `command` start in its own session with stdio to `/dev/null`, so
+/// closing the terminal that started it can't hang it up. For `shoald` and
+/// the window.
+pub fn detach(command: &mut Command) -> &mut Command {
     command
-        .current_dir("/")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -81,14 +95,7 @@ fn spawn_detached(shoald: &Path) -> io::Result<()> {
             Ok(())
         });
     }
-    let mut child = command.spawn()?;
-    // Reap it whenever it exits, so a long-lived window keeps no zombie.
-    std::thread::Builder::new()
-        .name("shoald-reaper".into())
-        .spawn(move || {
-            let _ = child.wait();
-        })?;
-    Ok(())
+    command
 }
 
 /// `systemctl --user <args>`, quietly: whether it succeeded.

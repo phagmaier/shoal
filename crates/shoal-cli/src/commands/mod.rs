@@ -1,11 +1,12 @@
-//! `new`, `ls`, `kill`, `send`, `capture` and `daemon` (M1 spec §11),
-//! through `shoal-client`. Exit codes: 0 success, 1 error, 2 bad usage, 3
-//! daemon unreachable. Workspace commands start the daemon if needed (§4.1);
-//! `shoal` and `shoal attach` open windows (T40).
+//! `shoal`, `attach`, `new`, `ls`, `kill`, `send`, `capture` and `daemon`
+//! (M1 spec §11), through `shoal-client`. Exit codes: 0 success, 1 error, 2
+//! bad usage, 3 daemon unreachable. Every command but `daemon` starts the
+//! daemon if needed (§4.1); `shoal` and `shoal attach` then open a window.
 
 mod daemon;
 mod ls;
 mod target;
+mod window;
 
 use std::{
     ffi::OsString,
@@ -24,10 +25,14 @@ use shoal_client::{
 };
 use target::Target;
 
-pub const COMMANDS: [&str; 6] = ["new", "ls", "kill", "send", "capture", "daemon"];
+/// The command a bare `shoal` runs: open a window.
+pub const OPEN: &str = "open";
+pub const COMMANDS: [&str; 7] = ["attach", "new", "ls", "kill", "send", "capture", "daemon"];
 
 pub const USAGE: &str = "\
-usage: shoal new [-n NAME] [--cwd DIR]
+usage: shoal                            (opens a window)
+       shoal attach <session>
+       shoal new [-n NAME] [--cwd DIR]
        shoal ls [--json]
        shoal kill <target>
        shoal send <target> <text>      (\\n presses Enter)
@@ -37,6 +42,10 @@ targets: an id (s3, t12, p40), a session name, or . for this pane";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
+    Open,
+    Attach {
+        target: String,
+    },
     New {
         name: Option<String>,
         cwd: Option<PathBuf>,
@@ -122,6 +131,10 @@ fn parse(command: &str, args: impl IntoIterator<Item = OsString>) -> Result<Comm
     let flag = |name: &str| flags.iter().any(|flag| flag == name);
     let mut words = words.into_iter();
     let parsed = match command {
+        OPEN => Command::Open,
+        "attach" => Command::Attach {
+            target: words.next().ok_or_else(|| usage("which session?".into()))?,
+        },
         "new" => Command::New { name, cwd },
         "ls" => Command::Ls {
             json: flag("--json"),
@@ -161,6 +174,13 @@ fn run(command: Command) -> Result<(), Failure> {
     let client = connect(SystemdOrSpawn::new())?;
     match command {
         Command::Daemon(_) => unreachable!("handled above"),
+        Command::Open => window::launch(None),
+        Command::Attach { target } => match resolve(&client, &target)?.0 {
+            Target::Session(session) => window::launch(Some(session)),
+            Target::Tab(_) | Target::Pane(_) => {
+                Err(Failure::Error(format!("{target} isn't a session")))
+            }
+        },
         Command::New { name, cwd } => {
             let cwd = cwd.map(absolute).transpose()?;
             let result = request(&client, Call::SessionCreate { name, cwd })?;
@@ -168,8 +188,11 @@ fn run(command: Command) -> Result<(), Failure> {
             print(format!("{session}\n").as_bytes())
         }
         Command::Ls { json } => {
-            let result = request(&client, Call::WorkspaceGet(Empty {}))?;
+            let mut result = request(&client, Call::WorkspaceGet(Empty {}))?;
             if json {
+                // Sorted keys, even where another crate in the build turns on
+                // serde_json's `preserve_order` (GPUI's dependencies do).
+                result.sort_all_objects();
                 let text = serde_json::to_string_pretty(&result).map_err(internal)?;
                 return print(format!("{text}\n").as_bytes());
             }
@@ -382,11 +405,19 @@ mod tests {
                 target: "main".into()
             })
         );
+        assert_eq!(
+            parse(&["attach", "work"]),
+            Ok(Command::Attach {
+                target: "work".into()
+            })
+        );
+        assert_eq!(parse(&[OPEN]), Ok(Command::Open));
     }
 
     #[test]
     fn bad_usage_says_what_is_wrong() {
         assert_eq!(parse(&["kill"]), usage("which target?"));
+        assert_eq!(parse(&["attach"]), usage("which session?"));
         assert_eq!(parse(&["send", "p3"]), usage("what text?"));
         assert_eq!(
             parse(&["ls", "extra"]),

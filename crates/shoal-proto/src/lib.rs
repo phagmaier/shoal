@@ -24,5 +24,5 @@ pub use error::{
 pub use methods::{
     AttachResult, Call, CaptureFormat, CaptureResult, ClientKind, DaemonStatusResult, DetachReason,
     Empty, HelloResult, NoticeLevel, Notification, PaneResult, SessionResult, SizeResult,
-    TabCreateResult, WorkspaceState,
+    TabCreateResult, WINDOW_ENV, WorkspaceState,
 };

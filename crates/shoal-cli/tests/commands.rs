@@ -187,7 +187,7 @@ fn errors_go_to_stderr_with_the_right_exit_codes() {
     // 2: bad usage, with the usage text.
     let stderr = failed(&shoal(&env, &["kill"]), 2);
     assert!(
-        stderr.starts_with("shoal kill: which target?\nusage: shoal new"),
+        stderr.starts_with("shoal kill: which target?\nusage: shoal "),
         "{stderr}"
     );
     let stderr = failed(&shoal(&env, &["ls", "--bogus"]), 2);

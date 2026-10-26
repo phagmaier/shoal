@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 base64.workspace = true
-shoal-client = { path = "../shoal-client" }
+shoal-client.workspace = true
 shoal-config.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -1,5 +1,5 @@
-//! `shoal`, the command-line interface (M1 spec §11): workspace commands,
-//! the native prompt and shell integration (§8).
+//! `shoal`, the command-line interface (M1 spec §11): opening windows,
+//! workspace commands, the native prompt and shell integration (§8).
 
 mod commands;
 mod prompt;
@@ -12,6 +12,7 @@ fn main() -> ExitCode {
     let started = Instant::now();
     let mut args = std::env::args_os().skip(1);
     match args.next() {
+        None => commands::main(commands::OPEN, args),
         Some(command) if command == "prompt" => prompt::main(args, started),
         Some(command) if command == "shell-init" => shell_init::main(args),
         Some(command) if commands::COMMANDS.iter().any(|name| command == *name) => {

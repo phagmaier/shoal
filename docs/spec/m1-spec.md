@@ -505,6 +505,13 @@ A format change bumps `format` and ships a migration from every older format, wi
 
 A GPUI window with `app_id` `dev.shoal.Shoal`, title `<session> — Shoal`, a transparent background and no client-side decorations; Hyprland tiles and blurs it. One window shows one session at a time. Running `shoal` starts `shoal-gui`, which calls `session.open_smart`; `shoal attach <name>` passes a session explicitly.
 
+**Window details (T40, 2026-10-25).**
+
+- *Starting:* `shoal-gui [--session <id>]`. Without an argument it smart-opens in its current folder. It connects with the §4.1 auto-start, sending its `core` and the §4.2 variables (`shoal_proto::WINDOW_ENV`) in `hello`, then calls `window.show_session` and `workspace.subscribe`, and waits up to 5 s for the first full workspace before opening the window. If any step fails, it prints `shoal-gui: <reason>` and exits 1; bad usage exits 2. It logs to stderr at the `SHOAL_LOG` level; when `shoal` starts it, stderr goes to `/dev/null`.
+- *Reconnecting:* after each reconnect the window sends `window.show_session` again, because the daemon forgot the closed connection's window.
+- *Its session closing* (the last tab closing, or `shoal kill`) closes the window (settled with the user). When the last window closes, `shoal-gui` exits. Closing a window closes nothing.
+- *Settings:* config and theme are read once at start. T48 follows changes; until T46, notices and config errors are only logged.
+
 ### 7.2 Layout and chrome
 
 Sizes are logical pixels before scaling.
@@ -515,6 +522,14 @@ Sizes are logical pixels before scaling.
 - **Zoom.** The zoomed pane fills the pane area, and its tab shows a zoom glyph.
 - **Dividers.** The gap between panes is the drag target: resize cursor, `split.set_ratio` at most 60 times a second, final value sent on release.
 - **Grid size.** `cols = floor(inner width / cell width)`, rows likewise; leftover pixels split evenly as padding. The window sends `pane.set_size` when it changes, debounced 50 ms during a drag.
+
+**Chrome details (T40, 2026-10-25).** `shoal-gui`'s `chrome` module turns the workspace into the title, top bar and pane boxes; the view only paints them.
+
+- A tab's label is its name, otherwise its focused pane's title. A tab rings when any of its panes has `bell`. The glyphs are Octicons `terminal` (U+F489) and, for a zoomed tab, `screen-full` (U+F50C), from the bundled symbols font, which T40 embeds (settled with the user). The active tab's underline sits under the label, inset 8 px.
+- The session chip is `foreground` text on `lighter_background` at the window opacity. Chrome text is 13 px in `font.family`.
+- When only one pane is in view (a one-pane tab, or a zoomed pane), it gets the unfocused border.
+- Pane boxes fill the pane area less `window.padding`, split by `rects` with `window.gap`. A window smaller than its padding draws empty boxes.
+- T43 adds the `+` and split buttons, and all clicking.
 
 ### 7.3 Drawing the grid
 
@@ -771,6 +786,8 @@ Super is never bound (Hyprland owns it). Every action id can be rebound in `[key
 - *`new`:* `--cwd` is made absolute against the current folder and must be a folder (exit 1 otherwise), rather than silently starting in `$HOME`. It prints the new session's id.
 - *`ls`:* a tree, one line per session (`s1 work`, plus `(N windows)` when shown), tab (`t2 <name or title>`, `(active)`) and pane (`p3 <title>  <folder>  <status>`, `(focused)` in a split tab, `(zoomed)`). Folders under `$HOME` start with `~`. Statuses: `running`, `exited <code>`, `killed by signal <n>`. An empty workspace prints `No sessions.` `--json` prints `workspace.get`'s result.
 - *Errors:* `shoal: <message>` on stderr; bad usage prints `shoal <command>: <problem>` and the usage text. A timeout or lost connection counts as unreachable (exit 3).
+
+**Opening windows (T40, 2026-10-25).** `shoal` and `shoal attach <session>` first connect, starting the daemon if needed, so an unreachable daemon is exit 3 and one of another protocol is exit 1 with the hint, and no window starts. `attach` resolves its target like the other commands; a tab or pane is exit 1 (`<target> isn't a session`). Then they start the `shoal-gui` beside the running binary, else the one on `PATH`, in its own session with stdio to `/dev/null` and the current folder, pass `--session <id>` for `attach`, and exit 0 without waiting or printing.
 
 ## 12. Performance budgets
 
