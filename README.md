@@ -18,6 +18,12 @@ sources. Agents run only `--check`; the install command above is for the user.
 The Rust pin is 1.98.1 in both mise and rustup so a global mise override cannot
 silently select a different workspace compiler.
 
+## Try it
+
+`just run` opens a window from this checkout; `just stop` stops everything.
+[docs/using-shoal.md](docs/using-shoal.md) explains what works so far and how
+to drive it.
+
 ## Development
 
 T01 provides empty crate skeletons, not a working terminal or daemon yet.

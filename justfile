@@ -29,6 +29,18 @@ dev-gui:
 fuzz-proto *args:
     mise exec -- cargo +nightly fuzz run frame_decoder {{args}}
 
+# Open a Shoal window from this checkout's release build (docs/using-shoal.md).
+run:
+    scripts/shoal.sh start
+
+# Close this checkout's windows and stop shoald.
+stop:
+    scripts/shoal.sh stop
+
+# A task's guided manual checks, e.g. `just manual t41`.
+manual task:
+    scripts/manual/{{task}}.sh
+
 # A development shoald.service running this checkout's release build (T22).
 install-unit:
     mise exec -- scripts/install-unit.sh install

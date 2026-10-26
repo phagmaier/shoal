@@ -118,8 +118,13 @@ cargo insta review    # accept snapshot changes deliberately, never blindly
 - Snapshot tests (`insta`) for JSON, CLI output and draw lists.
 - Anything that waits has a timeout (default 5 s). Never `sleep` to synchronize; use
   `shoal_testkit::eventually` with a deadline.
-- GUI: keep logic in pure functions with tests. List the manual checks the user needs
-  to run, with the exact commands, and wait for their results.
+- GUI: keep logic in pure functions with tests. Put the manual checks the user needs to
+  run in a guided script, `scripts/manual/t<NN>.sh` (run as `just manual t<NN>`): it
+  starts what it needs, drives the window with `shoal send` where the window can't take
+  input yet, asks yes/no questions, measures what can be measured, and saves the results
+  to `target/manual/t<NN>.txt` for you to read. Tell the user the one command, then wait.
+  `scripts/manual/t41.sh` is the model. Keep `docs/using-shoal.md` current when what the
+  user can do changes.
 
 ## Working on a task
 
