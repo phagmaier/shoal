@@ -252,6 +252,10 @@ A simple safe order: T00, T01, T02, T03, T04, T05, T06, T07, T08, T31, T10, T11,
 
 ### T22 · Daemon lifecycle
 
+- **Status:** automated work done 2026-10-25 on `t22-daemon-lifecycle`, from `main` at `2f41030`; waiting for the user's manual check before merging.
+- **Settled with the user (2026-10-25):** the window never auto-starts while reconnecting (M1 spec §7.7 amended to match T20); the manual check uses the CLI now, and its window half moves to T40; `just install-unit` installs a development unit; CLI commands facing another protocol fail with a hint. M1 spec §4.1 "Lifecycle details (T22)" records the rest.
+- **Verified:** `crates/shoal-cli/tests/daemon.rs` runs the real binaries with a logging fake `systemctl`: with systemd absent, `shoal daemon start` tries `systemctl --user start shoald.service`, then spawns `shoald` in its own session (its session id is its pid); `start` again, `status`, `persist` and `stop` report as specified, and `status`/`persist` without a daemon exit 3; workspace commands start the daemon once; a systemd stand-in that starts the daemon is used instead of a second spawn; against a stand-in daemon of another protocol, `shoal ls` exits 1 with the hint and `shoal daemon stop` asks systemd for the main pid, sends `SIGTERM` to the reported pid and waits for the socket. `crates/shoal-client/tests/lifecycle.rs` covers restart (saved, stopped through its shutdown, started by the given strategy, workspace restored), stop when nothing runs, `SIGTERM` saving like a shutdown, and core and version mismatches from `hello` and attach. Unit tests cover `Mismatch` parsing, the systemd pid check, the status text and durations.
+- **Manual check (user):** `just install-unit`; then, with no `shoald` running (`target/release/shoal daemon stop`), run `target/release/shoal new -n check`. Expect `systemctl --user status shoald` to show it active, started by systemd. Close that terminal window, open another, and run `target/release/shoal ls`: the `check` session is still there. Finish with `target/release/shoal daemon stop` and, if you like, `just uninstall-unit`. The window half ("outlives closing every window") is T40's manual check.
 - **Needs:** T20, T16.
 - **Build:** `shoald.service`; `shoal daemon start | stop | status | persist`; the auto-start strategy (§4.1); protocol, core and version mismatch detection in `hello` and the restart helper from §5.3 (shutdown that persists, wait up to 5 s, start, reconnect).
 - **Done when:** a test exercises the fallback spawn in a `TempEnv` with no `systemctl`; manually, with the unit installed, `shoal` starts the daemon and the daemon outlives closing every window.
@@ -287,7 +291,7 @@ Every GUI task keeps its logic in plain functions (workspace to chrome, render s
 
 - **Needs:** T00, T06, T20.
 - **Build:** `shoal-gui`: a GPUI window with the right `app_id`, title and transparent background; connects through `shoal-client` (sends `env`, smart open or `--session`, `window.show_session`, subscribe); draws the top bar (session chip and tab labels, no interaction yet) and pane rectangles from `rects` with theme colors and the focus border. `shoal` launches `shoal-gui` detached.
-- **Done when:** unit tests for the workspace-to-chrome function; manually, the window appears translucent on Hyprland in the theme, its boxes match `shoal ls`, and changes made with the CLI appear live.
+- **Done when:** unit tests for the workspace-to-chrome function; manually, the window appears translucent on Hyprland in the theme, its boxes match `shoal ls`, and changes made with the CLI appear live. Also (moved from T22): with the unit installed, `shoal` starts the daemon and the daemon outlives closing every window.
 
 ### T41 · Terminal rendering
 

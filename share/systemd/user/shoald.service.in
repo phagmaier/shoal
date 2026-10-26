@@ -1,0 +1,10 @@
+# The Shoal session daemon (M1 spec §4.1). `just install-unit` and the
+# installer replace @BINDIR@ with the folder holding shoald.
+[Unit]
+Description=Shoal session daemon
+
+[Service]
+Type=simple
+ExecStart=@BINDIR@/shoald
+Restart=on-failure
+TimeoutStopSec=10

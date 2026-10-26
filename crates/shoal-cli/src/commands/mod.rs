@@ -1,8 +1,9 @@
-//! `new`, `ls`, `kill`, `send` and `capture` (M1 spec §11), through
-//! `shoal-client`. Exit codes: 0 success, 1 error, 2 bad usage, 3 daemon
-//! unreachable. `shoal` and `shoal attach` open windows (T40); `shoal daemon`
-//! and auto-start come with T22, so until then a stopped daemon is exit 3.
+//! `new`, `ls`, `kill`, `send`, `capture` and `daemon` (M1 spec §11),
+//! through `shoal-client`. Exit codes: 0 success, 1 error, 2 bad usage, 3
+//! daemon unreachable. Workspace commands start the daemon if needed (§4.1);
+//! `shoal` and `shoal attach` open windows (T40).
 
+mod daemon;
 mod ls;
 mod target;
 
@@ -16,13 +17,14 @@ use std::{
 use base64::Engine as _;
 use serde_json::Value;
 use shoal_client::{
-    Client, Error, NoAutoStart, Options,
+    AutoStart, Client, Error, NoAutoStart, Options,
+    lifecycle::{Mismatch, SystemdOrSpawn},
     model::{PaneId, SessionId},
     proto::{Call, CaptureFormat, ClientKind, Empty, WorkspaceState},
 };
 use target::Target;
 
-pub const COMMANDS: [&str; 5] = ["new", "ls", "kill", "send", "capture"];
+pub const COMMANDS: [&str; 6] = ["new", "ls", "kill", "send", "capture", "daemon"];
 
 pub const USAGE: &str = "\
 usage: shoal new [-n NAME] [--cwd DIR]
@@ -30,6 +32,7 @@ usage: shoal new [-n NAME] [--cwd DIR]
        shoal kill <target>
        shoal send <target> <text>      (\\n presses Enter)
        shoal capture <target> [--scrollback] [--vt]
+       shoal daemon start|stop|status|persist
 targets: an id (s3, t12, p40), a session name, or . for this pane";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -53,6 +56,7 @@ enum Command {
         scrollback: bool,
         vt: bool,
     },
+    Daemon(daemon::Action),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -134,6 +138,14 @@ fn parse(command: &str, args: impl IntoIterator<Item = OsString>) -> Result<Comm
             scrollback: flag("--scrollback"),
             vt: flag("--vt"),
         },
+        "daemon" => Command::Daemon(match words.next().as_deref() {
+            Some("start") => daemon::Action::Start,
+            Some("stop") => daemon::Action::Stop,
+            Some("status") => daemon::Action::Status,
+            Some("persist") => daemon::Action::Persist,
+            Some(other) => return Err(usage(format!("unknown daemon command {other:?}"))),
+            None => return Err(usage("start, stop, status or persist?".into())),
+        }),
         _ => return Err(usage("unknown command".into())),
     };
     match words.next() {
@@ -143,8 +155,12 @@ fn parse(command: &str, args: impl IntoIterator<Item = OsString>) -> Result<Comm
 }
 
 fn run(command: Command) -> Result<(), Failure> {
-    let client = connect()?;
+    if let Command::Daemon(action) = command {
+        return daemon::run(action);
+    }
+    let client = connect(SystemdOrSpawn::new())?;
     match command {
+        Command::Daemon(_) => unreachable!("handled above"),
         Command::New { name, cwd } => {
             let cwd = cwd.map(absolute).transpose()?;
             let result = request(&client, Call::SessionCreate { name, cwd })?;
@@ -231,16 +247,26 @@ fn keys(text: &str) -> String {
     keys
 }
 
-fn connect() -> Result<Client, Failure> {
+/// The CLI's connection settings: one-shot, no reconnecting.
+fn options() -> Result<Options, Failure> {
     let paths = shoal_config::XdgPaths::from_env().map_err(|e| Failure::Error(e.to_string()))?;
     let socket = paths
         .socket_file()
         .map_err(|e| Failure::Error(e.to_string()))?;
     let mut options = Options::new(socket, ClientKind::Cli);
     options.reconnect = false;
-    Client::connect(options, NoAutoStart)
+    Ok(options)
+}
+
+fn connect(auto_start: impl AutoStart) -> Result<Client, Failure> {
+    Client::connect(options()?, auto_start)
         .map(|connected| connected.client)
         .map_err(failure)
+}
+
+/// Connect without starting anything, for `shoal daemon`.
+fn connect_running() -> Result<shoal_client::Connected, Failure> {
+    Client::connect(options()?, NoAutoStart).map_err(failure)
 }
 
 fn request(client: &Client, call: Call) -> Result<Value, Failure> {
@@ -248,9 +274,15 @@ fn request(client: &Client, call: Call) -> Result<Value, Failure> {
 }
 
 fn failure(error: Error) -> Failure {
+    if let Some(Mismatch::Protocol { .. }) = Mismatch::of_error(&error) {
+        return Failure::Error(
+            "shoald is from a different build. Restart it with `shoal daemon stop`, then try again."
+                .into(),
+        );
+    }
     match error {
         Error::Rpc(error) => Failure::Error(error.message),
-        Error::Protocol(_) => Failure::Error(error.to_string()),
+        Error::Protocol(_) | Error::DidNotStop => Failure::Error(error.to_string()),
         Error::Connect(reason) => Failure::Unreachable(reason),
         Error::Timeout(_) | Error::NotConnected | Error::Stopped => {
             Failure::Unreachable(error.to_string())

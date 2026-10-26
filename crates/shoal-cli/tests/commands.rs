@@ -177,11 +177,10 @@ fn send_then_capture_round_trips_and_kill_closes() {
 #[test]
 fn errors_go_to_stderr_with_the_right_exit_codes() {
     let env = fixture();
-    // 3: no daemon. Auto-start arrives with T22.
-    let stderr = failed(&shoal(&env, &["ls"]), 3);
-    assert!(
-        stderr.starts_with("shoal: can't reach shoald: "),
-        "{stderr}"
+    // 3: no daemon, for a command that never starts one (T22).
+    assert_eq!(
+        failed(&shoal(&env, &["daemon", "persist"]), 3),
+        "shoal: can't reach shoald: it isn't running\n"
     );
 
     let _daemon = env.spawn_daemon(shoald());

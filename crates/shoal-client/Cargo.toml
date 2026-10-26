@@ -10,6 +10,7 @@ description = "Daemon connection and client transport for Shoal"
 [dependencies]
 shoal-model.workspace = true
 shoal-proto.workspace = true
+rustix = { workspace = true, features = ["process"] }
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "net", "io-util", "time", "sync", "macros"] }

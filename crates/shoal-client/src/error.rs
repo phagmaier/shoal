@@ -19,6 +19,9 @@ pub enum Error {
     /// The daemon broke the protocol, so the connection was closed.
     #[error("protocol error from shoald: {0}")]
     Protocol(String),
+    /// `shoald` was asked to stop but its socket was still there after 5 s.
+    #[error("shoald didn't stop within 5 s")]
+    DidNotStop,
     /// The client's background thread has ended.
     #[error("the client has stopped")]
     Stopped,

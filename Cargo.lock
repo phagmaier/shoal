@@ -719,6 +719,7 @@ dependencies = [
 name = "shoal-client"
 version = "0.1.0"
 dependencies = [
+ "rustix",
  "serde_json",
  "shoal-model",
  "shoal-proto",

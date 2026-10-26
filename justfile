@@ -29,6 +29,13 @@ dev-gui:
 fuzz-proto *args:
     mise exec -- cargo +nightly fuzz run frame_decoder {{args}}
 
+# A development shoald.service running this checkout's release build (T22).
+install-unit:
+    mise exec -- scripts/install-unit.sh install
+
+uninstall-unit:
+    mise exec -- scripts/install-unit.sh uninstall
+
 # The native prompt's hyperfine budgets (M1 spec §8.3) on a release build.
 bench-prompt:
     mise exec -- scripts/bench-prompt.sh

@@ -10,6 +10,7 @@
 mod backoff;
 mod client;
 mod error;
+pub mod lifecycle;
 mod options;
 mod stream;
 mod worker;

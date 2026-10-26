@@ -71,10 +71,36 @@ impl Default for TempEnv {
 impl TempEnv {
     pub fn new() -> Self {
         let root = tempfile::tempdir().expect("create the temporary environment");
-        for dir in ["home", "config", "state", "cache", "data", "runtime"] {
+        for dir in ["home", "config", "state", "cache", "data", "runtime", "bin"] {
             std::fs::create_dir(root.path().join(dir)).expect("create an XDG folder");
         }
-        Self { root }
+        let env = Self { root };
+        env.fake_systemctl("exit 1");
+        env
+    }
+
+    /// Replace the `systemctl` every command finds first on `PATH`, so no test
+    /// reaches the real one. Each call's arguments are logged first, one line
+    /// per call ([`TempEnv::systemctl_calls`]); then `script` runs as `sh`.
+    /// The default fails, as if systemd were absent.
+    pub fn fake_systemctl(&self, script: &str) {
+        use std::os::unix::fs::PermissionsExt as _;
+        let path = self.root.path().join("bin/systemctl");
+        let log = self.root.path().join("systemctl.log");
+        let body = format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\n{script}\n",
+            log.display()
+        );
+        std::fs::write(&path, body).expect("write the fake systemctl");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+            .expect("make the fake systemctl executable");
+    }
+
+    /// The fake `systemctl`'s calls so far, one argument string each.
+    pub fn systemctl_calls(&self) -> Vec<String> {
+        std::fs::read_to_string(self.root.path().join("systemctl.log"))
+            .map(|log| log.lines().map(str::to_owned).collect())
+            .unwrap_or_default()
     }
 
     pub fn home(&self) -> PathBuf {
@@ -124,10 +150,17 @@ impl TempEnv {
     /// test's, everything else, `SHOAL_*` included, is left out. Logging is at
     /// debug.
     pub fn vars(&self) -> Vec<(OsString, OsString)> {
-        let mut vars: Vec<(OsString, OsString)> = ["PATH", "LANG", "LC_ALL"]
+        let mut vars: Vec<(OsString, OsString)> = ["LANG", "LC_ALL"]
             .into_iter()
             .filter_map(|kept| Some((kept.into(), std::env::var_os(kept)?)))
             .collect();
+        // The fake systemctl comes first.
+        let mut path = OsString::from(self.root.path().join("bin"));
+        if let Some(rest) = std::env::var_os("PATH") {
+            path.push(":");
+            path.push(rest);
+        }
+        vars.push(("PATH".into(), path));
         let dirs = [
             ("HOME", self.home()),
             ("XDG_CONFIG_HOME", self.config_home()),
