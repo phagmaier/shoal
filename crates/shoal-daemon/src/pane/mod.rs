@@ -33,6 +33,8 @@ pub use stream::{Item, Subscribed, SubscriberId};
 pub struct PaneSettings {
     /// `shell.program`; `None` when the config leaves it empty.
     pub shell_program: Option<String>,
+    pub shell_integration: shoal_config::schema::ShellIntegration,
+    pub prompt_mode: shoal_config::schema::PromptMode,
     pub scrollback: u32,
     pub theme: Theme,
     /// `SHOAL_SOCKET`.
@@ -124,7 +126,7 @@ pub fn spawn(spec: PaneSpec, settings: &PaneSettings, events: Events) -> Result<
     let (commands, receiver) = mpsc::channel();
     let (started, result) = mpsc::sync_channel(1);
     let id = spec.id;
-    let plan = runtime::Plan::new(spec, settings);
+    let plan = runtime::Plan::new(spec, settings)?;
     let thread_wake = wake.clone();
     std::thread::Builder::new()
         .name(format!("pane-{}", id.get()))

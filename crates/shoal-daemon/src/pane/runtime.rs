@@ -47,27 +47,29 @@ pub struct Plan {
 }
 
 impl Plan {
-    pub fn new(spec: PaneSpec, settings: &PaneSettings) -> Self {
-        let argv = spawn::program(
+    pub fn new(spec: PaneSpec, settings: &PaneSettings) -> Result<Self, std::io::Error> {
+        let mut argv = spawn::program(
             &spec.argv,
             settings.shell_program.as_deref(),
             &settings.base_env,
             spawn::passwd_shell,
         );
-        Self {
+        let mut env = spawn::environment(
+            &settings.base_env,
+            &spec.window_env,
+            spec.id,
+            &settings.socket,
+        );
+        spawn::integrate(&mut argv, &mut env, settings)?;
+        Ok(Self {
             id: spec.id,
             size: spec.size,
             argv,
-            env: spawn::environment(
-                &settings.base_env,
-                &spec.window_env,
-                spec.id,
-                &settings.socket,
-            ),
+            env,
             cwd: spawn::directory(spec.cwd.as_deref(), &settings.home),
             scrollback: settings.scrollback,
             theme: settings.theme,
-        }
+        })
     }
 }
 

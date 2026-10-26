@@ -57,6 +57,8 @@ impl Settings {
         let program = &self.config.shell.program;
         PaneSettings {
             shell_program: (!program.is_empty()).then(|| program.clone()),
+            shell_integration: self.config.shell.integration,
+            prompt_mode: self.config.prompt.mode,
             scrollback: self.config.scrollback.lines,
             theme: theme(&self.palette),
             socket,

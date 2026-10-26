@@ -74,6 +74,47 @@ pub fn environment(
     env
 }
 
+/// Auto-inject only a bare interactive bash/zsh invocation. Explicit command
+/// arguments (`-c`, `--norc`, scripts, etc.) retain their requested startup.
+pub fn integrate(
+    argv: &mut Vec<OsString>,
+    env: &mut BTreeMap<OsString, OsString>,
+    settings: &super::PaneSettings,
+) -> std::io::Result<()> {
+    use shoal_config::schema::{PromptMode, ShellIntegration};
+    let integration = match settings.shell_integration {
+        ShellIntegration::Auto => "auto",
+        ShellIntegration::Manual => "manual",
+        ShellIntegration::Off => "off",
+    };
+    let mode = match settings.prompt_mode {
+        PromptMode::Native => "native",
+        PromptMode::Shell => "shell",
+    };
+    env.insert("SHOAL_SHELL_INTEGRATION".into(), integration.into());
+    env.insert("SHOAL_PROMPT_MODE".into(), mode.into());
+    if settings.shell_integration != ShellIntegration::Auto || argv.len() != 1 {
+        return Ok(());
+    }
+    let shell = Path::new(&argv[0]).file_name().and_then(OsStr::to_str);
+    if !matches!(shell, Some("bash" | "zsh")) {
+        return Ok(());
+    }
+    let paths = shoal_config::shell::ShellPaths::discover()?;
+    env.insert("SHOAL_SHELL_DIR".into(), paths.root.as_os_str().to_owned());
+    env.insert("SHOAL_BIN".into(), paths.binary.into_os_string());
+    if shell == Some("bash") {
+        argv.push("--posix".into());
+        env.insert("ENV".into(), paths.root.join("bash/inject.bash").into());
+    } else {
+        env.remove(OsStr::new("SHOAL_ORIG_ZDOTDIR"));
+        if let Some(original) = env.insert("ZDOTDIR".into(), paths.root.join("zsh").into()) {
+            env.insert("SHOAL_ORIG_ZDOTDIR".into(), original);
+        }
+    }
+    Ok(())
+}
+
 /// The requested directory when it is one, else `$HOME`. Splits and new tabs
 /// pass their source pane's directory as the request.
 pub fn directory(requested: Option<&Path>, home: &Path) -> PathBuf {

@@ -29,6 +29,13 @@ impl Harness {
     /// A temporary environment whose bash and zsh show a known prompt.
     fn new() -> Self {
         let env = TempEnv::new();
+        std::fs::create_dir_all(env.config_home().join("shoal")).unwrap();
+        // T11 exercises the pane runtime without T30's prompt replacement.
+        std::fs::write(
+            env.config_home().join("shoal/config.toml"),
+            "[shell]\nintegration = 'off'\n",
+        )
+        .unwrap();
         std::fs::write(env.home().join(".bashrc"), "PS1='bash$ '\n").unwrap();
         std::fs::write(env.home().join(".zshrc"), "PROMPT='zsh%% '\n").unwrap();
         let (sender, events) = unbounded_channel();
@@ -310,7 +317,11 @@ fn shell_program_is_used_when_the_pane_has_no_argv() {
 
     let config = harness.env.config_home().join("shoal");
     std::fs::create_dir_all(&config).unwrap();
-    std::fs::write(config.join("config.toml"), "[shell]\nprogram = \"zsh\"\n").unwrap();
+    std::fs::write(
+        config.join("config.toml"),
+        "[shell]\nprogram = \"zsh\"\nintegration = 'off'\n",
+    )
+    .unwrap();
     let mut settings = harness.settings();
     settings.base_env.push(("SHELL".into(), "bash".into()));
     let spec = harness.spec(&[]);

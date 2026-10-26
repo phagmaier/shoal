@@ -16,6 +16,7 @@ mod load;
 mod palette;
 mod paths;
 pub mod schema;
+pub mod shell;
 mod theme;
 mod watch;
 pub use chord::{Chord, ChordError, Key, Modifiers};

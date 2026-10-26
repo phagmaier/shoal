@@ -532,6 +532,17 @@ The native prompt is a normal shell prompt computed by `shoal prompt` and instal
 - Times each command (`EPOCHREALTIME` in bash 5 and zsh).
 - With `prompt.mode = "native"` (default): sets `PS1` (bash) or `PROMPT` (zsh) at every prompt from `shoal prompt`. Existing `PROMPT_COMMAND` and `precmd` hooks still run, first. With `prompt.mode = "shell"`: marks and directory only.
 
+**Settled details (T30, 2026-10-25).**
+
+- *Assets (settled with the user):* resolve `<prefix>/share/shoal/shell` relative to the running binary's `bin` directory. Debug builds fall back to this checkout's `share/shoal/shell`; release builds do not. Installed assets take precedence. The native prompt uses the matching `bin/shoal`, not whichever version happens to be on `PATH`. Cargo test executables account for their extra `deps` directory.
+- *Spawn:* automatic injection applies to bare `bash` and `zsh` invocations, including absolute program paths and the configured/default shell. Explicit arguments (`-c`, script paths, `--norc`, etc.) retain their requested startup. Other programs are unchanged. `SHOAL_SHELL_INTEGRATION=auto|manual|off` and `SHOAL_PROMPT_MODE=native|shell` carry the startup settings. Auto injection also supplies `SHOAL_SHELL_DIR` and `SHOAL_BIN`. Manual and off modes do not rewrite `ENV`, `ZDOTDIR` or the argument list.
+- *Manual loading:* `shoal shell-init bash|zsh` prints shell-quoted assignments and a source command, reading the same config as the daemon. With integration off it prints no shell code. Bad arguments exit 2; missing assets or unusable paths exit 1. `__shoal_loaded` is a non-exported, shell-local guard: repeated sourcing succeeds without installing another hook; a child shell can install its own integration.
+- *Startup:* bash leaves POSIX mode and unsets its injected `ENV` before the system and user rc files. Zsh restores the original unset, empty or explicit `ZDOTDIR` before sourcing `.zshenv`, and honors a new `ZDOTDIR` selected there when sourcing `.zshrc`. The shim avoids sourcing itself recursively. Panes remain interactive, non-login shells.
+- *Shell prompt (settled with the user):* “leaves PS1 alone” means preserving the user's visible prompt and expansion, not byte-for-byte equality. Both shells add only nonprinting A/B wrappers in shell mode, removing the previous wrappers before each update. User prompt hooks may replace the prompt. Bash retains string or array `PROMPT_COMMAND`; zsh appends its `precmd` and `preexec` hooks after the user's hooks and retains zsh's normal stop-on-hook-error behavior.
+- *Lifecycle:* bash uses `PS0` once per parsed command, so compound commands do not produce a C mark per simple command and existing `DEBUG` traps are untouched. Its empty arithmetic expansion samples `EPOCHREALTIME` in the parent shell; with the nondefault `promptvars` disabled, marks still work but this clock sample is unavailable. Zsh uses `zsh/datetime` and `preexec`/`precmd`. Native prompts receive all five arguments from §8.3, including the original command status before user prompt hooks run, milliseconds, job count and terminal columns. Native zsh enables `prompt_subst`; shell mode leaves prompt expansion options unchanged.
+- *Directory reports:* OSC 7 paths are bytewise percent-encoded, including spaces, percent signs, controls and UTF-8. Hostnames are restricted to hostname characters so an environment value cannot terminate the OSC early. OSC terminators may be BEL or ST.
+
+
 ### 8.3 `shoal prompt`
 
 ```
