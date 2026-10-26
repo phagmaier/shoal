@@ -77,7 +77,17 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   or creates one when all sessions are on screen.
 - Rebind actions in `[keybinds]` in `config.toml`; bindings reload without a restart.
   `"none"` removes a binding. Ctrl+Shift+, opens the file in `$EDITOR` in a new tab
-  (`vi` if unset). Font zoom is T48.
+  (`vi` if unset).
+- Ctrl+= / Ctrl+- changes the font by one point in this window (4–72 pt).
+  Ctrl+0 resets to the current configured size. A font config edit preserves
+  each window's zoom offset. Explicit `font.size` values outside the shortcut
+  range still work when zoom is reset.
+- Theme changes recolor open windows within a second, including existing text
+  and retained tabs. `theme.source`, `[theme.colors]`, `window.*`, `cursor.*`
+  and `font.*` reload live. Font and spacing changes resize the terminal grids;
+  programs keep running, and appearance changes preserve local scroll/selection.
+  A program's cursor-shape choice takes precedence over `cursor.style`; blinking
+  cursors remain steady.
 - A lost daemon connection blanks the panes and shows **Reconnecting to shoald…**.
   When the daemon returns, the window rebuilds panes from fresh snapshots.
   Reconnecting never starts the daemon: systemd restarts a crashed managed
@@ -160,6 +170,11 @@ test daemon itself to stand in for systemd. Results go to
 confirmations, live opt-out, retained shell startup errors and window detach.
 It uses disposable HOME/XDG folders and a fake systemctl. Results go to
 `target/manual/t47.txt`.
+
+`just manual t48` checks live theme, font, line height, window and cursor edits,
+font shortcuts against `stty size`, retained tabs, per-window zoom and invalid
+config retention. It runs the installed Omarchy theme switcher in headless mode
+with a disposable HOME/XDG environment. Results go to `target/manual/t48.txt`.
 
 ## A sandbox for experiments
 

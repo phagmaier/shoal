@@ -5,7 +5,6 @@ use crate::{
     mirror::State,
 };
 use gpui::{AnyElement, Context, SharedString, div, prelude::*, px};
-use shoal_config::Config;
 
 impl ShoalWindow {
     pub fn current_session(&self) -> shoal_client::model::SessionId {
@@ -18,12 +17,6 @@ impl ShoalWindow {
             self.sizer.reset();
             cx.notify();
         }
-    }
-
-    pub fn apply_input_config(&mut self, config: &Config) {
-        self.config.keybinds = config.keybinds.clone();
-        self.config.selection = config.selection.clone();
-        self.config.behavior.confirm_close_running = config.behavior.confirm_close_running;
     }
 
     pub fn set_available(&mut self, available: bool, cx: &mut Context<Self>) {

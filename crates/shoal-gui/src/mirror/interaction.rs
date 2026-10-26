@@ -134,6 +134,10 @@ mod tests {
             scrollback: 100,
             cursor: CursorShape::Block,
             blink: false,
+            ..Setup::from_config(
+                &shoal_config::Config::default(),
+                &shoal_config::LoadedTheme::default().palette(&shoal_config::Config::default()),
+            )
         };
         let mut state = State::new();
         state.apply(
@@ -182,6 +186,14 @@ mod tests {
         let State::Live(mirror) = &mut state else {
             panic!()
         };
+        let mut reloaded = setup;
+        reloaded.theme.foreground = shoal_term::Rgb {
+            r: 12,
+            g: 34,
+            b: 56,
+        };
+        mirror.apply_setup(&reloaded).unwrap();
+        mirror.invalidate_rows();
         let after = mirror.draw(&settings).unwrap();
         assert_eq!(
             after
@@ -211,6 +223,10 @@ mod tests {
                 scrollback: 100,
                 cursor: CursorShape::Bar,
                 blink: false,
+                ..Setup::from_config(
+                    &shoal_config::Config::default(),
+                    &shoal_config::LoadedTheme::default().palette(&shoal_config::Config::default()),
+                )
             },
         )
         .unwrap();
@@ -242,6 +258,10 @@ mod tests {
                 scrollback: 100,
                 cursor: CursorShape::Bar,
                 blink: false,
+                ..Setup::from_config(
+                    &shoal_config::Config::default(),
+                    &shoal_config::LoadedTheme::default().palette(&shoal_config::Config::default()),
+                )
             },
         )
         .unwrap();

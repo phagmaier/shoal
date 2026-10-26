@@ -153,6 +153,9 @@ pub struct Builder {
 }
 
 impl Builder {
+    pub fn invalidate(&mut self) {
+        self.rows.clear();
+    }
     /// Rebuild the rows the render state marks dirty, every row after a
     /// size or settings change, and reuse the rest.
     pub fn build(

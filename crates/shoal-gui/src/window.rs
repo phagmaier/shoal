@@ -2,18 +2,19 @@
 //! open on a refused hello, before a session or a client exists.
 mod banners;
 
-use futures::{StreamExt as _, channel::mpsc};
+use futures::StreamExt as _;
 use gpui::{Context, Entity, Render, Subscription, Task, Window, div, prelude::*, px};
 use shoal_client::{
     Event, Options,
     lifecycle::{self, SystemdOrSpawn},
     proto::Notification,
 };
-use shoal_config::{Config, ConfigUpdate, ConfigWatcher, Palette, XdgPaths};
+use shoal_config::{Config, Palette, XdgPaths};
 
 use crate::{
     recovery::{Notices, Recovery, Status},
     session::{self, Choice, OpenError, Opened},
+    settings,
     view::ShoalWindow,
 };
 
@@ -29,7 +30,7 @@ pub struct ShoalRoot {
     restart: Option<Task<()>>,
     pane_errors: Option<Subscription>,
     config_task: Option<Task<()>>,
-    watcher: Option<ConfigWatcher>,
+    watcher: Option<settings::Watchers>,
 }
 
 impl ShoalRoot {
@@ -182,24 +183,15 @@ impl ShoalRoot {
         cx.notify();
     }
 
-    fn config_update(&mut self, update: ConfigUpdate, cx: &mut Context<Self>) {
-        if let Some(error) = update.error {
-            self.notices
-                .push(Some("local-config-error".into()), error.to_string());
+    fn config_update(&mut self, update: settings::Update, cx: &mut Context<Self>) {
+        for (key, message) in update.notices {
+            self.notices.push(Some(key), message);
         }
-        for warning in update.loaded.warnings {
-            self.notices
-                .push(Some(format!("config:{}", warning.key)), warning.to_string());
-        }
-        // T48 owns the other live settings. The watcher retains the last
-        // good complete config after an invalid edit.
-        self.config.keybinds = update.loaded.config.keybinds;
-        self.config.selection = update.loaded.config.selection;
-        self.config.behavior.confirm_close_running =
-            update.loaded.config.behavior.confirm_close_running;
+        self.config = update.config;
+        self.palette = update.palette;
         if let Some(content) = &self.content {
             content.update(cx, |view, cx| {
-                view.apply_input_config(&self.config);
+                view.apply_config(&self.config, self.palette);
                 cx.notify();
             });
         }
@@ -210,13 +202,9 @@ impl ShoalRoot {
         let Ok(paths) = XdgPaths::from_env() else {
             return;
         };
-        let (sender, mut updates) = mpsc::unbounded();
-        match ConfigWatcher::new(&paths.config_file(), move |update| {
-            let _ = sender.unbounded_send(update);
-        }) {
-            Ok((watcher, initial)) => {
+        match settings::watch(paths.clone()) {
+            Ok((mut updates, watcher)) => {
                 self.watcher = Some(watcher);
-                self.config_update(initial, cx);
                 self.config_task = Some(cx.spawn(async move |root, cx| {
                     while let Some(update) = updates.next().await {
                         if root

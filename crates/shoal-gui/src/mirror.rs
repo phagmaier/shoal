@@ -5,7 +5,10 @@
 //! automatic retry.
 
 use shoal_client::{Error, StreamItem, model::GridSize, proto::DetachReason};
-use shoal_config::schema::{Config, CursorStyle};
+use shoal_config::{
+    Palette,
+    schema::{Config, CursorStyle},
+};
 use shoal_term::{CellSize, CursorShape, KeyEvent, MouseEvent, RestoreError, TermError, Terminal};
 
 use crate::draw::{self, DrawList};
@@ -18,10 +21,15 @@ pub struct Setup {
     /// `cursor.style`: the shape until a program chooses one.
     pub cursor: CursorShape,
     pub blink: bool,
+    pub theme: shoal_term::Theme,
 }
 
 impl Setup {
-    pub fn from_config(config: &Config) -> Self {
+    pub fn from_config(config: &Config, palette: &Palette) -> Self {
+        let rgb = |color: shoal_config::schema::Rgb| {
+            let [r, g, b] = color.0;
+            shoal_term::Rgb { r, g, b }
+        };
         Self {
             scrollback: config.scrollback.lines,
             cursor: match config.cursor.style {
@@ -30,6 +38,12 @@ impl Setup {
                 CursorStyle::Underline => CursorShape::Underline,
             },
             blink: config.cursor.blink,
+            theme: shoal_term::Theme {
+                foreground: rgb(palette.foreground),
+                background: rgb(palette.background),
+                cursor: rgb(palette.cursor),
+                ansi: palette.ansi.map(rgb),
+            },
         }
     }
 }
@@ -44,11 +58,24 @@ pub struct Mirror {
 }
 
 impl Mirror {
+    pub fn apply_setup(&mut self, setup: &Setup) -> Result<(), TermError> {
+        self.terminal.set_theme(&setup.theme)?;
+        self.terminal
+            .set_default_cursor(setup.cursor, setup.blink)?;
+        self.terminal.set_scrollback(setup.scrollback)?;
+        self.invalidate_rows();
+        Ok(())
+    }
+
+    pub fn invalidate_rows(&mut self) {
+        self.builder.invalidate();
+    }
     /// Decode a snapshot into a fresh mirror. It has no callbacks, so it
     /// never answers the program; only its drawing settings are set before
     /// the first live byte.
     fn new(bytes: &[u8], size: GridSize, setup: &Setup) -> Result<Self, MirrorError> {
         let mut terminal = Terminal::restore(bytes, size.cols, size.rows, setup.scrollback)?;
+        terminal.set_theme(&setup.theme)?;
         terminal.set_default_cursor(setup.cursor, setup.blink)?;
         terminal.set_overscan(1)?;
         Ok(Self {
@@ -213,11 +240,15 @@ mod tests {
 
     use super::*;
 
-    const SETUP: Setup = Setup {
-        scrollback: 100,
-        cursor: CursorShape::Bar,
-        blink: false,
-    };
+    fn setup() -> Setup {
+        let mut setup = Setup::from_config(
+            &Config::default(),
+            &shoal_config::LoadedTheme::default().palette(&Config::default()),
+        );
+        setup.scrollback = 100;
+        setup.cursor = CursorShape::Bar;
+        setup
+    }
 
     fn snapshot_of(bytes: &[u8]) -> StreamItem {
         let mut pane = Terminal::new(20, 4, 100).unwrap();
@@ -270,19 +301,19 @@ mod tests {
     #[test]
     fn a_snapshot_then_output_and_resizes_make_a_live_mirror() {
         let mut state = State::new();
-        assert_eq!(state.apply(snapshot_of(b"hello"), &SETUP), Next::Redraw);
+        assert_eq!(state.apply(snapshot_of(b"hello"), &setup()), Next::Redraw);
         assert_eq!(text(&mut state), "hello|||");
         let output = StreamItem::Output {
             seq: 8,
             bytes: b" world\r\nnext".to_vec(),
         };
-        assert_eq!(state.apply(output, &SETUP), Next::Redraw);
+        assert_eq!(state.apply(output, &setup()), Next::Redraw);
         assert_eq!(text(&mut state), "hello world|next||");
         let resized = StreamItem::Resized {
             seq: 9,
             size: GridSize { cols: 30, rows: 2 },
         };
-        state.apply(resized, &SETUP);
+        state.apply(resized, &setup());
         let State::Live(mirror) = &mut state else {
             panic!()
         };
@@ -297,16 +328,16 @@ mod tests {
         let cursor = mirror.terminal.frame().unwrap().cursor().unwrap();
         assert_eq!(cursor.shape, CursorShape::Bar);
         // A later snapshot replaces the mirror.
-        state.apply(snapshot_of(b"fresh"), &SETUP);
+        state.apply(snapshot_of(b"fresh"), &setup());
         assert_eq!(text(&mut state), "fresh|||");
     }
 
     #[test]
     fn a_failure_reattaches_once_and_a_second_shows_a_banner() {
         let mut state = State::new();
-        assert_eq!(state.apply(corrupt(), &SETUP), Next::Reattach);
+        assert_eq!(state.apply(corrupt(), &setup()), Next::Reattach);
         assert!(matches!(state, State::Attaching { retried: true }));
-        assert_eq!(state.apply(corrupt(), &SETUP), Next::Redraw);
+        assert_eq!(state.apply(corrupt(), &setup()), Next::Redraw);
         let State::Stopped(Banner::Failed(reason)) = &state else {
             panic!("{state:?}")
         };
@@ -315,12 +346,12 @@ mod tests {
         // A success in between resets the count, and a live mirror that
         // fails is dropped and re-attached once.
         let mut state = State::new();
-        state.apply(corrupt(), &SETUP);
-        state.apply(snapshot_of(b"ok"), &SETUP);
+        state.apply(corrupt(), &setup());
+        state.apply(snapshot_of(b"ok"), &setup());
         assert!(matches!(state, State::Live(_)));
-        assert_eq!(state.apply(rpc(1005, None), &SETUP), Next::Reattach);
-        assert_eq!(state.apply(snapshot_of(b"ok"), &SETUP), Next::Redraw);
-        assert_eq!(state.apply(corrupt(), &SETUP), Next::Reattach);
+        assert_eq!(state.apply(rpc(1005, None), &setup()), Next::Reattach);
+        assert_eq!(state.apply(snapshot_of(b"ok"), &setup()), Next::Redraw);
+        assert_eq!(state.apply(corrupt(), &setup()), Next::Reattach);
     }
 
     #[test]
@@ -331,7 +362,7 @@ mod tests {
         ] {
             let mut state = State::new();
             assert_eq!(
-                state.apply(item, &SETUP),
+                state.apply(item, &setup()),
                 Next::Redraw,
                 "no automatic retry"
             );
@@ -340,7 +371,7 @@ mod tests {
         // Too large is a failure like any other.
         let mut state = State::new();
         assert_eq!(
-            state.apply(rpc(1002, Some("too_large")), &SETUP),
+            state.apply(rpc(1002, Some("too_large")), &setup()),
             Next::Reattach
         );
         assert_eq!(
@@ -352,7 +383,7 @@ mod tests {
     #[test]
     fn live_input_uses_snapshot_modes_and_subsequent_mode_changes() {
         let mut state = State::new();
-        state.apply(snapshot_of(b"\x1b[?2004h\x1b[?1h\x1b[?1004h"), &SETUP);
+        state.apply(snapshot_of(b"\x1b[?2004h\x1b[?1h\x1b[?1004h"), &setup());
         let State::Live(mirror) = &mut state else {
             panic!()
         };
@@ -372,7 +403,7 @@ mod tests {
                 seq: 8,
                 bytes: b"\x1b[?2004l\x1b[?1l\x1b[?1004l".to_vec(),
             },
-            &SETUP,
+            &setup(),
         );
         let State::Live(mirror) = &mut state else {
             panic!()
@@ -388,5 +419,77 @@ mod tests {
                 .unwrap(),
             b"\x1b[A"
         );
+    }
+
+    #[test]
+    fn live_cursor_defaults_preserve_program_shape_and_terminal_state() {
+        let mut state = State::new();
+        state.apply(snapshot_of(b"\x1b[?2004h\x1b[4 qhello"), &setup());
+        let State::Live(mirror) = &mut state else {
+            panic!()
+        };
+        let changed = Setup {
+            cursor: CursorShape::Block,
+            ..setup()
+        };
+        mirror.apply_setup(&changed).unwrap();
+        assert_eq!(
+            mirror.terminal.frame().unwrap().cursor().unwrap().shape,
+            CursorShape::Underline
+        );
+        assert_eq!(mirror.paste("ok").unwrap(), b"\x1b[200~ok\x1b[201~");
+        mirror.terminal.feed(b"\x1b[0 q");
+        assert_eq!(
+            mirror.terminal.frame().unwrap().cursor().unwrap().shape,
+            CursorShape::Block
+        );
+        assert_eq!(
+            mirror.terminal.row_text(0).unwrap().concat().trim(),
+            "hello"
+        );
+    }
+
+    #[test]
+    fn palette_reload_recolors_cached_rows_and_preserves_explicit_rgb() {
+        let mut state = State::new();
+        state.apply(
+            snapshot_of(b"plain \x1b[31mred \x1b[38;2;1;2;3mrgb"),
+            &setup(),
+        );
+        let State::Live(mirror) = &mut state else {
+            panic!()
+        };
+        let settings = draw::Settings {
+            opacity: 0.8,
+            cursor: shoal_config::schema::Rgb([4, 5, 6]),
+            focused: true,
+        };
+        let first = mirror.draw(&settings).unwrap();
+        assert_eq!(mirror.draw(&settings).unwrap().rebuilt, 0);
+        let mut changed = setup();
+        changed.theme.foreground = shoal_term::Rgb {
+            r: 17,
+            g: 34,
+            b: 51,
+        };
+        changed.theme.ansi[1] = shoal_term::Rgb {
+            r: 68,
+            g: 85,
+            b: 102,
+        };
+        mirror.apply_setup(&changed).unwrap();
+        let after = mirror.draw(&settings).unwrap();
+        assert_eq!(after.rebuilt, 4);
+        assert_ne!(first.rows[0].version, after.rows[0].version);
+        let runs = &after.rows[0].text;
+        assert_eq!(
+            runs.iter().map(|r| r.text.as_str()).collect::<String>(),
+            "plainredrgb"
+        );
+        assert_eq!(
+            runs.iter().map(|r| r.color.rgb.0).collect::<Vec<_>>(),
+            [[17, 34, 51], [68, 85, 102], [1, 2, 3]]
+        );
+        assert_eq!(mirror.draw(&settings).unwrap().rebuilt, 0);
     }
 }

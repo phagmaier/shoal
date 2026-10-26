@@ -60,6 +60,29 @@ impl Panes {
         self.attached.get_mut(&pane)
     }
 
+    /// Include retained hidden tabs and future snapshots without touching streams.
+    pub fn apply_setup(&mut self, setup: Setup) {
+        if self.setup != setup {
+            self.setup = setup;
+            for (pane, attached) in &mut self.attached {
+                if let State::Live(mirror) = &mut attached.state
+                    && let Err(error) = mirror.apply_setup(&setup)
+                {
+                    tracing::warn!(%pane, %error, "can't apply mirror settings");
+                }
+            }
+        }
+    }
+
+    pub fn invalidate_rows(&mut self) {
+        for attached in self.attached.values_mut() {
+            if let State::Live(mirror) = &mut attached.state {
+                mirror.invalidate_rows();
+            }
+            attached.painter = Painter::default();
+        }
+    }
+
     /// Drop streams and terminals at a connection boundary. The next sync
     /// attaches from fresh snapshots, including retained hidden tabs.
     pub fn clear(&mut self) {

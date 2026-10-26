@@ -74,9 +74,10 @@ pub struct Shaped {
 struct Key {
     family: String,
     size: f32,
+    line_height: f64,
 }
 
-/// Glyphs by face and grapheme, for one font family and size.
+/// Glyphs by face and grapheme, for one font configuration.
 #[derive(Debug, Default)]
 pub struct GlyphCache {
     key: Option<Key>,
@@ -94,11 +95,12 @@ fn face_index(face: Face) -> usize {
 }
 
 impl GlyphCache {
-    /// Empty the cache unless it was filled for this family and size.
-    pub fn use_font(&mut self, family: &str, size: f32) {
+    /// Empty the cache on any font change, including line height alone.
+    pub fn use_font(&mut self, family: &str, size: f32, line_height: f64) {
         let key = Key {
             family: family.to_owned(),
             size,
+            line_height,
         };
         if self.key.as_ref() != Some(&key) {
             *self = Self {
@@ -111,6 +113,14 @@ impl GlyphCache {
 
     pub fn generation(&self) -> u64 {
         self.generation
+    }
+
+    pub fn clear(&mut self) {
+        *self = Self {
+            key: self.key.take(),
+            generation: self.generation + 1,
+            ..Self::default()
+        };
     }
 
     /// The glyphs for `text` (one cell's grapheme) in `face`.
@@ -154,7 +164,7 @@ impl GlyphCache {
     }
 
     fn shape(&mut self, text: &str, face: Face, text_system: &WindowTextSystem) -> Shaped {
-        let Some(Key { family, size }) = &self.key else {
+        let Some(Key { family, size, .. }) = &self.key else {
             return Shaped {
                 glyphs: Rc::from([]),
                 width: px(0.0),
@@ -189,5 +199,30 @@ impl GlyphCache {
             glyphs,
             width: layout.width,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_font_setting_invalidates_glyphs_including_line_height_alone() {
+        let mut cache = GlyphCache::default();
+        cache.use_font("JetBrains Mono", 15.0, 1.0);
+        cache.ascii.push(Some(Shaped {
+            glyphs: Rc::from([]),
+            width: px(9.0),
+        }));
+        let first = cache.generation();
+        cache.use_font("JetBrains Mono", 15.0, 1.0);
+        assert_eq!(cache.generation(), first);
+        assert_eq!(cache.ascii.len(), 1);
+        cache.use_font("JetBrains Mono", 15.0, 1.2);
+        assert!(cache.ascii.is_empty());
+        assert_eq!(cache.generation(), first + 1);
+        cache.use_font("monospace", 15.0, 1.2);
+        cache.use_font("monospace", 16.0, 1.2);
+        assert_eq!(cache.generation(), first + 3);
     }
 }

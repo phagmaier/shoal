@@ -9,6 +9,7 @@ mod layout;
 mod mouse;
 mod scroll;
 mod sessions;
+mod settings;
 mod switcher;
 mod text;
 mod topbar;
@@ -63,6 +64,7 @@ pub struct ShoalWindow {
     title: String,
     pub(crate) panes: Panes,
     glyphs: GlyphCache,
+    zoom: crate::zoom::Zoom,
     /// Cell metrics, with the font family and line height they were
     /// measured for (the size and scale are in the metrics).
     metrics: Option<(CellMetrics, String, f64)>,
@@ -126,7 +128,7 @@ impl ShoalWindow {
             session,
             revisions: session::Revisions::new(workspace.rev),
             workspace,
-            panes: Panes::new(mirror::Setup::from_config(&config)),
+            panes: Panes::new(mirror::Setup::from_config(&config, &palette)),
             config,
             available,
             awaiting_workspace: false,
@@ -134,6 +136,7 @@ impl ShoalWindow {
             palette,
             title: String::new(),
             glyphs: GlyphCache::default(),
+            zoom: crate::zoom::Zoom::default(),
             metrics: None,
             shown: layout::Shown::default(),
             sizer: Sizer::default(),
@@ -300,8 +303,8 @@ impl ShoalWindow {
     fn cell_metrics(&mut self, window: &Window) -> CellMetrics {
         let scale = window.scale_factor();
         let font = &self.config.font;
-        let size = metrics::font_size(font.size);
-        self.glyphs.use_font(&font.family, size);
+        let size = metrics::font_size(self.zoom.size(font.size));
+        self.glyphs.use_font(&font.family, size, font.line_height);
         match &self.metrics {
             Some((cached, family, line_height))
                 if cached.scale == scale
@@ -337,7 +340,7 @@ impl ShoalWindow {
                 alpha: 0.65,
             }),
             hsla(Color {
-                rgb: self.palette.foreground,
+                rgb: self.palette.selection_foreground,
                 alpha: 1.0,
             }),
         ];

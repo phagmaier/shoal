@@ -144,6 +144,10 @@ impl ShoalWindow {
                 }
             }
             Action::ConfigEdit => self.edit_config(cx),
+            Action::FontIncrease | Action::FontDecrease | Action::FontReset => {
+                self.zoom_font(action);
+                cx.notify();
+            }
             Action::ScrollPageUp
             | Action::ScrollPageDown
             | Action::ScrollTop

@@ -21,12 +21,14 @@ mod rename;
 mod retention;
 mod selection;
 mod session;
+mod settings;
 mod shapes;
 mod sizing;
 mod switcher;
 mod terminal;
 mod view;
 mod window;
+mod zoom;
 
 use std::{ffi::OsString, io, process::ExitCode, sync::mpsc::Receiver};
 

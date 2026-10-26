@@ -2,7 +2,7 @@
 
 32 tasks in six phases, each sized for one agent session. The daemon is finished and tested end to end through the CLI before the window exists, so the riskiest UI work is off the critical path.
 
-**Current status:** T00–T47 done and merged into `main` (2026-10-26, T47 `b5f8ac6`, 403 Rust tests). **Next: T48, then T49.** T00–T46 history is archived verbatim in `docs/spec/completed.md`; later task history is in Git.
+**Current status:** T00–T47 done and merged into `main` (2026-10-26, T47 `b5f8ac6`, 403 Rust tests). **T48 implemented on `t48-live-theme-font`; full commit check pending; next: T49.** Guided checks passed (`target/manual/t48.txt`). T00–T46 history is archived verbatim in `docs/spec/completed.md`; later task history is in Git.
 
 | ID | Title | Status |
 | --- | --- | --- |
@@ -35,7 +35,7 @@
 | T45 | Scrollback, selection and links | done 2026-10-26 `56df772` |
 | T46 | Reconnect and banners | done 2026-10-26 `ff0f47f` |
 | T47 | Close confirmations and exited panes | done 2026-10-26 `b5f8ac6` |
-| T48 | Live theme and font changes | ready |
+| T48 | Live theme and font changes | verification pending |
 | T49 | Polish and hardening pass | ready after T48 (accepted checkpoint, see below) |
 | T50 | Install and packaging | blocked on T48, T49 |
 | T51 | Performance harness | blocked on T13, T41 |

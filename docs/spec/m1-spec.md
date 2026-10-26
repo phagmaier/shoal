@@ -510,7 +510,9 @@ A GPUI window with `app_id` `dev.shoal.Shoal`, title `<session> — Shoal`, a tr
 - *Starting:* `shoal-gui [--session <id>]`. Without an argument it smart-opens in its current folder. It connects with the §4.1 auto-start, sending its `core` and the §4.2 variables (`shoal_proto::WINDOW_ENV`) in `hello`, then calls `window.show_session` and `workspace.subscribe`, and waits up to 5 s for the first full workspace before opening the window. If any step fails, it prints `shoal-gui: <reason>` and exits 1; bad usage exits 2. It logs to stderr at the `SHOAL_LOG` level; when `shoal` starts it, stderr goes to `/dev/null`.
 - *Reconnecting:* after each reconnect the window sends `window.show_session` again, because the daemon forgot the closed connection's window.
 - *Its session closing* (the last tab closing, or `shoal kill`) closes the window (settled with the user). When the last window closes, `shoal-gui` exits. Closing a window closes nothing.
-- *Settings:* config and theme are read once at start. T48 follows changes; until T46, notices and config errors are only logged.
+- *Settings:* config and theme load at start and follow native filesystem
+  notifications (§9). Appearance changes apply live without reattaching panes;
+  invalid config keeps the last good settings and shows a banner.
 
 ### 7.2 Layout and chrome
 
@@ -560,6 +562,15 @@ Sizes are logical pixels before scaling.
 - *Feeding:* each attached pane's items are fed on the main thread for at most 4 ms per turn before yielding, so a flood still lets frames and input in. Output to a kept mirror whose tab is out of view requests no frame.
 - *Failures:* any attach or decode failure other than mid-sequence counts toward "re-attach once, then a banner". The error banner reads "Couldn't show this pane: <reason>." Retry starts over with a fresh attach and a fresh retry.
 - *Timing:* with `SHOAL_LOG=debug`, every frame that rebuilds all of a pane's rows logs `full redraw` with its size and the milliseconds from building its draw list to the end of its paint.
+
+**Live appearance details (T48, settled with the user, 2026-10-26).** Font
+shortcuts change the window's size by 1 point, within 4–72 pt. Ctrl+0 returns
+to the current configured size. Config font edits preserve each window's zoom
+offset; a zoomed size stays within the shortcut range. Explicit `font.size`
+values outside that range remain valid and apply without clamping when the
+offset is zero. Theme, window, cursor and font reloads update existing mirrors,
+including retained hidden tabs, without reattaching. Any font change clears the
+glyph and row caches, including line-height-only edits.
 
 ### 7.4 Input
 
