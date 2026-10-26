@@ -43,8 +43,20 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   Otherwise drag selects, double-click selects a word and triple-click a line.
   Selecting sets primary selection; middle-click pastes it. Ctrl+Shift+C or
   Ctrl+Insert copies; Ctrl+Shift+V or Shift+Insert pastes. Pastes use the program's
-  bracketed-paste mode. Basic selections clear when the pane changes; content
-  anchors, local scrolling, prompt jumps and links come with T45.
+  bracketed-paste mode. Selections follow their text through output and resize;
+  soft-wrapped lines copy without added newlines. `selection.copy_on_select`
+  also writes the clipboard and reloads live. Focus leaving the pane, typing,
+  history erasure or eviction of an endpoint clears the selection.
+- Scroll locally with the wheel (three rows per notch) or touchpad (by pixel).
+  Hold Shift to scroll locally when a program captures the mouse. Shift+PageUp /
+  PageDown pages; Shift+Home / End goes to the oldest output / live bottom.
+  New output preserves a scrolled-up view and shows a **new output** pill.
+  Click it, type or paste to return to the bottom. Ctrl+Shift+Up / Down jumps
+  between shell prompts. Recently viewed tabs retain their scroll position.
+- Hold Ctrl over a row to underline its links; Ctrl+click opens one with
+  `xdg-open`. OSC 8 targets and explicit `http://` / `https://` URLs work,
+  including soft wraps. Balanced brackets in URLs are kept; surrounding
+  punctuation is trimmed.
 - Sessions: click the session chip or Ctrl+Shift+S. Type a fuzzy filter, use
   Up/Down and Enter to switch, or choose New session. F2 renames the selected
   session; Escape cancels. Ctrl+Backspace asks before closing it. Closing the
@@ -111,6 +123,11 @@ results go to `target/manual/t42.txt`. Skip input-method checks if none is used.
 confirmation, next/previous and smart new windows in its own disposable HOME/XDG
 sandbox. Results go to `target/manual/t44.txt`; it also cleans up the extra
 windows created during the check.
+
+`just manual t45` checks smooth scrolling, anchored selections, the new-output
+pill, clipboard/primary paste, prompt jumps and links in an isolated HOME/XDG
+environment. Its substitute `xdg-open` records the exact URI instead of opening
+a browser. Results go to `target/manual/t45.txt`.
 
 ## A sandbox for experiments
 

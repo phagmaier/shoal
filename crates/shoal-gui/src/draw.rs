@@ -137,6 +137,9 @@ pub struct DrawList {
     pub cursor: Option<CursorDraw>,
     /// Rows rebuilt for this frame; equal to the row count on a full redraw.
     pub rebuilt: u16,
+    pub selection: Vec<(u16, std::ops::Range<u16>)>,
+    pub links: Vec<(u16, std::ops::Range<u16>)>,
+    pub fraction: f32,
 }
 
 /// Builds a mirror's draw lists, reusing clean rows.
@@ -158,7 +161,8 @@ impl Builder {
         settings: &Settings,
     ) -> Result<DrawList, TermError> {
         let mut frame = terminal.frame()?;
-        let (cols, rows) = frame.size()?;
+        let (cols, _) = frame.size()?;
+        let rows = frame.captured_rows()?;
         let colors = frame.colors()?;
         let stale = self.cols != cols
             || self.rows.len() != usize::from(rows)
@@ -184,6 +188,7 @@ impl Builder {
             })?;
         }
         let cursor = frame.cursor()?;
+        let selection = frame.selection()?;
         // Every dirty row is cached now, so the flags can go.
         frame.mark_clean()?;
         let cursor = cursor.position.filter(|_| cursor.visible).and_then(|at| {
@@ -219,6 +224,9 @@ impl Builder {
             rows: self.rows.clone(),
             cursor,
             rebuilt,
+            selection,
+            links: Vec::new(),
+            fraction: 0.0,
         })
     }
 }

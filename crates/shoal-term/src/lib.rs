@@ -13,6 +13,7 @@
 mod alloc;
 mod core;
 mod input;
+mod interaction;
 mod mouse;
 mod pane;
 mod persist;
@@ -22,6 +23,7 @@ mod terminal;
 
 pub use core::core_id;
 pub use input::{Key, KeyAction, KeyEvent, Mods};
+pub use interaction::{CellPoint, Scroll, TextLine, Viewport};
 pub use mouse::{CellSize, MouseAction, MouseButton, MouseEvent};
 pub use pane::{EventSink, PaneSetup, PromptMark, TermEvent, Theme};
 pub use persist::{FormatVtError, Persisted};

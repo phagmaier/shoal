@@ -64,6 +64,20 @@ pub enum CursorShape {
 }
 
 impl Terminal {
+    /// Capture up to `below` extra rows for fractional-row scrolling.
+    pub fn set_overscan(&mut self, below: u16) -> Result<(), TermError> {
+        if self.view.render.is_none() {
+            self.view.render = Some(Renderer::new()?);
+        }
+        self.view
+            .render
+            .as_mut()
+            .expect("invariant: renderer was just made")
+            .state
+            .set_overscan(libghostty_vt::render::Overscan { above: 0, below })?;
+        Ok(())
+    }
+
     /// The cursor shown until a program chooses one (DECSCUSR), and again
     /// when it asks for the default (`CSI 0 SP q`) or resets. A shape the
     /// program chose, even before a snapshot, stays. `HollowBlock` is drawn
@@ -285,6 +299,7 @@ impl Terminal {
     /// is made on first use, so a terminal that is never drawn, such as the
     /// daemon's, never has one.
     pub fn frame(&mut self) -> Result<Frame<'_>, TermError> {
+        self.validate_selection()?;
         if self.view.render.is_none() {
             self.view.render = Some(Renderer::new()?);
         }
@@ -321,6 +336,25 @@ impl Frame<'_> {
     /// Columns and rows.
     pub fn size(&self) -> Result<(u16, u16), TermError> {
         Ok((self.snapshot.cols()?, self.snapshot.rows()?))
+    }
+
+    pub fn captured_rows(&self) -> Result<u16, TermError> {
+        Ok(self.snapshot.rows()? + self.snapshot.overscan()?.below)
+    }
+
+    /// Selection spans use terminal-owned content anchors and do not require
+    /// reading cells or rebuilding cached glyphs.
+    pub fn selection(&mut self) -> Result<Vec<(u16, std::ops::Range<u16>)>, TermError> {
+        let mut spans = Vec::new();
+        let mut rows = self.rows.update(&self.snapshot)?;
+        while let Some(row) = rows.next() {
+            if let Some(span) = row.selection()? {
+                let y =
+                    u16::try_from(row.viewport_y()?).expect("invariant: overscan is only below");
+                spans.push((y, span.start_x..span.end_x + 1));
+            }
+        }
+        Ok(spans)
     }
 
     pub fn colors(&self) -> Result<Colors, TermError> {
@@ -372,7 +406,7 @@ impl Frame<'_> {
             let y = match y {
                 Some(y) => y,
                 None => u16::try_from(row.viewport_y()?)
-                    .expect("invariant: without overscan every row is on the viewport"),
+                    .expect("invariant: overscan is only below the viewport"),
             };
             read_row(self.cells, row, &palette, self.scratch, y, self.row)?;
             each(self.row);

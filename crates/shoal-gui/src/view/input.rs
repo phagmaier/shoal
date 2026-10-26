@@ -68,12 +68,15 @@ impl ShoalWindow {
             },
         );
         if let Some(mirror) = self.mirror(pane) {
+            if let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom) {
+                tracing::warn!(%error, "can't return to terminal input");
+            }
             let bytes = mirror.key(&input.event());
             self.send_input(pane, bytes);
             self.pressed
                 .insert(keys::unshift(&event.keystroke.key).to_owned(), pane);
         }
-        self.selection = None;
+        self.clear_selection();
         cx.notify();
         cx.stop_propagation();
     }
@@ -114,11 +117,12 @@ impl ShoalWindow {
                 }
             }
             Action::ClipboardCopy => {
-                if let Some(selection) = &self.selection {
-                    let text = selection.text();
-                    if !text.is_empty() {
-                        cx.write_to_clipboard(ClipboardItem::new_string(text));
-                    }
+                if let Some(pane) = self.selection.as_ref().map(|s| s.pane)
+                    && let Some(mirror) = self.mirror(pane)
+                    && let Ok(text) = mirror.selection_text()
+                    && !text.is_empty()
+                {
+                    cx.write_to_clipboard(ClipboardItem::new_string(text));
                 }
             }
             Action::ClipboardPaste => {
@@ -132,6 +136,29 @@ impl ShoalWindow {
                 }
             }
             Action::ConfigEdit => self.edit_config(cx),
+            Action::ScrollPageUp
+            | Action::ScrollPageDown
+            | Action::ScrollTop
+            | Action::ScrollBottom
+            | Action::ScrollPrevPrompt
+            | Action::ScrollNextPrompt => {
+                if let Some(pane) = self.focused_pane()
+                    && let Some(mirror) = self.mirror(pane)
+                {
+                    let result = match action {
+                        Action::ScrollPageUp => mirror.scroll_page(-1),
+                        Action::ScrollPageDown => mirror.scroll_page(1),
+                        Action::ScrollTop => mirror.scroll(shoal_term::Scroll::Top),
+                        Action::ScrollBottom => mirror.scroll(shoal_term::Scroll::Bottom),
+                        Action::ScrollPrevPrompt => mirror.scroll(shoal_term::Scroll::Prompts(-1)),
+                        _ => mirror.scroll(shoal_term::Scroll::Prompts(1)),
+                    };
+                    if let Err(error) = result {
+                        tracing::warn!(%error, "can't scroll terminal");
+                    }
+                    cx.notify();
+                }
+            }
             _ => {
                 let viewport = window.viewport_size();
                 let pad = self.config.window.padding;
@@ -159,10 +186,13 @@ impl ShoalWindow {
 
     pub(super) fn paste(&mut self, pane: PaneId, text: &str) {
         if let Some(mirror) = self.mirror(pane) {
+            if let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom) {
+                tracing::warn!(%error, "can't return to terminal input");
+            }
             let bytes = mirror.paste(text);
             self.send_input(pane, bytes);
         }
-        self.selection = None;
+        self.clear_selection();
     }
 
     pub(crate) fn sync_terminal_focus(&mut self) {
@@ -188,7 +218,7 @@ impl ShoalWindow {
         self.preedit = None;
     }
 
-    /// Only bindings reload here; theme/font/window updates belong to T48.
+    /// Bindings and selection policy reload here; theme/font/window is T48.
     pub(super) fn watch_keymap(&mut self, cx: &mut Context<Self>) {
         let Ok(paths) = XdgPaths::from_env() else {
             return;
@@ -199,6 +229,7 @@ impl ShoalWindow {
         }) {
             Ok((watcher, initial)) => {
                 self.config.keybinds = initial.loaded.config.keybinds;
+                self.config.selection = initial.loaded.config.selection;
                 self.config_watcher = Some(watcher);
                 self.config_task = Some(cx.spawn(async move |view, cx| {
                     while let Some(update) = receiver.next().await {
@@ -207,6 +238,7 @@ impl ShoalWindow {
                                 tracing::warn!(%error, "can't reload keybindings");
                             }
                             view.config.keybinds = update.loaded.config.keybinds;
+                            view.config.selection = update.loaded.config.selection;
                             tracing::debug!("keybindings reloaded");
                             cx.notify();
                         })

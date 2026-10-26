@@ -6,11 +6,10 @@
 
 use shoal_client::{Error, StreamItem, model::GridSize, proto::DetachReason};
 use shoal_config::schema::{Config, CursorStyle};
-use shoal_term::{
-    CellSize, CellWidth, CursorShape, KeyEvent, MouseEvent, RestoreError, Rows, TermError, Terminal,
-};
+use shoal_term::{CellSize, CursorShape, KeyEvent, MouseEvent, RestoreError, TermError, Terminal};
 
 use crate::draw::{self, DrawList};
+mod interaction;
 
 /// What every mirror is set up with, from config.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +39,8 @@ impl Setup {
 pub struct Mirror {
     terminal: Terminal,
     builder: draw::Builder,
+    fraction: f32,
+    new_output: bool,
 }
 
 impl Mirror {
@@ -49,14 +50,23 @@ impl Mirror {
     fn new(bytes: &[u8], size: GridSize, setup: &Setup) -> Result<Self, MirrorError> {
         let mut terminal = Terminal::restore(bytes, size.cols, size.rows, setup.scrollback)?;
         terminal.set_default_cursor(setup.cursor, setup.blink)?;
+        terminal.set_overscan(1)?;
         Ok(Self {
             terminal,
             builder: draw::Builder::default(),
+            fraction: 0.0,
+            new_output: false,
         })
     }
 
     pub fn draw(&mut self, settings: &draw::Settings) -> Result<DrawList, TermError> {
-        self.builder.build(&mut self.terminal, settings)
+        if self.terminal.viewport()?.at_bottom {
+            self.fraction = 0.0;
+            self.new_output = false;
+        }
+        let mut list = self.builder.build(&mut self.terminal, settings)?;
+        list.fraction = self.fraction;
+        Ok(list)
     }
 
     pub fn key(&mut self, event: &KeyEvent<'_>) -> Result<Vec<u8>, TermError> {
@@ -85,30 +95,6 @@ impl Mirror {
         let mut bytes = Vec::new();
         self.terminal.encode_mouse(event, cell, &mut bytes)?;
         Ok(bytes)
-    }
-
-    pub fn screen(&mut self) -> Result<Vec<Vec<String>>, TermError> {
-        let mut screen = Vec::new();
-        self.terminal.frame()?.read_rows(Rows::All, |row| {
-            screen.push(
-                row.cells()
-                    .iter()
-                    .map(|cell| {
-                        if cell.width == CellWidth::SpacerTail {
-                            String::new()
-                        } else {
-                            let text = row.text(cell);
-                            if text.is_empty() {
-                                " ".into()
-                            } else {
-                                text.into()
-                            }
-                        }
-                    })
-                    .collect(),
-            );
-        })?;
-        Ok(screen)
     }
 }
 
@@ -175,7 +161,9 @@ impl State {
             },
             StreamItem::Output { bytes, .. } => {
                 if let Self::Live(mirror) = self {
+                    let scrolled = mirror.terminal.viewport().is_ok_and(|view| !view.at_bottom);
                     mirror.terminal.feed(&bytes);
+                    mirror.new_output |= scrolled && !bytes.is_empty();
                 }
                 Next::Redraw
             }

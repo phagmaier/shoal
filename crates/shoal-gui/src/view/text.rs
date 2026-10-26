@@ -177,8 +177,13 @@ impl EntityInputHandler for ShoalWindow {
             && !self.session_busy
             && let Some(pane) = self.focused_pane()
         {
+            if let Some(mirror) = self.mirror(pane)
+                && let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom)
+            {
+                tracing::warn!(%error, "can't return to terminal input");
+            }
             self.client.input(pane, text.as_bytes().to_vec());
-            self.selection = None;
+            self.clear_selection();
         }
         self.filter_changed();
         self.preedit = None;
@@ -196,6 +201,13 @@ impl EntityInputHandler for ShoalWindow {
         if let Some(field) = self.editing_mut() {
             field.replace(range, text, selected, true);
         } else if self.switcher.is_none() && !self.session_busy {
+            if !text.is_empty()
+                && let Some(pane) = self.focused_pane()
+                && let Some(mirror) = self.mirror(pane)
+                && let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom)
+            {
+                tracing::warn!(%error, "can't return to terminal input");
+            }
             self.preedit = (!text.is_empty()).then(|| text.to_owned());
         }
         self.filter_changed();

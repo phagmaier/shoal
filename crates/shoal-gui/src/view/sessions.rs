@@ -19,7 +19,7 @@ impl ShoalWindow {
             self.drag = None;
             self.ratio_timer = None;
             self.mouse_capture = None;
-            self.selection = None;
+            self.clear_selection();
             self.preedit = None;
             self.switcher = Some(Switcher::new(self.session));
             self.switcher_scroll = gpui::ScrollHandle::new();
@@ -145,7 +145,7 @@ impl ShoalWindow {
         self.ratio_timer = None;
         self.size_timer = None;
         self.sizer.reset();
-        self.selection = None;
+        self.clear_selection();
         self.preedit = None;
         self.input_cursor = None;
         self.mouse_capture = None;

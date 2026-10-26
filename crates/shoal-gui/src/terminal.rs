@@ -72,6 +72,10 @@ pub struct PaneFrame {
     /// rebuilt, for the full-redraw log.
     started: Instant,
     full: Option<(u16, u16)>,
+    fraction: f32,
+    selection: Vec<(u16, std::ops::Range<u16>)>,
+    links: Vec<(u16, std::ops::Range<u16>)>,
+    overlay_colors: [Hsla; 2],
 }
 
 impl Painter {
@@ -84,6 +88,7 @@ impl Painter {
         glyphs: &mut GlyphCache,
         text: &WindowTextSystem,
         started: Instant,
+        overlay_colors: [Hsla; 2],
     ) -> PaneFrame {
         let key = Some((metrics, glyphs.generation()));
         if self.metrics != key {
@@ -113,6 +118,10 @@ impl Painter {
             metrics,
             started,
             full: (rows > 0 && list.rebuilt == rows).then_some((list.cols, rows)),
+            fraction: list.fraction,
+            selection: list.selection.clone(),
+            links: list.links.clone(),
+            overlay_colors,
         }
     }
 
@@ -241,6 +250,7 @@ impl Painter {
 /// Paint one pane's grid with its top-left cell at `origin`.
 pub fn paint(frame: &PaneFrame, origin: Point<Pixels>, window: &mut Window) {
     let m = &frame.metrics;
+    let origin = origin - point(px(0.0), px(frame.fraction * m.height));
     let top = |y: usize| origin.y + px(y as f32 * m.height);
     let cell = |x: f32, y: usize| point(origin.x + px(x), top(y));
     for (y, row) in frame.rows.iter().enumerate() {
@@ -345,6 +355,28 @@ pub fn paint(frame: &PaneFrame, origin: Point<Pixels>, window: &mut Window) {
         && c.shape == CursorShape::HollowBlock
     {
         window.paint_quad(outline(bounds, hsla(c.color), BorderStyle::Solid));
+    }
+    for (row, span) in &frame.selection {
+        window.paint_quad(fill(
+            Bounds::new(
+                cell(f32::from(span.start) * m.width, usize::from(*row)),
+                size(px(f32::from(span.end - span.start) * m.width), px(m.height)),
+            ),
+            frame.overlay_colors[0],
+        ));
+    }
+    for (row, span) in &frame.links {
+        window.paint_quad(fill(
+            Bounds::new(
+                cell(f32::from(span.start) * m.width, usize::from(*row))
+                    + point(px(0.0), px(m.underline)),
+                size(
+                    px(f32::from(span.end - span.start) * m.width),
+                    px(m.thickness),
+                ),
+            ),
+            frame.overlay_colors[1],
+        ));
     }
     if let Some((cols, rows)) = frame.full {
         tracing::debug!(

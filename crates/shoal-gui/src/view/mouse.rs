@@ -1,16 +1,13 @@
-//! Terminal mouse capture and visible-grid selection (§7.4).
+//! Terminal mouse capture, local scrolling and content selection (§7.4–7.5).
 
 use super::{ShoalWindow, layout::pane_point};
-use crate::{
-    chrome, input, metrics,
-    selection::{CellPoint, Selection},
-};
+use crate::{chrome, input, metrics, selection::Selection};
 use gpui::{
     ClipboardItem, Context, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     Pixels, Point, ScrollDelta, ScrollWheelEvent, Window,
 };
 use shoal_client::{model::PaneId, proto::Call};
-use shoal_term::{CellSize, MouseAction, MouseButton as Button, MouseEvent};
+use shoal_term::{CellPoint, CellSize, MouseAction, MouseButton as Button, MouseEvent};
 
 impl ShoalWindow {
     pub(super) fn pointer_down(
@@ -35,8 +32,35 @@ impl ShoalWindow {
         if event.button == MouseButton::Left && self.focused_pane() != Some(pane) {
             drop(self.client.send(Call::PaneFocus { pane }));
         }
+        self.hover_point = Some(event.position);
+        if event.button == MouseButton::Left
+            && event.modifiers.control
+            && let Some(at) = self.cell_at(pane, event.position)
+            && let Some(mirror) = self.mirror(pane)
+            && let Ok(links) = mirror.links(at.row)
+            && let Some(link) = links
+                .into_iter()
+                .find(|link| link.columns.contains(&at.col))
+        {
+            self.clear_selection();
+            cx.background_executor()
+                .spawn(async move {
+                    let result = std::process::Command::new("xdg-open")
+                        .arg(link.uri)
+                        .stdin(std::process::Stdio::null())
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status();
+                    if !result.is_ok_and(|status| status.success()) {
+                        tracing::warn!("couldn't open terminal link");
+                    }
+                })
+                .detach();
+            cx.notify();
+            return;
+        }
         if !event.modifiers.shift && self.reports_mouse(pane) {
-            self.selection = None;
+            self.clear_selection();
             self.mouse_capture = Some(pane);
             self.report_mouse(
                 pane,
@@ -47,12 +71,16 @@ impl ShoalWindow {
                 true,
             );
         } else if event.button == MouseButton::Left {
+            self.clear_selection();
             if let Some(at) = self.cell_at(pane, event.position)
                 && let Some(mirror) = self.mirror(pane)
             {
-                match mirror.screen() {
-                    Ok(screen) => {
-                        self.selection = Some(Selection::new(pane, screen, at, event.click_count))
+                match mirror.begin_selection(at, event.click_count) {
+                    Ok(()) => {
+                        self.selection = Some(Selection {
+                            pane,
+                            dragging: true,
+                        });
                     }
                     Err(error) => tracing::warn!(%error, "can't select terminal text"),
                 }
@@ -66,6 +94,12 @@ impl ShoalWindow {
     }
 
     pub(super) fn pointer_move(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) {
+        if self.hover_point != Some(event.position) {
+            self.hover_point = Some(event.position);
+            if event.modifiers.control {
+                cx.notify();
+            }
+        }
         if self.switcher.is_some() || self.session_busy {
             return;
         }
@@ -80,9 +114,10 @@ impl ShoalWindow {
         {
             if event.pressed_button == Some(MouseButton::Left) {
                 if let Some(at) = self.cell_at(pane, event.position)
-                    && let Some(selection) = &mut self.selection
+                    && let Some(mirror) = self.mirror(pane)
+                    && let Err(error) = mirror.extend_selection(at)
                 {
-                    selection.move_to(at);
+                    tracing::warn!(%error, "can't extend terminal selection");
                 }
             } else {
                 self.finish_selection(cx);
@@ -131,7 +166,10 @@ impl ShoalWindow {
     fn finish_selection(&mut self, cx: &mut Context<Self>) {
         if let Some(selection) = &mut self.selection {
             selection.dragging = false;
-            let text = selection.text();
+            let pane = selection.pane;
+            let Some(text) = self.mirror(pane).and_then(|m| m.selection_text().ok()) else {
+                return;
+            };
             if !text.is_empty() {
                 let item = ClipboardItem::new_string(text);
                 cx.write_to_primary(item.clone());
@@ -139,6 +177,15 @@ impl ShoalWindow {
                     cx.write_to_clipboard(item);
                 }
             }
+        }
+    }
+
+    pub(super) fn clear_selection(&mut self) {
+        if let Some(selection) = self.selection.take()
+            && let Some(mirror) = self.mirror(selection.pane)
+            && let Err(error) = mirror.clear_selection()
+        {
+            tracing::warn!(%error, "can't clear terminal selection");
         }
     }
 
@@ -168,18 +215,21 @@ impl ShoalWindow {
         ))
     }
 
-    fn cell_at(&self, pane: PaneId, position: Point<Pixels>) -> Option<CellPoint> {
+    pub(super) fn cell_at(&mut self, pane: PaneId, position: Point<Pixels>) -> Option<CellPoint> {
         let (x, y, cell) = self.mouse_position(pane, position)?;
         let size = self.workspace.panes.get(&pane)?.size;
+        let fraction = self.mirror(pane).map_or(0.0, |m| m.fraction());
         Some(CellPoint {
             col: (x / cell.width as f32)
                 .floor()
                 .max(0.0)
                 .min(f32::from(size.cols.saturating_sub(1))) as u16,
-            row: (y / cell.height as f32)
+            row: (y / cell.height as f32 + fraction)
                 .floor()
                 .max(0.0)
-                .min(f32::from(size.rows.saturating_sub(1))) as u16,
+                .min(f32::from(
+                    size.rows.saturating_sub(u16::from(fraction == 0.0)),
+                )) as u16,
         })
     }
 
@@ -213,7 +263,7 @@ impl ShoalWindow {
         &mut self,
         event: &ScrollWheelEvent,
         _: &mut Window,
-        _: &mut Context<Self>,
+        cx: &mut Context<Self>,
     ) {
         if self.switcher.is_some() || self.session_busy {
             return;
@@ -221,20 +271,35 @@ impl ShoalWindow {
         let Some(pane) = chrome::pane_at(&self.shown.panes, pane_point(event.position)) else {
             return;
         };
-        // Local scrolling is T45. Shift always bypasses program capture.
-        if event.modifiers.shift || !self.reports_mouse(pane) {
-            return;
-        }
+        let local = event.modifiers.shift || !self.reports_mouse(pane);
         let Some((cell, _, _)) = self.metrics.as_ref() else {
             return;
         };
         let (x, y) = match event.delta {
-            ScrollDelta::Lines(delta) => (delta.x, delta.y),
+            ScrollDelta::Lines(delta) => (delta.x, delta.y * if local { 3.0 } else { 1.0 }),
             ScrollDelta::Pixels(delta) => (
                 f32::from(delta.x) / cell.width,
                 f32::from(delta.y) / cell.height,
             ),
         };
+        if local {
+            if let Some(mirror) = self.mirror(pane)
+                && let Err(error) = mirror.scroll_rows(-y)
+            {
+                tracing::warn!(%error, "can't scroll terminal");
+            }
+            if let Some(selection) = &self.selection
+                && selection.dragging
+                && selection.pane == pane
+                && let Some(at) = self.cell_at(pane, event.position)
+                && let Some(mirror) = self.mirror(pane)
+                && let Err(error) = mirror.extend_selection(at)
+            {
+                tracing::warn!(%error, "can't extend terminal selection");
+            }
+            cx.notify();
+            return;
+        }
         let pending = self.wheel_pending.entry(pane).or_default();
         pending.0 += x;
         pending.1 += y;

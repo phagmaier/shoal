@@ -148,9 +148,6 @@ fn attach(pane: PaneId, client: &Client, cx: &mut Context<ShoalWindow>) -> Strea
                 let ShoalWindow { panes, client, .. } = view;
                 // Mirrors of tabs out of view keep up without drawing.
                 let redraw = panes.feed(pane, first, &mut receiver, client, cx);
-                if view.selection.as_ref().is_some_and(|s| s.pane == pane) {
-                    view.selection = None;
-                }
                 view.sync_terminal_focus();
                 if redraw && view.shows(pane) {
                     cx.notify();

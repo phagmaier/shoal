@@ -11,6 +11,7 @@ mod fonts;
 mod glyphs;
 mod input;
 mod keys;
+mod links;
 mod metrics;
 mod mirror;
 mod panes;

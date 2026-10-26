@@ -601,6 +601,28 @@ Sizes are logical pixels before scaling.
 - Selections are anchored to content. Selecting sets the Wayland primary selection; copy puts it on the clipboard (`selection.copy_on_select` does both).
 - Ctrl+Shift+Up and Down jump to the previous or next prompt, using shell-integration marks.
 
+**Selection and link details (T45, 2026-10-26).**
+
+- Settled with the user: selections survive reflow while their endpoints
+  remain. Evicting an endpoint, resetting the terminal or erasing history
+  clears the selection; ordinary output and scrolling preserve it. This
+  replaces T42's copied visible-grid selection. Word and physical-row gestures
+  keep §7.4's rules; copying joins soft wraps and trims trailing blank cells.
+  Typing (including composition and paste) returns to live output. Focus
+  leaving the pane clears its selection; the primary clipboard remains.
+- Wheel notches scroll three rows; pixel deltas retain a fractional row, drawn
+  with one row of overscan below the viewport. Paging moves a full viewport.
+  Top/bottom and prompt jumps discard the fractional offset. Prompt navigation
+  uses the core's retained OSC 133 marks: absent matches do nothing, and forward
+  navigation through the last continuation returns to live output.
+- Settled with the user: plain links require `http://` or `https://`, preserve
+  balanced brackets and trim surrounding punctuation. Detection follows soft
+  wraps even outside the viewport. OSC 8 targets take precedence over detected
+  URLs on their label cells. Holding Ctrl underlines links on the hovered row;
+  Ctrl+click opens the exact URI as an argument to `xdg-open`, including when
+  the application requests mouse reports. Targets must have a URI scheme and
+  contain no control characters. No shell interprets the URI.
+
 ### 7.6 Session switcher
 
 A popover under the session chip: each session with its tab count and an "on screen" marker for sessions shown in another window. Type to filter, Enter to switch, a "New session" row, F2 to rename, Ctrl+Backspace to close (with confirm), Esc to dismiss.

@@ -5,6 +5,7 @@
 mod input;
 mod layout;
 mod mouse;
+mod scroll;
 mod sessions;
 mod switcher;
 mod text;
@@ -67,6 +68,7 @@ pub struct ShoalWindow {
     switcher_scroll: gpui::ScrollHandle,
     session_busy: bool,
     held_modifiers: gpui::Modifiers,
+    hover_point: Option<gpui::Point<gpui::Pixels>>,
     caps_lock: bool,
     pressed: std::collections::BTreeMap<String, PaneId>,
     preedit: Option<String>,
@@ -124,6 +126,7 @@ impl ShoalWindow {
             switcher_scroll: gpui::ScrollHandle::new(),
             session_busy: false,
             held_modifiers: gpui::Modifiers::none(),
+            hover_point: None,
             caps_lock: false,
             pressed: Default::default(),
             preedit: None,
@@ -169,7 +172,7 @@ impl ShoalWindow {
                     .as_ref()
                     .is_some_and(|s| !self.shows(s.pane) || self.focused_pane() != Some(s.pane))
                 {
-                    self.selection = None;
+                    self.clear_selection();
                 }
                 self.wheel_pending
                     .retain(|pane, _| self.workspace.panes.contains_key(pane));
@@ -302,9 +305,27 @@ impl ShoalWindow {
         let focused = self.focused_pane().filter(|_| window.is_window_active());
         let opacity = self.config.window.opacity as f32;
         let cursor = self.palette.cursor;
+        let overlay_colors = [
+            hsla(Color {
+                rgb: self.palette.selection_background,
+                alpha: 0.65,
+            }),
+            hsla(Color {
+                rgb: self.palette.foreground,
+                alpha: 1.0,
+            }),
+        ];
         boxes
             .iter()
             .map(|pane_box| {
+                let hover = self
+                    .hover_point
+                    .filter(|at| {
+                        self.held_modifiers.control
+                            && chrome::pane_at(boxes, layout::pane_point(*at))
+                                == Some(pane_box.pane)
+                    })
+                    .and_then(|at| self.cell_at(pane_box.pane, at));
                 let attached = self.panes.get_mut(pane_box.pane)?;
                 let State::Live(mirror) = &mut attached.state else {
                     return None;
@@ -315,10 +336,18 @@ impl ShoalWindow {
                     cursor,
                     focused: focused == Some(pane_box.pane),
                 };
-                let list = mirror
+                let mut list = mirror
                     .draw(&settings)
                     .inspect_err(|error| tracing::warn!(%error, "can't draw a pane"))
                     .ok()?;
+                if let Some(at) = hover {
+                    list.links = mirror
+                        .links(at.row)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|link| (at.row, link.columns))
+                        .collect();
+                }
                 if focused == Some(pane_box.pane) {
                     self.input_cursor = list.cursor.as_ref().map(|c| (c.col, c.row));
                 }
@@ -328,6 +357,7 @@ impl ShoalWindow {
                     &mut self.glyphs,
                     window.text_system(),
                     started,
+                    overlay_colors,
                 ))
             })
             .collect()
@@ -415,6 +445,7 @@ impl Render for ShoalWindow {
             .iter()
             .filter_map(|pane| self.banner(pane, cx))
             .collect();
+        let output_pills = self.output_pills(&panes, cx);
         let handles = self.divider_handles(&dividers);
         let dragging = self.drag.as_ref().map(|drag| drag.axis);
         let drag_listeners = self.drag_listeners(dragging, cx);
@@ -425,18 +456,6 @@ impl Render for ShoalWindow {
         let input_view = cx.entity();
         let input_focus = (self.rename.is_none() && self.switcher.is_none() && !self.session_busy)
             .then(|| self.focus.clone());
-        let selection = self.selection.as_ref().map(|s| {
-            (
-                s.pane,
-                (0..1000)
-                    .filter_map(|row| s.span(row).map(|span| (row, span)))
-                    .collect::<Vec<_>>(),
-            )
-        });
-        let selection_color = rgba(Color {
-            rgb: self.palette.selection_background,
-            alpha: 0.65,
-        });
         let boxes = canvas(
             |_, _, _| (),
             move |bounds, (), window, cx| {
@@ -478,23 +497,6 @@ impl Render for ShoalWindow {
                     window.with_content_mask(Some(ContentMask { bounds: inner }), |window| {
                         window.paint_layer(inner, |window| {
                             terminal::paint(frame, grid, window);
-                            if let Some((selected_pane, spans)) = &selection
-                                && *selected_pane == pane.pane
-                            {
-                                for (row, span) in spans {
-                                    let bounds = Bounds::new(
-                                        grid + point(
-                                            px(f32::from(span.start) * cell.width),
-                                            px(f32::from(*row) * cell.height),
-                                        ),
-                                        size(
-                                            px(f32::from(span.end - span.start) * cell.width),
-                                            px(cell.height),
-                                        ),
-                                    );
-                                    window.paint_quad(gpui::fill(bounds, selection_color));
-                                }
-                            }
                         });
                     });
                 }
@@ -545,6 +547,7 @@ impl Render for ShoalWindow {
             .child(boxes)
             .children(preedit)
             .children(banners)
+            .children(output_pills)
             .children(handles);
         let popover = self.session_popover(window, cx);
         div()
@@ -555,12 +558,15 @@ impl Render for ShoalWindow {
             .track_focus(&self.focus)
             .on_key_down(cx.listener(Self::key_down))
             .on_key_up(cx.listener(Self::key_up))
-            .on_modifiers_changed(
-                cx.listener(|view, event: &gpui::ModifiersChangedEvent, _, _| {
+            .on_modifiers_changed(cx.listener(
+                |view, event: &gpui::ModifiersChangedEvent, _, cx| {
+                    if view.held_modifiers.control != event.modifiers.control {
+                        cx.notify();
+                    }
                     view.held_modifiers = event.modifiers;
                     view.caps_lock = event.capslock.on;
-                }),
-            )
+                },
+            ))
             .font_family(SharedString::from(self.config.font.family.clone()))
             .text_size(px(TEXT_SIZE))
             .child(top_bar)

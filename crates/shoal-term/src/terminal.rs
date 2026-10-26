@@ -55,6 +55,7 @@ pub struct Terminal {
 /// state and its input encoders.
 #[derive(Debug, Default)]
 pub(crate) struct View {
+    pub(crate) selection: Option<crate::interaction::Anchor>,
     pub(crate) render: Option<crate::render::Renderer>,
     pub(crate) keys: Option<crate::input::KeyEncoder>,
     pub(crate) mouse: Option<crate::mouse::MouseEncoder>,
@@ -96,6 +97,9 @@ impl Terminal {
 
     /// Change the history line limit; zero erases history and disables retention.
     pub fn set_scrollback(&mut self, lines: u32) -> Result<(), TermError> {
+        if lines == 0 {
+            self.clear_selection()?;
+        }
         let lines = usize::try_from(lines).expect("invariant: u32 fits in usize on Linux");
         self.inner
             .set_scrollback_max_lines(Some(lines))?
@@ -104,7 +108,12 @@ impl Terminal {
     }
 
     pub fn feed(&mut self, bytes: &[u8]) {
-        self.inner.vt_write(bytes);
+        let used = if self.view.selection.is_some() {
+            self.feed_selected(bytes)
+        } else {
+            0
+        };
+        self.inner.vt_write(&bytes[used..]);
     }
 
     /// Feed only up to the first point where the parser is at ground. Returns
