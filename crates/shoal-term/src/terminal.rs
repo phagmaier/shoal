@@ -94,11 +94,12 @@ impl Terminal {
         Ok(terminal)
     }
 
-    pub(crate) fn set_scrollback(&mut self, lines: u32) -> Result<(), TermError> {
+    /// Change the history line limit; zero erases history and disables retention.
+    pub fn set_scrollback(&mut self, lines: u32) -> Result<(), TermError> {
         let lines = usize::try_from(lines).expect("invariant: u32 fits in usize on Linux");
         self.inner
             .set_scrollback_max_lines(Some(lines))?
-            .set_scrollback_max_bytes(None)?;
+            .set_scrollback_max_bytes((lines == 0).then_some(0))?;
         Ok(())
     }
 

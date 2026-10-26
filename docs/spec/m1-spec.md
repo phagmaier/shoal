@@ -233,9 +233,17 @@ Event-driven, never polled on a timer. Triggers: output followed by 300 ms of qu
 - **Focus is shared.** Active tab and focused pane belong to the session, so two windows on it stay in sync.
 - **Closing:** last pane closes its tab; last tab closes its session. Closing a window closes nothing.
 
+**Actor details (T12, 2026-10-25).** A smart-open result reserves that session for its connection until `window.show_session`, another smart-open selection, or disconnect; reservations exclude a session from another connection's smart-open choices but are not counted as visible windows. Showing the same session twice does not increase its window count. Closing a session clears every connection's reference to it. New panes start at 80 × 24 until T13 size arbitration; new tabs inherit the active tab's focused pane size and directory, and splits inherit their source pane's. Explicit directories override inheritance. Spawns run on blocking workers, with reserved ids and names, and commit only if their target still exists.
+
+**Focus while zoomed (settled with the user, T12, 2026-10-25).** `pane.focus` targeting another pane in a zoomed tab moves zoom to the newly focused pane; zoom remains enabled. Input must not target a pane hidden behind another pane's zoom. `pane.zoom` with `zoomed: false` clears the tab's zoom and focuses its target. Closing the active tab activates the next tab at its former index, or the previous tab if there is no next tab.
+
 ### 4.5 Shutdown
 
 On `SIGTERM`, `SIGINT` or `daemon.shutdown`: persist everything (section 6), `SIGHUP` every pane, wait up to 2 s, `SIGKILL` stragglers, remove the socket, exit 0. Must finish within 3 s with 50 panes.
+
+**Implementation boundary (T12/T15, settled 2026-10-25).** Persistence is implemented in T15, not T12. Until T15, `daemon.persist` returns -32601 and `daemon.status.last_persist_at` stays null. T12 implements pane termination and socket cleanup for all three shutdown paths, but does not save. T15 adds the save before termination; a successful no-op persistence response is never allowed. This staging does not change the final protocol or format.
+
+**Bounded actor shutdown (T12).** All existing, retiring and late-arriving panes share the shutdown's absolute two-second escalation cutoff; a late spawn never receives a fresh two-second grace. Queued spawn work stops before forking, and an in-flight worker applies and acknowledges that same cutoff before returning a pane. The actor waits up to 2.5 s for exits, then connections get one overall 250 ms drain window so the shutdown response can reach the caller, including when the workspace is empty. A control connection whose outgoing queue overflows is explicitly canceled even if its socket writer is blocked.
 
 ### 4.6 Logging
 
@@ -331,6 +339,8 @@ In both cases the window shows a banner: "shoald is from a different build. Rest
 | `daemon.shutdown` | none | `{}`, then the daemon exits (4.5) |
 
 `index`, `cells`, counts (`sessions`, `panes`) and `uptime_s` are nonnegative integers; uptime is in whole seconds. `last_persist_at` is an RFC 3339 UTC timestamp, or null before any save. `session`, `tab` and `pane` results above are prefixed ids, as in 5.7.
+
+**Method details (T12, 2026-10-25).** Tab insertion indices are in `0..=tabs.len()` (omitted means append); move indices are in `0..tabs.len()` in the final order. An out-of-range index is invalid state (1002). `pane.resize` converts cells to the selected ancestor split's fraction using current pane grid sizes: sum children along a split's axis and take their maximum on the perpendicular axis. Zero cells or no eligible divider is a successful no-op, as in §3. VT captures are standard padded base64. `workspace.subscribe` acknowledges before its initial full-state notification. Outstanding startup config/theme notices are replayed to GUI clients; live notices go to connected clients.
 
 **Notifications from the daemon**
 
@@ -635,6 +645,10 @@ confirm_close_running = true
 Keybinding overrides apply per chord: adding a shortcut preserves an action's default shortcuts until those chords are explicitly assigned `"none"` or another action. Chords are case-insensitive; repeated modifiers and multiple entries that normalize to the same chord are errors. `+` as the key is written `+` alone or after the modifier separator (for example `ctrl++`). Super has no default binding but is available in user chords.
 
 **Config watching.** Use native filesystem notifications, debounce 100 ms after the last relevant event, and reload at least once per 750 ms during continuous edits. Block while idle; no polling timer. Watch parent directories so atomic saves, directory replacement and initially absent config directories work. A symlink config also follows changes to its target. Reload callbacks carry the last good config alongside any error; the initial read follows watch installation so startup saves are not missed.
+
+**Live daemon settings (T12).** A valid reload applies palette and history limits to existing pane terminals and uses the new shell/program/prompt settings for future panes; it does not restart or alter the environment of a running shell. A zero history limit erases retained history and disables retention (the pinned core requires its zero byte limit as well as its zero line limit). Changing `theme.source` replaces the native theme watch; updates queued by the old source cannot overwrite the new palette.
+
+If a native config/theme watch cannot be installed, startup still loads usable config and theme layers and reports which source is unwatched; it does not claim that watch is healthy. Successfully installed watches remain active. A later valid config selecting another theme source attempts a new theme watch. Worker-thread creation failure remains a startup error rather than pretending a coordinator is running.
 
 ### 9.2 Theme mapping
 

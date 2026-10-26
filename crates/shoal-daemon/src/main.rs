@@ -1,5 +1,6 @@
 //! `shoald`, the per-user daemon that owns every shell, pane and layout.
 
+mod actor;
 mod connection;
 mod log;
 mod server;
@@ -8,7 +9,6 @@ mod startup;
 use std::process::ExitCode;
 
 use shoal_config::XdgPaths;
-use shoal_daemon::settings::Settings;
 use startup::Start;
 
 fn main() -> ExitCode {
@@ -37,8 +37,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     };
-    // The workspace actor (T12) starts panes with these and watches for changes.
-    let _settings = Settings::load(&paths);
+    let (settings, updates, _watchers) = shoal_daemon::settings::watch(&paths)?;
     let daemon = connection::Daemon {
         version: env!("CARGO_PKG_VERSION"),
         core: shoal_term::core_id(),
@@ -48,6 +47,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .enable_io()
         .enable_time()
         .build()?
-        .block_on(server::serve(bound, daemon))?;
+        .block_on(server::serve(bound, daemon, paths, settings, updates))?;
     Ok(())
 }

@@ -3,6 +3,7 @@
 
 use std::{
     collections::BTreeMap,
+    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
 
@@ -17,12 +18,12 @@ use shoal_testkit::{TempEnv, eventually};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 const SIZE: GridSize = GridSize { cols: 80, rows: 24 };
+static NEXT_PANE: AtomicU64 = AtomicU64::new(1);
 
 struct Harness {
     env: TempEnv,
     sender: UnboundedSender<(PaneId, Event)>,
     events: UnboundedReceiver<(PaneId, Event)>,
-    next_id: u64,
 }
 
 impl Harness {
@@ -43,7 +44,6 @@ impl Harness {
             env,
             sender,
             events,
-            next_id: 1,
         }
     }
 
@@ -60,9 +60,8 @@ impl Harness {
     }
 
     fn spec(&mut self, argv: &[&str]) -> PaneSpec {
-        self.next_id += 1;
         PaneSpec {
-            id: PaneId::new(self.next_id),
+            id: PaneId::new(NEXT_PANE.fetch_add(1, Ordering::Relaxed)),
             size: SIZE,
             argv: argv.iter().map(|arg| (*arg).to_owned()).collect(),
             cwd: None,
@@ -245,6 +244,28 @@ fn kill_escalates_when_the_hangup_is_ignored() {
 }
 
 #[test]
+fn a_shared_shutdown_deadline_shortens_existing_grace_and_handles_expiry() {
+    let mut harness = Harness::new();
+    let pane = harness.spawn(&["bash", "-c", "trap '' HUP; echo ready; sleep 100; true"]);
+    wait_for(&pane, "ready");
+    let started = Instant::now();
+    pane.kill();
+    pane.kill_by(started + Duration::from_millis(200))
+        .blocking_recv()
+        .unwrap();
+    assert_eq!(harness.exited(&pane), (None, Some(9), false));
+    assert!(started.elapsed() >= Duration::from_millis(200));
+    assert!(started.elapsed() < Duration::from_secs(1));
+
+    let pane = harness.spawn(&["bash", "-c", "trap '' HUP; echo ready; sleep 100; true"]);
+    wait_for(&pane, "ready");
+    let started = Instant::now();
+    pane.kill_by(started).blocking_recv().unwrap();
+    assert_eq!(harness.exited(&pane), (None, Some(9), false));
+    assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[test]
 fn dropping_the_handle_ends_the_shell() {
     let mut harness = Harness::new();
     let pane = harness.spawn(&["sleep", "100"]);
@@ -300,6 +321,78 @@ fn a_color_query_gets_the_configured_theme() {
     .unwrap();
     let script = r"printf '\033]11;?\033\\'; IFS= read -rs -d '\' -t 4 r; r=${r%?}; printf 'got %s|' ${r#*;}";
     assert_eq!(ask(&mut harness, script), "rgb:1212/3434/5656");
+}
+
+#[test]
+fn live_settings_change_color_answers_without_replacing_program_colors() {
+    let mut harness = Harness::new();
+    let script = r"
+        stty -echo
+        printf 'ready-first'
+        IFS= read -r -t 4 step || exit 1
+        printf '\033]11;?\033\\'
+        IFS= read -rs -d '\' -t 4 r || exit 2
+        r=${r%?}; printf '\r\nfirst %s|' ${r#*;}
+        printf '\033]11;#445566\033\\ready-second'
+        IFS= read -r -t 4 step || exit 3
+        printf '\033]11;?\033\\'
+        IFS= read -rs -d '\' -t 4 r || exit 4
+        r=${r%?}; printf '\r\nkept %s|' ${r#*;}
+        printf '\033]111\033\\\033]11;?\033\\'
+        IFS= read -rs -d '\' -t 4 r || exit 5
+        r=${r%?}; printf '\r\nreset %s|' ${r#*;}
+    ";
+    let pane = harness.spawn(&["bash", "--norc", "--noprofile", "-c", script]);
+    wait_for(&pane, "ready-first");
+    let settings = harness.settings();
+    let mut theme = settings.theme;
+    theme.background = shoal_term::Rgb {
+        r: 0x12,
+        g: 0x34,
+        b: 0x56,
+    };
+    pane.apply_settings(theme, settings.scrollback);
+    pane.write(b"\n".to_vec());
+    let text = wait_for(&pane, "ready-second");
+    assert!(text.contains("first rgb:1212/3434/5656|"), "{text}");
+    theme.background = shoal_term::Rgb {
+        r: 0xab,
+        g: 0xcd,
+        b: 0xef,
+    };
+    pane.apply_settings(theme, settings.scrollback);
+    pane.write(b"\n".to_vec());
+    assert_eq!(harness.exited(&pane).0, Some(0));
+    let text = screen(&pane);
+    assert!(text.contains("kept rgb:4444/5555/6666|"), "{text}");
+    assert!(text.contains("reset rgb:abab/cdcd/efef|"), "{text}");
+}
+
+#[test]
+fn live_settings_limit_future_scrollback() {
+    let mut harness = Harness::new();
+    let script = r"
+        stty -echo
+        printf 'ready'
+        IFS= read -r -t 4 step || exit 1
+        for ((i = 0; i < 100; i++)); do printf '\r\nline-%03d' $i; done
+    ";
+    let mut spec = harness.spec(&["bash", "--norc", "--noprofile", "-c", script]);
+    spec.size = GridSize { cols: 40, rows: 3 };
+    let pane = harness.start(spec);
+    wait_for(&pane, "ready");
+    pane.apply_settings(harness.settings().theme, 0);
+    pane.write(b"\n".to_vec());
+    assert_eq!(harness.exited(&pane).0, Some(0));
+    let capture = pane
+        .capture(CaptureFormat::Text, true)
+        .blocking_recv()
+        .unwrap()
+        .unwrap();
+    let text = String::from_utf8(capture).unwrap();
+    assert!(text.contains("line-099"), "{text}");
+    assert!(!text.contains("line-000"), "{text}");
+    assert!(text.lines().count() <= 3, "{text}");
 }
 
 #[test]
@@ -432,8 +525,12 @@ fn the_pane_thread_sleeps_while_the_shell_is_idle() {
     let name = format!("pane-{}", pane.id().get());
     let task = std::fs::read_dir("/proc/self/task")
         .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .find(|task| std::fs::read_to_string(task.join("comm")).unwrap().trim() == name)
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .find(|task| {
+            std::fs::read_to_string(task.join("comm"))
+                .ok()
+                .is_some_and(|comm| comm.trim() == name)
+        })
         .expect("a thread named after the pane");
     let sample = || {
         let stat = std::fs::read_to_string(task.join("stat")).unwrap();

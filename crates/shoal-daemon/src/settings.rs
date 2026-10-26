@@ -1,6 +1,9 @@
-//! Config and theme as the daemon loads them at startup (M1 spec §4.1 step 4,
-//! §9). Watching for changes and `daemon.notice` arrive with the workspace
-//! actor (T12).
+//! The daemon's current config and palette, including native watching and
+//! banner-worthy diagnostics for the workspace actor (M1 spec §9).
+
+mod watch;
+
+pub use watch::{Update, Watchers, watch};
 
 use std::{ffi::OsString, path::PathBuf};
 

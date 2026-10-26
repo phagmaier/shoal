@@ -287,6 +287,14 @@ impl Runtime {
                 }
             }
             Command::Resize(size) => self.resize(size, now),
+            Command::ApplySettings { theme, scrollback } => {
+                if let Err(error) = self.terminal.set_theme(&theme) {
+                    tracing::error!(pane = %self.id, %error, "could not update pane colors");
+                }
+                if let Err(error) = self.terminal.set_scrollback(scrollback) {
+                    tracing::error!(pane = %self.id, %error, "could not update pane history limit");
+                }
+            }
             Command::Snapshot(reply) => {
                 // Everything fed so far gets numbered, so the snapshot holds
                 // exactly the items up to `seq`.
@@ -310,6 +318,10 @@ impl Runtime {
                 let _ = reply.send(self.terminal.capture(format, scrollback));
             }
             Command::Kill => self.kill(),
+            Command::KillBy(deadline, reply) => {
+                self.kill_by(deadline);
+                let _ = reply.send(());
+            }
         }
     }
 
@@ -420,10 +432,19 @@ impl Runtime {
     }
 
     fn kill(&mut self) {
+        self.kill_by(Instant::now() + KILL_GRACE);
+    }
+
+    fn kill_by(&mut self, deadline: Instant) {
         let Some(pty) = &self.pty else { return };
         if self.kill_deadline.is_none() {
             pty.signal(Signal::HUP);
-            self.kill_deadline = Some(Instant::now() + KILL_GRACE);
+        }
+        if deadline <= Instant::now() {
+            pty.signal(Signal::KILL);
+            self.kill_deadline = None;
+        } else {
+            self.kill_deadline = Some(self.kill_deadline.map_or(deadline, |old| old.min(deadline)));
         }
     }
 }

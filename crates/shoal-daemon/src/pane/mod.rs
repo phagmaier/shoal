@@ -96,6 +96,10 @@ pub enum SpawnError {
 enum Command {
     Write(Vec<u8>),
     Resize(GridSize),
+    ApplySettings {
+        theme: Theme,
+        scrollback: u32,
+    },
     Snapshot(oneshot::Sender<Result<Snapshot, SnapshotError>>),
     Subscribe(UnboundedSender<Item>, oneshot::Sender<Subscribed>),
     Unsubscribe(SubscriberId),
@@ -105,6 +109,7 @@ enum Command {
         reply: oneshot::Sender<Result<Vec<u8>, TermError>>,
     },
     Kill,
+    KillBy(std::time::Instant, oneshot::Sender<()>),
 }
 
 /// The handle to a running pane thread. Dropping it ends the thread, killing
@@ -173,6 +178,13 @@ impl Pane {
         self.send(Command::Resize(size));
     }
 
+    /// Change terminal defaults and the history limit on the pane's thread.
+    /// Application-set colors stay in force until the application resets them.
+    /// Shell and prompt settings only affect subsequently spawned panes.
+    pub fn apply_settings(&self, theme: Theme, scrollback: u32) {
+        self.send(Command::ApplySettings { theme, scrollback });
+    }
+
     pub fn snapshot(&self) -> oneshot::Receiver<Result<Snapshot, SnapshotError>> {
         let (reply, receiver) = oneshot::channel();
         self.send(Command::Snapshot(reply));
@@ -210,6 +222,14 @@ impl Pane {
     /// end arrives as [`Event::Exited`].
     pub fn kill(&self) {
         self.send(Command::Kill);
+    }
+
+    /// Hang up now and escalate no later than this shared shutdown deadline.
+    /// The acknowledgement confirms the signal/deadline was applied on-thread.
+    pub fn kill_by(&self, deadline: std::time::Instant) -> oneshot::Receiver<()> {
+        let (reply, receiver) = oneshot::channel();
+        self.send(Command::KillBy(deadline, reply));
+        receiver
     }
 
     fn send(&self, command: Command) {

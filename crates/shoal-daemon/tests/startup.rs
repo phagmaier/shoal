@@ -76,11 +76,14 @@ fn requests_after_hello_are_answered_in_order() {
     assert_eq!(bad.code, 1004, "{bad:?}");
     assert_eq!(error(connection.response(), Some(3)).code, 1002);
     assert_eq!(error(connection.response(), None).code, -32600);
-    let later = error(connection.response(), Some(5));
-    assert_eq!(
-        (later.code, later.message.as_str()),
-        (-32601, "workspace.get is not implemented yet")
-    );
+    match connection.response() {
+        Response::Success { id, result } => {
+            assert_eq!(id, 5_u64.into());
+            assert_eq!(result["rev"], 0);
+            assert_eq!(result["workspace"]["sessions"], json!([]));
+        }
+        other => panic!("workspace.get failed: {other:?}"),
+    }
 }
 
 #[test]
