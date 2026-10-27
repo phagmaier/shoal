@@ -23,8 +23,6 @@ const DIM_ALPHA: f32 = 0.6;
 /// What the draw list takes from the window rather than the terminal.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Settings {
-    /// `window.opacity`: explicit backgrounds are painted at it.
-    pub opacity: f32,
     /// `cursor.color`, resolved through the palette.
     pub cursor: Rgb,
     /// Whether the pane has keyboard focus; an unfocused pane shows a
@@ -133,6 +131,9 @@ pub struct CursorDraw {
 #[derive(Debug, Clone)]
 pub struct DrawList {
     pub cols: u16,
+    /// The viewport's rows; `rows` may hold one more below it, which a
+    /// fractional scroll shows.
+    pub visible_rows: u16,
     pub rows: Vec<Rc<RowDraw>>,
     pub cursor: Option<CursorDraw>,
     /// Rows rebuilt for this frame; equal to the row count on a full redraw.
@@ -147,8 +148,6 @@ pub struct DrawList {
 pub struct Builder {
     rows: Vec<Rc<RowDraw>>,
     cols: u16,
-    /// The opacity the cached rows were built with.
-    opacity: Option<f32>,
     version: u64,
 }
 
@@ -164,15 +163,12 @@ impl Builder {
         settings: &Settings,
     ) -> Result<DrawList, TermError> {
         let mut frame = terminal.frame()?;
-        let (cols, _) = frame.size()?;
+        let (cols, visible_rows) = frame.size()?;
         let rows = frame.captured_rows()?;
         let colors = frame.colors()?;
-        let stale = self.cols != cols
-            || self.rows.len() != usize::from(rows)
-            || self.opacity != Some(settings.opacity);
+        let stale = self.cols != cols || self.rows.len() != usize::from(rows);
         if stale {
             self.cols = cols;
-            self.opacity = Some(settings.opacity);
             self.rows = (0..rows).map(|y| Rc::new(RowDraw::empty(y))).collect();
         }
         let which = if stale { Rows::All } else { Rows::Dirty };
@@ -184,7 +180,7 @@ impl Builder {
                     return;
                 };
                 *version += 1;
-                let mut draw = build_row(row, &colors, settings.opacity);
+                let mut draw = build_row(row, &colors);
                 draw.version = *version;
                 *slot = Rc::new(draw);
                 rebuilt += 1;
@@ -224,6 +220,7 @@ impl Builder {
         });
         Ok(DrawList {
             cols,
+            visible_rows,
             rows: self.rows.clone(),
             cursor,
             rebuilt,
@@ -273,7 +270,7 @@ fn push_line(lines: &mut Vec<Line>, line: Line) {
     }
 }
 
-fn build_row(row: &RowCells, colors: &Colors, opacity: f32) -> RowDraw {
+fn build_row(row: &RowCells, colors: &Colors) -> RowDraw {
     let mut out = RowDraw::empty(row.y());
     // Where the last run ends, while it is a narrow run that can grow.
     let mut narrow_end = None;
@@ -295,10 +292,7 @@ fn build_row(row: &RowCells, colors: &Colors, opacity: f32) -> RowDraw {
                 Span {
                     col,
                     cells,
-                    color: Color {
-                        rgb: bg,
-                        alpha: opacity,
-                    },
+                    color: Color::opaque(bg),
                 },
             );
         }

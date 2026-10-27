@@ -149,7 +149,6 @@ mod tests {
             &setup,
         );
         let settings = draw::Settings {
-            opacity: 1.0,
             cursor: shoal_config::schema::Rgb([0, 0, 0]),
             focused: true,
         };
@@ -172,6 +171,9 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["two", "three", "four", "five"]
         );
+        // "five" is the row below the three-row viewport that the fraction
+        // scrolls in; painting clips to the viewport's rows.
+        assert_eq!(before.visible_rows, 3);
         assert_eq!(before.selection, [(0, 0..12)]);
         assert_eq!(
             state.apply(
@@ -209,7 +211,8 @@ mod tests {
         mirror.scroll_rows(1000.0).unwrap();
         assert!(!mirror.has_new_output());
         assert_eq!(mirror.fraction(), 0.0);
-        assert_eq!(mirror.draw(&settings).unwrap().rows.len(), 3);
+        let bottom = mirror.draw(&settings).unwrap();
+        assert_eq!((bottom.rows.len(), bottom.visible_rows), (3, 3));
     }
 
     #[test]

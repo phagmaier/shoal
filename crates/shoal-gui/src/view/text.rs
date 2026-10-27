@@ -104,7 +104,10 @@ impl ShoalWindow {
             .when(field.text().is_empty(), |element| {
                 element.child(
                     div()
-                        .text_color(color(self.palette.inactive_text))
+                        .text_color(rgba(Color {
+                            rgb: self.palette.foreground,
+                            alpha: 0.9,
+                        }))
                         .child(placeholder),
                 )
             })
@@ -245,8 +248,8 @@ impl EntityInputHandler for ShoalWindow {
         }
         let cell = self.metrics.as_ref()?.0;
         let pane = self.focused_pane()?;
-        let rect = self.shown.panes.iter().find(|p| p.pane == pane)?.rect;
-        let (x, y) = metrics::grid_origin(rect, &cell);
+        let content = self.shown.panes.iter().find(|p| p.pane == pane)?.content();
+        let (x, y) = metrics::grid_origin(content, &cell);
         let cursor = self.input_cursor.unwrap_or((0, 0));
         Some(Bounds::new(
             point(

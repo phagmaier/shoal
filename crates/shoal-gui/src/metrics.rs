@@ -104,6 +104,22 @@ pub fn grid_origin(pane: Rect, cell: &CellMetrics) -> (f32, f32) {
     )
 }
 
+/// Where a grid of `rows` paints, relative to the pane area, as `(x, y,
+/// width, height)`: inside the inset, and only over its rows, so the row
+/// below a scrolled view shows only as it scrolls in, and a mirror larger
+/// than its box is cut at the inset.
+pub fn grid_clip(content: Rect, cell: &CellMetrics, rows: u16) -> (f32, f32, f32, f32) {
+    let (_, top) = grid_origin(content, cell);
+    let inner_bottom = content.y as f32 + GRID_INSET + room(content.height);
+    let bottom = (top + f32::from(rows) * cell.height).min(inner_bottom);
+    (
+        content.x as f32 + GRID_INSET,
+        top,
+        room(content.width),
+        (bottom - top).max(0.0),
+    )
+}
+
 /// A box's extent less the inset on both sides.
 fn room(extent: u32) -> f32 {
     (extent as f32 - 2.0 * GRID_INSET).max(0.0)
@@ -155,6 +171,10 @@ mod tests {
         // At scale 2: 17.6 × 38.72 device pixels round to 18 × 39.
         let two = cell_metrics(size, measure, 1.0, 2.0);
         assert_eq!((two.width, two.height), (9.0, 19.5));
+        // The airy default keeps the same advance, with text centred in
+        // the 27 px row: (27 - 19.36) / 2 + 14.96 = 18.78.
+        let airy = cell_metrics(size, measure, 1.4, 1.0);
+        assert_eq!((airy.width, airy.height, airy.baseline), (9.0, 27.0, 19.0));
         // Line height scales the row, with the text centred in it.
         let tall = cell_metrics(size, measure, 1.5, 1.0);
         assert_eq!(tall.height, 29.0);
@@ -260,5 +280,26 @@ mod tests {
             height: 4,
         };
         assert_eq!(grid_origin(tiny, &cell), (6.0, 6.0));
+    }
+
+    #[test]
+    fn the_grid_clips_to_its_rows() {
+        let (size, measure) = jetbrains();
+        let cell = cell_metrics(size, measure, 1.0, 1.0);
+        let pane = Rect {
+            x: 8,
+            y: 8,
+            width: 412,
+            height: 212,
+        };
+        // Ten rows of 19 start at 19 (5 left over above): the clip ends at
+        // 209, hiding the scrolled view's extra row in the 5 px below.
+        assert_eq!(grid_clip(pane, &cell, 10), (14.0, 19.0, 400.0, 190.0));
+        // A smaller mirror is clipped to its own rows.
+        assert_eq!(grid_clip(pane, &cell, 4), (14.0, 19.0, 400.0, 76.0));
+        // A larger one is cut where the inset starts, at 8 + 212 - 6.
+        assert_eq!(grid_clip(pane, &cell, 30), (14.0, 19.0, 400.0, 195.0));
+        let empty = Rect { height: 0, ..pane };
+        assert_eq!(grid_clip(empty, &cell, 10).3, 0.0);
     }
 }

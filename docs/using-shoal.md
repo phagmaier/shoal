@@ -23,7 +23,13 @@ daemon, which saves the workspace first; the next start restores it.
 Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
 
 - The window shows the session's tabs in the top bar and its panes in their
-  boxes, with the terminal content drawn live (T40, T41).
+  boxes, with the terminal content drawn live (T40, T41). The active tab is a
+  highlighted pill. Panes have clean tops with no grips or reserved header
+  space. A faint edge and soft top line mark the focused pane of a split. The window has one tinted glass surface, including its gaps
+  and padding. Tabs, cards, banners and tooltips use proportional UI text (T49).
+- Terminal rows use an airy `font.line_height = 1.4` by default. Explicit cell
+  backgrounds are solid and meet across rows for TUIs. `window.opacity` controls
+  the combined pane opacity; 1.0 makes the entire window opaque.
 - Panes follow the window's size, including fullscreen (T43).
 - With the mouse (T43): click a tab to switch to it, middle-click to close it,
   double-click to rename it (Enter keeps the name, Escape cancels, an empty name
@@ -45,6 +51,9 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   `behavior.confirm_close_running = false` to disable those prompts; it reloads
   live. The switcher always confirms a session close and adds running-program
   details when that setting is enabled. Closing a window still only detaches it.
+- Ctrl+Shift+S or the session chip opens the centered session switcher. Type to
+  filter, use arrows and Enter to choose, F2 to rename, Ctrl+Backspace to close,
+  and Escape to dismiss. The list scrolls in short windows; hints wrap in narrow ones.
 - A shell that starts then fails with a nonzero exit code within one second
   stays visible with its error output, exit status and a **Close pane** button.
   This also labels panes retained by `behavior.close_pane_on_exit = false`.
@@ -60,7 +69,7 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
 - Scroll locally with the wheel (three rows per notch) or touchpad (by pixel).
   Hold Shift to scroll locally when a program captures the mouse. Shift+PageUp /
   PageDown pages; Shift+Home / End goes to the oldest output / live bottom.
-  New output preserves a scrolled-up view and shows a **new output** pill.
+  New output preserves a scrolled-up view and shows a **New output** pill.
   Click it, type or paste to return to the bottom. Ctrl+Shift+Up / Down jumps
   between shell prompts. Recently viewed tabs retain their scroll position.
 - Hold Ctrl over a row to underline its links; Ctrl+click opens one with
@@ -175,6 +184,14 @@ It uses disposable HOME/XDG folders and a fake systemctl. Results go to
 font shortcuts against `stty size`, retained tabs, per-window zoom and invalid
 config retention. It runs the installed Omarchy theme switcher in headless mode
 with a disposable HOME/XDG environment. Results go to `target/manual/t48.txt`.
+
+`just manual t49` opens a disposable playground with split panes, two tabs and
+two sessions. A short key reference appears in the launching terminal. Close
+the window or press Ctrl+C there to stop its daemon. Build and runtime logs and
+the disposable files stay under `target/manual/t49-play.*`. Tell the agent what
+you noticed in your own words; mixed or partial feedback is useful. Previous
+guided results in `target/manual/t49.txt` are preserved. Opening or closing
+the playground does not itself record visual acceptance.
 
 ## A sandbox for experiments
 

@@ -1,42 +1,60 @@
-//! The session-chip popover, text input and keyboard controls (§7.6).
+//! The centered session switcher, text input and keyboard controls (§7.6).
 use super::{ShoalWindow, rgba};
-use crate::chrome::{Color, TOP_BAR_HEIGHT};
+use crate::chrome::{Color, Glyph};
 use crate::{
+    controls::{self, Looks},
     field::{Outcome, TextField},
     keys,
-    switcher::{Mode, Target},
+    switcher::{Mode, Row, Target},
 };
 use gpui::{AnyElement, Context, KeyDownEvent, SharedString, Window, div, prelude::*, px};
 use shoal_config::Action;
 
 impl ShoalWindow {
+    /// The centered switcher card: a filter, the sessions,
+    /// and the keys that work here.
     pub(super) fn session_popover(
         &self,
         window: &Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let picker = self.switcher.as_ref()?;
-        let top = TOP_BAR_HEIGHT as f32 + self.banner_height as f32;
-        let color = |rgb| rgba(Color { rgb, alpha: 1.0 });
-        let rows = picker.rows(&self.workspace.sessions, self.session);
-        let mut popover = div()
+        let dim = Color {
+            rgb: self.palette.foreground,
+            alpha: 0.9,
+        };
+        let looks = Looks {
+            cap_fill: Color {
+                rgb: self.palette.foreground,
+                alpha: 0.05,
+            },
+            outline: Color {
+                rgb: self.palette.foreground,
+                alpha: 0.10,
+            },
+            cap_text: dim,
+            hint: dim,
+            ..Looks::new(&self.palette)
+        };
+        let rule = rgba(Color {
+            rgb: self.palette.foreground,
+            alpha: 0.08,
+        });
+        let section = |child: gpui::Div| child.px(px(16.0)).py(px(10.0));
+        let mut card = div()
             .id("session-switcher")
-            .absolute()
-            .left(px(8.0))
-            .top(px(top))
-            .w(px(360.0))
-            .max_w((window.viewport_size().width - px(16.0)).max(px(0.0)))
-            .max_h((window.viewport_size().height - px(top + 8.0)).max(px(0.0)))
+            .w(px(640.0))
+            .max_w((window.viewport_size().width - px(32.0)).max(px(0.0)))
+            .max_h((window.viewport_size().height - px(32.0)).max(px(0.0)))
             .flex()
             .flex_col()
-            .gap(px(6.0))
-            .p(px(8.0))
-            .rounded(px(8.0))
+            .overflow_hidden()
+            .rounded(px(16.0))
             .border_1()
-            .border_color(color(self.palette.unfocused_border))
+            .border_color(rule)
             .shadow_lg()
-            .bg(color(self.palette.top_bar))
-            .text_color(color(self.palette.foreground))
+            .bg(rgba(Color::opaque(self.palette.top_bar)))
+            .text_color(rgba(looks.text))
             .track_focus(&self.switcher_focus)
             .occlude()
             .on_key_down(cx.listener(Self::switcher_key))
@@ -44,95 +62,67 @@ impl ShoalWindow {
                 view.dismiss_switcher(window, cx);
                 cx.stop_propagation();
             }));
-        match &picker.mode {
+        let footer = match &picker.mode {
             Mode::Browse => {
                 if !picker.busy {
-                    popover = popover.child(self.text_field(
-                        &picker.query,
-                        &self.switcher_focus,
-                        "session-filter",
-                        "Filter sessions",
-                        cx,
-                    ));
+                    card = card.child(
+                        section(div())
+                            .flex()
+                            .items_center()
+                            .gap(px(12.0))
+                            .min_h(px(54.0))
+                            .flex_none()
+                            .border_b_1()
+                            .border_color(rule)
+                            .child(controls::glyph(controls::SEARCH_GLYPH, dim))
+                            .child(
+                                self.text_field(
+                                    &picker.query,
+                                    &self.switcher_focus,
+                                    "session-filter",
+                                    "Find a session…",
+                                    cx,
+                                )
+                                .flex_1()
+                                .min_w_0()
+                                .bg(gpui::transparent_black()),
+                            )
+                            .child(controls::cap("Esc", &looks).text_size(px(11.0))),
+                    );
                 }
-                popover = popover.child(
+                let rows = picker.rows(&self.workspace.sessions, self.session);
+                card = card.child(
                     div()
                         .id("session-rows")
                         .min_h_0()
                         .flex_shrink(1.0)
                         .overflow_y_scroll()
                         .track_scroll(&self.switcher_scroll)
+                        .p(px(8.0))
                         .children(rows.into_iter().map(|row| {
                             let target = row.target;
-                            let selected = picker.selected == target;
-                            let mut label = div()
-                                .id(SharedString::from(format!("session-{:?}", target)))
-                                .flex_none()
-                                .flex()
-                                .items_center()
-                                .gap(px(8.0))
-                                .px(px(8.0))
-                                .py(px(5.0))
-                                .rounded(px(4.0))
-                                .cursor_pointer()
-                                .when(selected, |div| {
-                                    div.bg(rgba(Color {
-                                        rgb: self.palette.accent,
-                                        alpha: 0.22,
-                                    }))
-                                })
-                                .hover(|style| style.bg(color(self.palette.unfocused_border)))
-                                .child(
-                                    div()
-                                        .min_w_0()
-                                        .flex_1()
-                                        .overflow_hidden()
-                                        .whitespace_nowrap()
-                                        .text_ellipsis()
-                                        .child(SharedString::from(row.name)),
-                                );
-                            if let Target::Session(session) = target {
-                                if session == self.session {
-                                    label = label.child(
-                                        div()
-                                            .text_color(color(self.palette.accent))
-                                            .child("Current"),
-                                    );
-                                }
-                                label = label.child(
-                                    div().text_color(color(self.palette.inactive_text)).child(
-                                        SharedString::from(format!(
-                                            "{} {}",
-                                            row.tabs,
-                                            if row.tabs == 1 { "tab" } else { "tabs" }
-                                        )),
-                                    ),
-                                );
-                                if row.on_screen {
-                                    label = label.child(
-                                        div()
-                                            .text_color(color(self.palette.inactive_text))
-                                            .child("On screen"),
-                                    );
-                                }
-                            }
-                            label.on_click(cx.listener(move |view, _, window, cx| {
-                                view.choose_session(target, window, cx)
-                            }))
+                            self.session_row(row, picker.selected == target, &looks)
+                                .on_click(cx.listener(move |view, _, window, cx| {
+                                    view.choose_session(target, window, cx)
+                                }))
                         })),
                 );
-                popover = popover.child(
-                    div()
-                        .text_size(px(11.0))
-                        .text_color(color(self.palette.inactive_text))
-                        .child("↑ ↓ Select · Enter Switch · F2 Rename")
-                        .child(div().child("Ctrl+Backspace Close · Esc Dismiss")),
-                );
+                controls::hints([
+                    controls::hint(&["↑", "↓"], "Select", &looks),
+                    controls::hint(&["Enter"], "Switch", &looks),
+                    controls::hint(&["F2"], "Rename", &looks),
+                    controls::hint(&["Ctrl", "Backspace"], "Close", &looks),
+                    controls::hint(&["Esc"], "Dismiss", &looks),
+                ])
             }
             Mode::Rename { field, .. } => {
-                popover = popover.child("Rename session");
+                let mut body = section(div())
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.0))
+                    .child(div().text_color(rgba(dim)).child("Rename session"));
                 if !picker.busy {
-                    popover = popover.child(self.text_field(
+                    body = body.child(self.text_field(
                         field,
                         &self.switcher_focus,
                         "session-name",
@@ -140,35 +130,161 @@ impl ShoalWindow {
                         cx,
                     ));
                 }
-                popover = popover.child(
-                    div()
-                        .text_size(px(11.0))
-                        .text_color(color(self.palette.inactive_text))
-                        .child("Enter Save · Esc Cancel"),
-                );
+                card = card.child(body);
+                controls::hints([
+                    controls::hint(&["Enter"], "Save", &looks),
+                    controls::hint(&["Esc"], "Cancel", &looks),
+                ])
             }
             Mode::Confirm { session, name } => {
                 let text = crate::closing::Target::Session(*session)
                     .prompt(&self.workspace, self.config.behavior.confirm_close_running)
                     .unwrap_or_else(|| format!("Close session {name}?"));
-                popover = popover.child(SharedString::from(text)).child(
-                    div()
-                        .text_color(color(self.palette.inactive_text))
-                        .child("Enter / Esc"),
+                card = card.child(
+                    section(div())
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(controls::glyph(controls::WARNING_GLYPH, looks.accent))
+                        .child(div().min_w_0().flex_1().child(SharedString::from(text))),
                 );
+                controls::hints([
+                    controls::hint(&["Enter"], "Close", &looks),
+                    controls::hint(&["Esc"], "Cancel", &looks),
+                ])
             }
-        }
+        };
         if picker.busy {
-            popover = popover.child("Working…");
+            card = card.child(section(div()).text_color(rgba(dim)).child("Working…"));
         }
         if let Some(error) = &picker.error {
-            popover = popover.child(
-                div()
-                    .text_color(color(self.palette.accent))
+            card = card.child(
+                section(div())
+                    .text_color(rgba(Color::opaque(self.palette.ansi[1])))
                     .child(SharedString::from(error.clone())),
             );
         }
-        Some(popover.into_any_element())
+        card = card.child(
+            section(footer)
+                .text_size(px(12.0))
+                .flex_none()
+                .border_t_1()
+                .border_color(rule),
+        );
+        Some(
+            div()
+                .absolute()
+                .left_0()
+                .top_0()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(rgba(Color {
+                    rgb: self.palette.top_bar,
+                    alpha: 0.35,
+                }))
+                .occlude()
+                .child(card)
+                .into_any_element(),
+        )
+    }
+
+    /// One switcher row: the session's glyph, name and details, or New
+    /// session. The selected row is tinted, with an accent edge.
+    fn session_row(&self, row: Row, selected: bool, looks: &Looks) -> gpui::Stateful<gpui::Div> {
+        let dim = rgba(looks.hint);
+        let hover = rgba(Color {
+            rgb: self.palette.unfocused_border,
+            alpha: 0.8,
+        });
+        let (glyph, current, details) = match row.target {
+            Target::Session(session) => (
+                Glyph::Session.text(),
+                session == self.session,
+                Some((row.tabs, row.on_screen)),
+            ),
+            Target::New => (controls::ADD_GLYPH, false, None),
+        };
+        let mut label = div()
+            .id(SharedString::from(format!("session-{:?}", row.target)))
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(10.0))
+            .px(px(10.0))
+            .min_h(px(42.0))
+            .py(px(7.0))
+            .relative()
+            .rounded(px(9.0))
+            .cursor_pointer()
+            .when(selected, |row| {
+                row.bg(rgba(Color {
+                    rgb: self.palette.foreground,
+                    alpha: 0.06,
+                }))
+                .child(
+                    div()
+                        .absolute()
+                        .left_0()
+                        .top(px(10.0))
+                        .bottom(px(10.0))
+                        .w(px(2.0))
+                        .rounded_full()
+                        .bg(rgba(looks.accent)),
+                )
+            })
+            .when(!selected, |row| row.hover(move |style| style.bg(hover)))
+            .child(
+                div()
+                    .flex_none()
+                    .size(px(24.0))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(6.0))
+                    .when(selected, |icon| {
+                        icon.bg(rgba(Color {
+                            rgb: self.palette.top_bar,
+                            alpha: 0.6,
+                        }))
+                    })
+                    .child(if current {
+                        div().child("✓")
+                    } else {
+                        controls::glyph(glyph, if selected { looks.text } else { looks.hint })
+                    }),
+            )
+            .child(
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .text_ellipsis()
+                    .child(SharedString::from(row.name)),
+            );
+        if let Some((tabs, on_screen)) = details {
+            let mut details = format!("{tabs} {}", if tabs == 1 { "tab" } else { "tabs" });
+            if current {
+                details.push_str(" · Current");
+            }
+            if on_screen {
+                details.push_str(" · On screen");
+            }
+            label = label.child(
+                div()
+                    .min_w_0()
+                    .max_w(gpui::relative(0.5))
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .text_ellipsis()
+                    .text_size(px(12.0))
+                    .text_color(dim)
+                    .child(SharedString::from(details)),
+            );
+        }
+        label
     }
 
     fn choose_session(&mut self, target: Target, window: &mut Window, cx: &mut Context<Self>) {

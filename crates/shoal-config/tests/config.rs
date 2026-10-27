@@ -19,7 +19,7 @@ fn partial_tables_preserve_other_defaults_and_unknown_keys_warn() {
         parse("mystery = true\n[font]\nsize = 14.5\nfont_typo = 8\n[window]\nopacity = 1\n");
     assert_eq!(loaded.config.font.size, 14.5);
     assert_eq!(loaded.config.font.family, "JetBrains Mono");
-    assert_eq!(loaded.config.font.line_height, 1.0);
+    assert_eq!(loaded.config.font.line_height, 1.4);
     assert_eq!(loaded.config.window.opacity, 1.0);
     assert_eq!(loaded.config.window.padding, 8);
     assert_eq!(loaded.config.scrollback.lines, 10000);

@@ -1,7 +1,7 @@
 //! The top bar (M1 spec §7.2): the session chip, tabs that select on
 //! click, close on middle-click and rename inline on double-click, the `+`
 //! button and the split buttons, whose tooltips show their shortcuts as
-//! key caps.
+//! key caps. The active tab is a pill.
 
 use gpui::{
     AnyElement, ClickEvent, Context, Div, KeyDownEvent, MouseButton, SharedString, Window, div,
@@ -15,12 +15,15 @@ use shoal_config::Action;
 
 use super::{ShoalWindow, rgba};
 use crate::{
-    chrome::{self, Chip, Color, TOP_BAR_HEIGHT, TabLabel, UNDERLINE_WIDTH},
+    chrome::{self, Chip, Color, Glyph, TOP_BAR_HEIGHT, TabLabel},
+    controls::{self, Looks},
     fonts, keys,
     rename::{Outcome, Rename},
 };
 
 const GLYPH_WIDTH: f32 = 16.0;
+/// The chip, tabs and buttons, centred in the bar.
+const ITEM_HEIGHT: f32 = 24.0;
 /// Codicons `add`, `split-horizontal` (side by side) and `split-vertical`
 /// (stacked), from the bundled symbols font.
 const NEW_TAB_GLYPH: &str = "\u{ea60}";
@@ -32,6 +35,7 @@ impl ShoalWindow {
         &self,
         bar: Color,
         chip: Chip,
+        rule: Color,
         tabs: Vec<TabLabel>,
         cx: &mut Context<Self>,
     ) -> Div {
@@ -59,20 +63,37 @@ impl ShoalWindow {
                     .cursor_pointer()
                     .on_click(cx.listener(|view, _, window, cx| view.toggle_switcher(window, cx)))
                     .flex_none()
-                    .mr(px(6.0))
+                    .h(px(ITEM_HEIGHT))
+                    .flex()
+                    .items_center()
+                    .gap(px(4.0))
                     .px(px(8.0))
-                    .py(px(2.0))
                     .rounded(px(6.0))
-                    .bg(rgba(chip.fill))
                     .text_color(rgba(chip.text))
+                    .hover(move |style| style.bg(rgba(chip.hover)))
+                    .child(
+                        div()
+                            .w(px(GLYPH_WIDTH))
+                            .font_family(fonts::SYMBOLS_FAMILY)
+                            .child(Glyph::Session.text()),
+                    )
                     .child(SharedString::from(chip.name)),
             )
             .child(
                 div()
-                    .h_full()
+                    .flex_none()
+                    .mx(px(6.0))
+                    .w(px(1.0))
+                    .h(px(16.0))
+                    .bg(rgba(rule)),
+            )
+            .child(
+                div()
                     .min_w_0()
                     .flex()
                     .flex_row()
+                    .items_center()
+                    .gap(px(2.0))
                     .overflow_hidden()
                     .children(labels),
             )
@@ -118,11 +139,16 @@ impl ShoalWindow {
         })
     }
 
-    /// A tab's glyph and title, at most 200 px wide with an ellipsis, with
-    /// the active tab's underline and a ringing tab's dot.
+    /// A tab's glyph and title, at most 200 px wide with an ellipsis, the
+    /// active one on its pill, and a ringing tab's dot.
     fn tab_label(&self, tab: TabLabel, cx: &mut Context<Self>) -> AnyElement {
         let id = tab.id;
-        let active = tab.underline.is_some();
+        let active = tab.fill.is_some();
+        let hover_fill = Color {
+            rgb: self.palette.unfocused_border,
+            alpha: 0.6,
+        };
+        let hover_text = Color::opaque(self.palette.foreground);
         let title = match self.rename.as_ref().filter(|rename| rename.tab == id) {
             Some(rename) => self.rename_field(rename, cx),
             None => div()
@@ -135,16 +161,20 @@ impl ShoalWindow {
         };
         let mut label = div()
             .id(SharedString::from(format!("tab-{id}")))
-            .relative()
-            .h_full()
+            .h(px(ITEM_HEIGHT))
             .min_w_0()
             .max_w(px(200.0))
             .flex()
             .flex_row()
             .items_center()
             .gap(px(6.0))
-            .px(px(8.0))
+            .px(px(10.0))
+            .rounded(px(6.0))
             .text_color(rgba(tab.text))
+            .when_some(tab.fill, |label, fill| label.bg(rgba(fill)))
+            .when(!active, |label| {
+                label.hover(move |style| style.bg(rgba(hover_fill)).text_color(rgba(hover_text)))
+            })
             .on_click(cx.listener(move |view, event: &ClickEvent, window, cx| {
                 if view.close_confirmation.is_some() {
                     return;
@@ -179,17 +209,6 @@ impl ShoalWindow {
                     .bg(rgba(bell)),
             );
         }
-        if let Some(underline) = tab.underline {
-            label = label.child(
-                div()
-                    .absolute()
-                    .bottom_0()
-                    .left(px(8.0))
-                    .right(px(8.0))
-                    .h(px(UNDERLINE_WIDTH))
-                    .bg(rgba(underline)),
-            );
-        }
         label.into_any_element()
     }
 
@@ -210,12 +229,12 @@ impl ShoalWindow {
             rgb: palette.unfocused_border,
             alpha: 0.8,
         };
-        let hover_text = opaque(palette.foreground);
+        let hover_text = Color::opaque(palette.foreground);
         div()
             .id(id)
             .flex_none()
-            .w(px(26.0))
-            .h(px(24.0))
+            .w(px(28.0))
+            .h(px(ITEM_HEIGHT))
             .flex()
             .items_center()
             .justify_center()
@@ -223,7 +242,7 @@ impl ShoalWindow {
             .cursor_pointer()
             .font_family(fonts::SYMBOLS_FAMILY)
             .text_size(px(15.0))
-            .text_color(rgba(opaque(palette.inactive_text)))
+            .text_color(rgba(Color::opaque(palette.inactive_text)))
             .hover(move |style| style.bg(rgba(hover_fill)).text_color(rgba(hover_text)))
             .child(glyph)
             .tooltip(move |_, cx| cx.new(|_| tooltip.clone()).into())
@@ -244,12 +263,11 @@ impl ShoalWindow {
             caps: keys::shortcut(&self.config.keybinds, action)
                 .map(|chord| keys::caps(&chord))
                 .unwrap_or_default(),
-            family: SharedString::from(self.config.font.family.clone()),
-            fill: opaque(palette.top_bar),
-            border: opaque(palette.unfocused_border),
-            text: opaque(palette.inactive_text),
-            cap_fill: opaque(palette.unfocused_border),
-            cap_text: opaque(palette.foreground),
+            family: fonts::UI_FAMILY.into(),
+            fill: Color::opaque(palette.top_bar),
+            border: Color::opaque(palette.unfocused_border),
+            text: Color::opaque(palette.inactive_text),
+            looks: Looks::new(palette),
         }
     }
 
@@ -357,14 +375,11 @@ struct Tooltip {
     fill: Color,
     border: Color,
     text: Color,
-    cap_fill: Color,
-    cap_text: Color,
+    looks: Looks,
 }
 
 impl Render for Tooltip {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        let cap_fill = self.cap_fill;
-        let cap_text = self.cap_text;
         div()
             .flex()
             .flex_row()
@@ -380,17 +395,10 @@ impl Render for Tooltip {
             .text_size(px(12.0))
             .text_color(rgba(self.text))
             .child(div().mr(px(4.0)).child(self.label))
-            .children(self.caps.iter().map(|cap| {
-                div()
-                    .px(px(5.0))
-                    .rounded(px(4.0))
-                    .bg(rgba(cap_fill))
-                    .text_color(rgba(cap_text))
-                    .child(SharedString::from(cap.clone()))
-            }))
+            .children(
+                self.caps
+                    .iter()
+                    .map(|cap| controls::cap(SharedString::from(cap.clone()), &self.looks)),
+            )
     }
-}
-
-fn opaque(rgb: shoal_config::schema::Rgb) -> Color {
-    Color { rgb, alpha: 1.0 }
 }

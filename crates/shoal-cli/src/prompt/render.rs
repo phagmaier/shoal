@@ -30,10 +30,15 @@ pub struct Tail {
 /// Commands shorter than this show no duration.
 const SLOW: Duration = Duration::from_secs(2);
 const SEPARATOR: char = '\u{e0b0}';
+/// Rounded ends: a left half circle before the first block, a right one
+/// after the last.
+const START_CAP: char = '\u{e0b6}';
+const END_CAP: char = '\u{e0b4}';
 const CHARACTER: char = '❯';
 
 /// One prompt line for `shell`. In `powerline` style each segment is a block of
-/// its color with `text_color` text; in `lean` style the segment text is colored.
+/// its color with `text_color` text, joined by arrows between rounded ends; in
+/// `lean` style the segment text is colored.
 pub fn render(
     shell: Shell,
     style: PromptStyle,
@@ -44,16 +49,27 @@ pub fn render(
     let mut line = Line::new(shell);
     match style {
         PromptStyle::Powerline => {
+            if let Some(first) = segments.first() {
+                line.sgr("49");
+                line.sgr(&foreground(first.color));
+                line.text(&START_CAP.to_string());
+            }
             for (index, segment) in segments.iter().enumerate() {
                 line.sgr(&background(segment.color));
                 line.sgr(&foreground(text_color));
                 line.text(&format!(" {} ", segment.text));
                 line.sgr(&foreground(segment.color));
-                match segments.get(index + 1) {
-                    Some(next) => line.sgr(&background(next.color)),
-                    None => line.sgr("49"),
-                }
-                line.text(&SEPARATOR.to_string());
+                let join = match segments.get(index + 1) {
+                    Some(next) => {
+                        line.sgr(&background(next.color));
+                        SEPARATOR
+                    }
+                    None => {
+                        line.sgr("49");
+                        END_CAP
+                    }
+                };
+                line.text(&join.to_string());
             }
         }
         PromptStyle::Lean => {
@@ -202,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn powerline_joins_blocks_with_colored_separators() {
+    fn powerline_joins_blocks_with_colored_separators_between_rounded_ends() {
         let line = render(
             Shell::Bash,
             PromptStyle::Powerline,
@@ -212,10 +228,11 @@ mod tests {
         );
         assert_eq!(
             line,
-            "\\[\x1b[48;2;0;0;255m\x1b[38;2;1;2;3m\\] ~/a \
+            "\\[\x1b[49m\x1b[38;2;0;0;255m\\]\u{e0b6}\
+             \\[\x1b[48;2;0;0;255m\x1b[38;2;1;2;3m\\] ~/a \
              \\[\x1b[38;2;0;0;255m\x1b[48;2;0;255;0m\\]\u{e0b0}\
              \\[\x1b[48;2;0;255;0m\x1b[38;2;1;2;3m\\] b \
-             \\[\x1b[38;2;0;255;0m\x1b[49m\\]\u{e0b0}\
+             \\[\x1b[38;2;0;255;0m\x1b[49m\\]\u{e0b4}\
              \\[\x1b[0m\\] \\[\x1b[38;2;9;9;9m\\]❯\\[\x1b[0m\\] "
         );
     }

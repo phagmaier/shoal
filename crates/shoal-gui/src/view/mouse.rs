@@ -30,7 +30,8 @@ impl ShoalWindow {
                 return;
             }
         }
-        let Some(pane) = chrome::pane_at(&self.shown.panes, pane_point(event.position)) else {
+        let at = pane_point(event.position);
+        let Some(pane) = chrome::pane_at(&self.shown.panes, at) else {
             return;
         };
         window.focus(&self.focus, cx);
@@ -208,7 +209,7 @@ impl ShoalWindow {
     ) -> Option<(f32, f32, CellSize)> {
         let cell = self.metrics.as_ref()?.0;
         let pane = self.shown.panes.iter().find(|p| p.pane == pane)?;
-        let (x, y) = metrics::grid_origin(pane.rect, &cell);
+        let (x, y) = metrics::grid_origin(pane.content(), &cell);
         let at = pane_point(position);
         Some((
             (at.0 - x) * cell.scale,

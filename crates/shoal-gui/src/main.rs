@@ -5,6 +5,7 @@
 mod actions;
 mod chrome;
 mod closing;
+mod controls;
 mod drag;
 mod draw;
 mod field;

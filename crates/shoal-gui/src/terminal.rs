@@ -66,6 +66,7 @@ pub struct Painter {
 /// Everything one pane's paint needs, owned so the paint closure can take it.
 pub struct PaneFrame {
     rows: Vec<Rc<PaintedRow>>,
+    visible_rows: u16,
     cursor: Option<CursorDraw>,
     metrics: CellMetrics,
     /// When drawing this frame started, and whether every row was
@@ -76,6 +77,13 @@ pub struct PaneFrame {
     selection: Vec<(u16, std::ops::Range<u16>)>,
     links: Vec<(u16, std::ops::Range<u16>)>,
     overlay_colors: [Hsla; 2],
+}
+
+impl PaneFrame {
+    /// The viewport's rows, without the one below that scrolling shows.
+    pub fn visible_rows(&self) -> u16 {
+        self.visible_rows
+    }
 }
 
 impl Painter {
@@ -114,6 +122,7 @@ impl Painter {
         let rows = list.rows.len() as u16;
         PaneFrame {
             rows: self.rows.clone(),
+            visible_rows: list.visible_rows,
             cursor: list.cursor,
             metrics,
             started,

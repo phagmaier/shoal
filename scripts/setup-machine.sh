@@ -28,7 +28,7 @@ packages=(
     base-devel clang cmake git rustup mise just bash zsh
     wayland libxkbcommon libxkbcommon-x11 libxcb fontconfig freetype2
     vulkan-icd-loader vulkan-headers alsa-lib openssl zstd
-    ttf-jetbrains-mono noto-fonts-emoji
+    ttf-jetbrains-mono noto-fonts noto-fonts-emoji
     sysstat hyperfine socat jq python xdg-utils
 )
 

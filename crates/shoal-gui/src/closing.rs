@@ -2,8 +2,6 @@
 use shoal_client::proto::Call;
 use shoal_model::{PaneId, PaneStatus, SessionId, TabId, Workspace};
 
-pub const EXIT_BAR_HEIGHT: u32 = 34;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
     Pane(PaneId),

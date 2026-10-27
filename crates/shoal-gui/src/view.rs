@@ -2,6 +2,7 @@
 //! each pane's mirror drawn inside its box, following the workspace as the
 //! daemon changes it.
 
+mod boxes;
 mod closing;
 mod connection;
 mod input;
@@ -17,8 +18,8 @@ mod topbar;
 use std::time::Instant;
 
 use gpui::{
-    BorderStyle, Bounds, ContentMask, Context, FocusHandle, Hsla, MouseButton, Rgba, SharedString,
-    Subscription, Task, Window, canvas, div, point, prelude::*, px, quad, size,
+    Context, FocusHandle, Hsla, MouseButton, Rgba, SharedString, Subscription, Task, Window, div,
+    prelude::*, px,
 };
 use shoal_client::{
     Client, Event,
@@ -30,7 +31,7 @@ use shoal_config::{Config, Palette};
 use crate::{
     chrome::{self, Chrome, Color, PaneBox, TOP_BAR_HEIGHT},
     drag::Drag,
-    draw,
+    draw, fonts,
     glyphs::{self, GlyphCache},
     metrics::{self, CellMetrics},
     mirror::{self, State},
@@ -38,11 +39,11 @@ use crate::{
     rename::Rename,
     session,
     sizing::Sizer,
-    terminal::{self, PaneFrame},
+    terminal::PaneFrame,
 };
 
 /// Chrome text size in logical pixels.
-const TEXT_SIZE: f32 = 13.0;
+pub(crate) const TEXT_SIZE: f32 = 13.0;
 
 pub struct Initial {
     pub client: Client,
@@ -332,7 +333,6 @@ impl ShoalWindow {
         window: &Window,
     ) -> Vec<Option<PaneFrame>> {
         let focused = self.focused_pane().filter(|_| window.is_window_active());
-        let opacity = self.config.window.opacity as f32;
         let cursor = self.palette.cursor;
         let overlay_colors = [
             hsla(Color {
@@ -350,9 +350,9 @@ impl ShoalWindow {
                 let hover = self
                     .hover_point
                     .filter(|at| {
+                        let at = layout::pane_point(*at);
                         self.held_modifiers.control
-                            && chrome::pane_at(boxes, layout::pane_point(*at))
-                                == Some(pane_box.pane)
+                            && chrome::pane_at(boxes, at) == Some(pane_box.pane)
                     })
                     .and_then(|at| self.cell_at(pane_box.pane, at));
                 let attached = self.panes.get_mut(pane_box.pane)?;
@@ -361,7 +361,6 @@ impl ShoalWindow {
                 };
                 let started = Instant::now();
                 let settings = draw::Settings {
-                    opacity,
                     cursor,
                     focused: focused == Some(pane_box.pane),
                 };
@@ -410,8 +409,7 @@ impl Render for ShoalWindow {
             self.session,
             &self.palette,
             &self.config.window,
-            width,
-            height.saturating_sub(self.banner_height),
+            (width, height.saturating_sub(self.banner_height)),
         ) else {
             return div().size_full();
         };
@@ -429,12 +427,13 @@ impl Render for ShoalWindow {
         let Chrome {
             bar,
             chip,
+            rule,
             tabs,
             panes,
             dividers,
             ..
         } = chrome;
-        let top_bar = self.top_bar(bar, chip, tabs, cx);
+        let top_bar = self.top_bar(bar, chip, rule, tabs, cx);
         let cell = self.cell_metrics(window);
         if self.available && !self.awaiting_workspace {
             self.request_sizes(&panes, &cell, cx);
@@ -453,68 +452,21 @@ impl Render for ShoalWindow {
             panes: panes.clone(),
             dividers,
         };
-        let input_view = cx.entity();
-        let input_focus = (self.available
+        let input = (self.available
             && !self.awaiting_workspace
             && self.rename.is_none()
             && self.close_confirmation.is_none()
             && self.switcher.is_none()
             && !self.session_busy)
-            .then(|| self.focus.clone());
-        let boxes = canvas(
-            |_, _, _| (),
-            move |bounds, (), window, cx| {
-                if let Some(input_focus) = input_focus {
-                    window.handle_input(
-                        &input_focus,
-                        gpui::ElementInputHandler::new(bounds, input_view),
-                        cx,
-                    );
-                }
-                drag_listeners(window, cx);
-                for (pane, frame) in panes.iter().zip(&frames) {
-                    let origin =
-                        bounds.origin + point(px(pane.rect.x as f32), px(pane.rect.y as f32));
-                    let extent = size(px(pane.rect.width as f32), px(pane.rect.height as f32));
-                    let pane_bounds = Bounds::new(origin, extent);
-                    window.paint_quad(quad(
-                        pane_bounds,
-                        px(pane.radius),
-                        rgba(pane.fill),
-                        px(pane.border_width),
-                        rgba(pane.border),
-                        BorderStyle::Solid,
-                    ));
-                    let Some(frame) = frame else {
-                        continue;
-                    };
-                    // A mirror bigger than its box is clipped at the inset.
-                    let inset = px(metrics::GRID_INSET);
-                    let inner = Bounds::new(
-                        origin + point(inset, inset),
-                        size(
-                            (extent.width - inset * 2.0).max(px(0.0)),
-                            (extent.height - inset * 2.0).max(px(0.0)),
-                        ),
-                    );
-                    let (x, y) = metrics::grid_origin(pane.rect, &cell);
-                    let grid = bounds.origin + point(px(x), px(y));
-                    window.with_content_mask(Some(ContentMask { bounds: inner }), |window| {
-                        window.paint_layer(inner, |window| {
-                            terminal::paint(frame, grid, window);
-                        });
-                    });
-                }
-            },
-        )
-        .size_full();
+            .then(|| (self.focus.clone(), cx.entity()));
+        let boxes = boxes::paint(panes, frames, cell, input, drag_listeners);
         let preedit = self.preedit.as_ref().and_then(|text| {
             let pane = self
                 .shown
                 .panes
                 .iter()
                 .find(|p| Some(p.pane) == self.focused_pane())?;
-            let (x, y) = metrics::grid_origin(pane.rect, &cell);
+            let (x, y) = metrics::grid_origin(pane.content(), &cell);
             let (col, row) = self.input_cursor.unwrap_or((0, 0));
             Some(
                 div()
@@ -529,6 +481,7 @@ impl Render for ShoalWindow {
                         rgb: self.palette.foreground,
                         alpha: 1.0,
                     }))
+                    .font_family(SharedString::from(self.config.font.family.clone()))
                     .text_size(px(cell.font_size))
                     .child(SharedString::from(text.clone())),
             )
@@ -574,7 +527,7 @@ impl Render for ShoalWindow {
                     view.caps_lock = event.capslock.on;
                 },
             ))
-            .font_family(SharedString::from(self.config.font.family.clone()))
+            .font_family(fonts::UI_FAMILY)
             .text_size(px(TEXT_SIZE))
             .child(top_bar)
             .child(pane_area)

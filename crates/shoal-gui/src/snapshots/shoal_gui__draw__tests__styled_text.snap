@@ -11,13 +11,13 @@ row 1
   text 12 narrow bold italic #c0caf5 "both"
   text 17 narrow #c0caf5@0.6 "dim"
 row 2
-  bg 8+8 #cc6666@0.88
-  bg 16+2 #81a2be@0.88
+  bg 8+8 #cc6666
+  bg 16+2 #81a2be
   text 0 narrow #cc6666 "red"
   text 4 narrow #0a141e "rgb"
   text 9 narrow #c5c8c6 "on red"
 row 3
-  bg 0+7 #c0caf5@0.88
+  bg 0+7 #c0caf5
   text 0 narrow #1a1b26 "inverse"
   text 15 narrow #c0caf5 "strike over"
   line Strike 15+6 #c0caf5
@@ -28,5 +28,5 @@ row 4
   line Underline(Curly) 7+5 #ff0000
   line Underline(Double) 13+6 #c0caf5
 row 5
-  bg 0+40 #b5bd68@0.88
+  bg 0+40 #b5bd68
 cursor 0,5 Block 1 cells #7aa2f7 text #1a1b26

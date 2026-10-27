@@ -10,7 +10,6 @@ const ACCENT: Rgb = Rgb([0x7a, 0xa2, 0xf7]);
 
 fn settings(focused: bool) -> Settings {
     Settings {
-        opacity: 0.88,
         cursor: ACCENT,
         focused,
     }
@@ -201,20 +200,31 @@ fn clean_rows_are_reused_and_changed_ones_rebuilt() {
     assert_ne!(changed.rows[1].version, first.rows[1].version);
     assert_eq!(changed.rows[1].text[0].text, "the");
 
-    // Focus changes only the cursor; opacity changes every background.
+    // Focus changes only the cursor; it reuses the rows.
     let unfocused = builder.build(&mut terminal, &settings(false)).unwrap();
     assert_eq!(unfocused.rebuilt, 0);
-    let clearer = Settings {
-        opacity: 0.5,
-        ..settings(true)
-    };
-    assert_eq!(builder.build(&mut terminal, &clearer).unwrap().rebuilt, 3);
 
     // A resize rebuilds everything at the new size.
     terminal.resize(12, 2).unwrap();
-    let resized = builder.build(&mut terminal, &clearer).unwrap();
+    let resized = builder.build(&mut terminal, &settings(true)).unwrap();
     assert_eq!(
         (resized.cols, resized.rows.len(), resized.rebuilt),
         (12, 2, 2)
     );
+}
+
+#[test]
+fn explicit_and_inverse_backgrounds_are_solid_while_default_cells_show_the_pane() {
+    let mut terminal = Terminal::new(8, 2, 100).unwrap();
+    terminal.feed(b"a\x1b[48;2;10;20;30mb\x1b[0m\x1b[7mc\x1b[0m");
+    let list = Builder::default()
+        .build(&mut terminal, &settings(true))
+        .unwrap();
+    let backgrounds = &list.rows[0].backgrounds;
+    assert_eq!(backgrounds.len(), 2);
+    assert_eq!((backgrounds[0].col, backgrounds[0].cells), (1, 1));
+    assert_eq!(backgrounds[0].color, Color::opaque(Rgb([10, 20, 30])));
+    assert_eq!((backgrounds[1].col, backgrounds[1].cells), (2, 1));
+    assert_eq!(backgrounds[1].color.alpha, 1.0);
+    assert!(list.rows[1].backgrounds.is_empty());
 }

@@ -3,7 +3,12 @@ use gpui::{AnyElement, Context, MouseButton, Rgba, SharedString, canvas, div, pr
 use shoal_config::schema::Rgb;
 
 use super::ShoalRoot;
-use crate::{chrome::TOP_BAR_HEIGHT, recovery::Status};
+use crate::{
+    chrome::{Color, TOP_BAR_HEIGHT},
+    controls::{self, Looks},
+    recovery::Status,
+    view::rgba,
+};
 
 impl ShoalRoot {
     pub(super) fn color(&self, rgb: Rgb) -> Rgba {
@@ -28,29 +33,41 @@ impl ShoalRoot {
         )
     }
 
+    /// Recovery explanations and notices above the pane area, one line
+    /// each except an explanation, which wraps.
     pub(super) fn banners(&self, cx: &mut Context<Self>) -> AnyElement {
-        let explanation = self.recovery.explanation().map(|text| {
-            let button = div()
-                .id("restart-daemon")
-                .flex_none()
-                .px(px(10.0))
-                .py(px(4.0))
-                .rounded(px(4.0))
-                .bg(self.color(self.palette.unfocused_border))
-                .child(if self.recovery.status == Status::Restarting {
-                    "Restarting…"
-                } else {
-                    "Restart daemon"
-                })
-                .cursor_pointer()
-                .on_click(cx.listener(|root, _, window, cx| root.restart_daemon(window, cx)));
+        let looks = Looks::new(&self.palette);
+        let rule = Color {
+            rgb: self.palette.unfocused_border,
+            alpha: 0.6,
+        };
+        let row = || {
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
-                .p(px(10.0))
+                .gap(px(8.0))
+                .px(px(12.0))
                 .border_b_1()
-                .border_color(self.color(self.palette.accent))
+                .border_color(rgba(rule))
+        };
+        let explanation = self.recovery.explanation().map(|text| {
+            let button = controls::button(
+                "restart-daemon",
+                if self.recovery.status == Status::Restarting {
+                    "Restarting…"
+                } else {
+                    "Restart daemon"
+                },
+                &looks,
+            )
+            .on_click(cx.listener(|root, _, window, cx| root.restart_daemon(window, cx)));
+            row()
+                .py(px(8.0))
+                .border_color(rgba(Color {
+                    rgb: self.palette.accent,
+                    alpha: 0.6,
+                }))
+                .child(controls::glyph(controls::WARNING_GLYPH, looks.accent))
                 .child(div().flex_1().child(text))
                 .child(button)
         });
@@ -59,14 +76,9 @@ impl ShoalRoot {
             .visible()
             .map(|notice| {
                 let id = notice.id;
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.0))
+                row()
                     .h(px(30.0))
-                    .px(px(10.0))
-                    .border_b_1()
-                    .border_color(self.color(self.palette.unfocused_border))
+                    .child(controls::glyph(controls::WARNING_GLYPH, looks.accent))
                     .child(
                         div()
                             .min_w_0()
@@ -77,16 +89,15 @@ impl ShoalRoot {
                             .child(SharedString::from(notice.text.clone())),
                     )
                     .child(
-                        div()
-                            .id(SharedString::from(format!("dismiss-notice-{id}")))
-                            .flex_none()
-                            .px(px(6.0))
-                            .cursor_pointer()
-                            .child("Dismiss")
-                            .on_click(cx.listener(move |root, _, _, cx| {
-                                root.notices.dismiss(id);
-                                cx.notify();
-                            })),
+                        controls::button(
+                            SharedString::from(format!("dismiss-notice-{id}")),
+                            "Dismiss",
+                            &looks,
+                        )
+                        .on_click(cx.listener(move |root, _, _, cx| {
+                            root.notices.dismiss(id);
+                            cx.notify();
+                        })),
                     )
             })
             .collect::<Vec<_>>();
@@ -98,23 +109,25 @@ impl ShoalRoot {
             .w_full()
             .flex()
             .flex_col()
-            .bg(self.color(self.palette.top_bar))
-            .text_size(px(13.0))
-            .text_color(self.color(self.palette.foreground))
+            .bg(rgba(Color {
+                rgb: self.palette.top_bar,
+                alpha: self.config.window.opacity as f32,
+            }))
+            .text_color(rgba(looks.text))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .children(explanation)
             .children(notices)
             .children(self.content.clone().map(|content| {
                 // Measure native text layout, including wrapped mismatch
                 // explanations, so panes and mouse coordinates stay below it.
+                // GPUI ignores a notify made while drawing, so the new height
+                // goes in after this frame, and its notify draws the next.
                 canvas(
                     |_, _, _| (),
                     move |bounds, _, _, cx| {
-                        content.update(cx, |view, cx| {
-                            view.set_banner_height(
-                                f32::from(bounds.size.height).ceil().max(0.0) as u32,
-                                cx,
-                            );
+                        let height = f32::from(bounds.size.height).ceil().max(0.0) as u32;
+                        cx.defer(move |cx| {
+                            content.update(cx, |view, cx| view.set_banner_height(height, cx));
                         });
                     },
                 )

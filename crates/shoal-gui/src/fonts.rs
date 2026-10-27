@@ -6,6 +6,9 @@ use std::borrow::Cow;
 
 use gpui::App;
 
+/// Proportional chrome text, independent of the terminal font.
+pub const UI_FAMILY: &str = "Noto Sans";
+
 /// The family name inside the bundled font file.
 pub const SYMBOLS_FAMILY: &str = "Symbols Nerd Font Mono";
 

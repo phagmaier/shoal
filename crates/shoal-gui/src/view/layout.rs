@@ -37,15 +37,7 @@ impl ShoalWindow {
     ) {
         let wanted: Vec<_> = panes
             .iter()
-            .filter_map(|pane| {
-                let mut rect = pane.rect;
-                if self.workspace.panes.get(&pane.pane).is_some_and(|p| {
-                    matches!(p.status, shoal_client::model::PaneStatus::Exited { .. })
-                }) {
-                    rect.height = rect.height.saturating_sub(crate::closing::EXIT_BAR_HEIGHT);
-                }
-                Some((pane.pane, metrics::grid_size(rect, cell)?))
-            })
+            .filter_map(|pane| Some((pane.pane, metrics::grid_size(pane.content(), cell)?)))
             .collect();
         let now = Instant::now();
         // A drag's sizes keep waiting after the release until they hold

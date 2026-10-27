@@ -1,8 +1,8 @@
 # Tern vs Shoal: visual reference for the polish checkpoint
 
 Reference only — not spec, not tasks. Input to the bounded polish + review
-checkpoint the user accepted after T48 (recorded in `prompt.md`; not yet a
-`docs/spec/tasks.md` entry). No fixes here.
+checkpoint the user accepted after T48, now T49 (visual polish) and T53
+(hardening review) in `docs/spec/tasks.md`. No fixes here.
 
 ## Tern reference shots (user-supplied)
 
@@ -85,9 +85,10 @@ These concern surfaces M1 already owns — top bar, panes, prompt, banners:
   search and bell in one strip. Shoal's 34 px bar carries chip + tabs + two
   split buttons. Sparse by comparison; bell, search and window actions have no
   home (several are M2 features — do not build the features, but leave room).
-- **Block headers.** Every Tern block has a header/toolbar giving it identity
-  (title, cursor position, actions). Shoal panes are bare grids with a focus
-  border; only the tab strip identifies them.
+- **Pane tops.** The latest user decision removes grips and their reserved
+  space, including the grip shown in Tern. T49 uses clean pane tops and a
+  subtle active edge with a fading top line. Keep the compact spacing and
+  glass treatment selected during the visual exploration.
 - **Card-style overlays.** Shoal's banners, confirm bar (T47) and switcher (T44)
   are the closest M1 analogues to Tern's palette/cards. Tern's spacing,
   segmented toggles, key-cap chips and one-line notice style are the concrete

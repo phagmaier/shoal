@@ -1,9 +1,6 @@
 //! Drop old connection state before any fresh snapshot can be displayed.
 use super::{ShoalWindow, rgba};
-use crate::{
-    chrome::{Color, PaneBox},
-    mirror::State,
-};
+use crate::{chrome::PaneBox, mirror::State};
 use gpui::{AnyElement, Context, SharedString, div, prelude::*, px};
 
 impl ShoalWindow {
@@ -41,7 +38,7 @@ impl ShoalWindow {
         }
         self.available = available;
     }
-    /// A pane's banner, with Retry, laid over its box.
+    /// A pane's banner, with Retry, laid over its grid.
     pub(super) fn banner(
         &mut self,
         pane_box: &PaneBox,
@@ -51,23 +48,15 @@ impl ShoalWindow {
             return None;
         };
         let pane = pane_box.pane;
-        let rect = pane_box.rect;
-        let retry = div()
-            .id(SharedString::from(format!("retry-{pane}")))
-            .px(px(10.0))
-            .py(px(3.0))
-            .rounded(px(6.0))
-            .cursor_pointer()
-            .bg(rgba(Color {
-                rgb: self.palette.unfocused_border,
-                alpha: 1.0,
-            }))
-            .child("Retry")
-            .on_click(cx.listener(move |view, _, _, cx| {
-                let ShoalWindow { panes, client, .. } = view;
-                panes.retry(pane, client, cx);
-                cx.notify();
-            }));
+        let rect = pane_box.content();
+        let looks = crate::controls::Looks::new(&self.palette);
+        let retry =
+            crate::controls::button(SharedString::from(format!("retry-{pane}")), "Retry", &looks)
+                .on_click(cx.listener(move |view, _, _, cx| {
+                    let ShoalWindow { panes, client, .. } = view;
+                    panes.retry(pane, client, cx);
+                    cx.notify();
+                }));
         Some(
             div()
                 .absolute()
@@ -81,10 +70,7 @@ impl ShoalWindow {
                 .justify_center()
                 .gap(px(10.0))
                 .p(px(12.0))
-                .text_color(rgba(Color {
-                    rgb: self.palette.foreground,
-                    alpha: 1.0,
-                }))
+                .text_color(rgba(looks.text))
                 .child(SharedString::from(banner.text()))
                 .child(retry)
                 .into_any_element(),

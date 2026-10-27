@@ -3,6 +3,7 @@ use super::{ShoalWindow, rgba};
 use crate::{
     chrome::{Color, PaneBox},
     closing::{self, Confirmation, Target},
+    controls::{self, Looks},
 };
 use gpui::{AnyElement, Context, KeyDownEvent, SharedString, Window, div, prelude::*, px};
 use shoal_client::proto::Call;
@@ -10,7 +11,7 @@ use shoal_client::proto::Call;
 impl ShoalWindow {
     pub(super) fn close_bar_height(&self) -> u32 {
         if self.close_confirmation.is_some() {
-            36
+            crate::chrome::TOP_BAR_HEIGHT
         } else {
             0
         }
@@ -86,9 +87,10 @@ impl ShoalWindow {
         cx.notify();
     }
 
+    /// The bar at the window's bottom: the warning, then its keys.
     pub(super) fn close_bar(&self) -> Option<AnyElement> {
         let pending = self.close_confirmation.as_ref()?;
-        let color = |rgb| rgba(Color { rgb, alpha: 1.0 });
+        let looks = Looks::new(&self.palette);
         Some(
             div()
                 .flex_none()
@@ -96,11 +98,19 @@ impl ShoalWindow {
                 .w_full()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .px(px(12.0))
-                .py(px(6.0))
-                .bg(color(self.palette.top_bar))
-                .text_color(color(self.palette.foreground))
+                .border_t_1()
+                .border_color(rgba(Color {
+                    rgb: self.palette.accent,
+                    alpha: 0.6,
+                }))
+                .bg(rgba(Color {
+                    rgb: self.palette.top_bar,
+                    alpha: self.config.window.opacity as f32,
+                }))
+                .text_color(rgba(looks.text))
+                .child(controls::glyph(controls::WARNING_GLYPH, looks.accent))
                 .child(
                     div()
                         .min_w_0()
@@ -110,46 +120,54 @@ impl ShoalWindow {
                         .text_ellipsis()
                         .child(SharedString::from(pending.text.clone())),
                 )
-                .child(
-                    div()
-                        .flex_none()
-                        .text_color(color(self.palette.inactive_text))
-                        .child("Enter / Esc"),
-                )
+                .child(controls::hints([
+                    controls::hint(&["Enter"], "Close", &looks),
+                    controls::hint(&["Esc"], "Cancel", &looks),
+                ]))
                 .into_any_element(),
         )
     }
 
-    /// Preserve the actual error output, adding an explanation and a way to close.
+    /// A retained exited pane's footer, inside its box below the grid: what
+    /// ended it, and a way to close it. The output above stays as it was.
     pub(super) fn exit_banners(
         &self,
         panes: &[PaneBox],
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
+        let looks = Looks::new(&self.palette);
         panes
             .iter()
+            .filter(|pane| pane.footer > 0)
             .filter_map(|pane| {
                 let text = closing::exit_text(self.workspace.panes.get(&pane.pane)?.status)?;
                 let id = pane.pane;
                 let rect = pane.rect;
-                let color = |rgb| rgba(Color { rgb, alpha: 1.0 });
+                // Follow the box's bottom corners.
+                let height = pane.footer.min(rect.height) as f32;
                 Some(
                     div()
                         .absolute()
-                        .left(px(rect.x as f32 + 1.0))
-                        .top(px(
-                            (rect.y + rect.height.saturating_sub(closing::EXIT_BAR_HEIGHT)) as f32,
-                        ))
-                        .w(px(rect.width.saturating_sub(2) as f32))
-                        .h(px(rect.height.min(closing::EXIT_BAR_HEIGHT) as f32))
+                        .left(px(rect.x as f32))
+                        .top(px((rect.y + rect.height) as f32 - height))
+                        .w(px(rect.width as f32))
+                        .h(px(height))
                         .overflow_hidden()
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        .px(px(10.0))
-                        .py(px(5.0))
-                        .bg(color(self.palette.top_bar))
-                        .text_color(color(self.palette.foreground))
+                        .px(px(9.0))
+                        .rounded_b(px(pane.radius))
+                        .border_t_1()
+                        .border_color(rgba(Color {
+                            rgb: self.palette.unfocused_border,
+                            alpha: 0.6,
+                        }))
+                        .bg(rgba(Color {
+                            rgb: self.palette.top_bar,
+                            alpha: self.config.window.opacity as f32,
+                        }))
+                        .text_color(rgba(looks.text))
                         .child(
                             div()
                                 .min_w_0()
@@ -160,20 +178,19 @@ impl ShoalWindow {
                                 .child(SharedString::from(text)),
                         )
                         .child(
-                            div()
-                                .id(SharedString::from(format!("close-exited-{id}")))
-                                .flex_none()
-                                .px(px(8.0))
-                                .rounded(px(4.0))
-                                .cursor_pointer()
-                                .bg(color(self.palette.unfocused_border))
-                                .child("Close pane")
-                                .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                                    cx.stop_propagation()
-                                })
-                                .on_click(cx.listener(move |view, _, window, cx| {
+                            controls::button(
+                                SharedString::from(format!("close-exited-{id}")),
+                                "Close pane",
+                                &looks,
+                            )
+                            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation()
+                            })
+                            .on_click(cx.listener(
+                                move |view, _, window, cx| {
                                     view.request_close(Target::Pane(id), window, cx);
-                                })),
+                                },
+                            )),
                         )
                         .into_any_element(),
                 )

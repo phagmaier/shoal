@@ -1,9 +1,17 @@
 //! New-output indicators are driven by bytes, never an idle timer.
 use super::{ShoalWindow, rgba};
-use crate::chrome::{Color, PaneBox};
+use crate::{
+    chrome::{Color, PaneBox},
+    controls,
+};
 use gpui::{AnyElement, Context, MouseButton, SharedString, div, prelude::*, px};
 
+/// Space between the pill and the grid's corner.
+const PILL_MARGIN: f32 = 10.0;
+
 impl ShoalWindow {
+    /// A pill at the bottom right of each scrolled-up pane with new output;
+    /// clicking it returns to the bottom.
     pub(super) fn output_pills(
         &mut self,
         panes: &[PaneBox],
@@ -16,40 +24,48 @@ impl ShoalWindow {
                     return None;
                 }
                 let id = pane.pane;
+                let content = pane.content();
+                let text = Color::opaque(self.palette.background);
+                let pill = div()
+                    .id(SharedString::from(format!("new-output-{id}")))
+                    .flex()
+                    .items_center()
+                    .gap(px(4.0))
+                    .pl(px(8.0))
+                    .pr(px(12.0))
+                    .py(px(3.0))
+                    .rounded_full()
+                    .cursor_pointer()
+                    .shadow_md()
+                    .bg(rgba(Color::opaque(self.palette.accent)))
+                    .text_color(rgba(text))
+                    .child(controls::glyph(controls::DOWN_GLYPH, text))
+                    .child("New output")
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_mouse_up(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(cx.listener(move |view, _, _, cx| {
+                        if let Some(mirror) = view.mirror(id)
+                            && let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom)
+                        {
+                            tracing::warn!(%error, "can't return to new output");
+                        }
+                        cx.stop_propagation();
+                        cx.notify();
+                    }));
+                // A frame over the content area places it at the corner
+                // without knowing its width; only the pill takes the mouse.
                 Some(
                     div()
-                        .id(SharedString::from(format!("new-output-{id}")))
                         .absolute()
-                        .left(px(
-                            (pane.rect.x + pane.rect.width).saturating_sub(104) as f32
-                        ))
-                        .top(px(
-                            (pane.rect.y + pane.rect.height).saturating_sub(34) as f32
-                        ))
-                        .px(px(10.0))
-                        .py(px(4.0))
-                        .rounded(px(12.0))
-                        .cursor_pointer()
-                        .bg(rgba(Color {
-                            rgb: self.palette.accent,
-                            alpha: 1.0,
-                        }))
-                        .text_color(rgba(Color {
-                            rgb: self.palette.background,
-                            alpha: 1.0,
-                        }))
-                        .child("new output")
-                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                        .on_mouse_up(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                        .on_click(cx.listener(move |view, _, _, cx| {
-                            if let Some(mirror) = view.mirror(id)
-                                && let Err(error) = mirror.scroll(shoal_term::Scroll::Bottom)
-                            {
-                                tracing::warn!(%error, "can't return to new output");
-                            }
-                            cx.stop_propagation();
-                            cx.notify();
-                        }))
+                        .left(px(content.x as f32))
+                        .top(px(content.y as f32))
+                        .w(px(content.width as f32))
+                        .h(px(content.height as f32))
+                        .flex()
+                        .justify_end()
+                        .items_end()
+                        .p(px(PILL_MARGIN))
+                        .child(pill)
                         .into_any_element(),
                 )
             })

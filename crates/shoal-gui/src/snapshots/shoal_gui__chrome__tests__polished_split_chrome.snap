@@ -1,0 +1,22 @@
+---
+source: crates/shoal-gui/src/chrome_tests.rs
+assertion_line: 428
+expression: out
+---
+work — Shoal
+glass Color { rgb: Rgb([8, 8, 8]), alpha: 0.76 }
+bar Color { rgb: Rgb([8, 8, 8]), alpha: 0.5 }
+chip Chip { name: "work", text: Color { rgb: Rgb([255, 64, 163]), alpha: 1.0 }, hover: Color { rgb: Rgb([48, 48, 48]), alpha: 0.5 } }
+rule Color { rgb: Rgb([48, 48, 48]), alpha: 0.6 }
+tab TabLabel { id: TabId(2), glyph: Terminal, title: "nvim", text: Color { rgb: Rgb([255, 64, 163]), alpha: 1.0 }, fill: Some(Color { rgb: Rgb([255, 64, 163]), alpha: 0.16 }), bell: None }
+tab TabLabel { id: TabId(6), glyph: Terminal, title: "logs", text: Color { rgb: Rgb([128, 128, 128]), alpha: 1.0 }, fill: None, bell: Some(Color { rgb: Rgb([255, 64, 163]), alpha: 1.0 }) }
+tab TabLabel { id: TabId(8), glyph: Zoomed, title: "htop", text: Color { rgb: Rgb([128, 128, 128]), alpha: 1.0 }, fill: None, bell: None }
+pane p3 Rect { x: 8, y: 8, width: 389, height: 584 } radius 10
+  fill Color { rgb: Rgb([16, 16, 16]), alpha: 0.5 }; focus None
+  edge None
+  content Rect { x: 8, y: 8, width: 389, height: 584 }; footer 0
+pane p5 Rect { x: 403, y: 8, width: 389, height: 584 } radius 10
+  fill Color { rgb: Rgb([16, 16, 16]), alpha: 0.5 }; focus Some(Color { rgb: Rgb([255, 64, 163]), alpha: 0.7 })
+  edge Some(Color { rgb: Rgb([255, 64, 163]), alpha: 0.34 })
+  content Rect { x: 403, y: 8, width: 389, height: 584 }; footer 0
+divider Divider { split: SplitId(4), axis: Row, ratio: 0.5, area: Rect { x: 8, y: 8, width: 784, height: 584 }, gap: Rect { x: 397, y: 8, width: 6, height: 584 } }

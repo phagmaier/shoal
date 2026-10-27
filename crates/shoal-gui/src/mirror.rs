@@ -281,7 +281,6 @@ mod tests {
             panic!("not live: {state:?}");
         };
         let settings = draw::Settings {
-            opacity: 1.0,
             cursor: shoal_config::schema::Rgb([0, 0, 0]),
             focused: true,
         };
@@ -460,7 +459,6 @@ mod tests {
             panic!()
         };
         let settings = draw::Settings {
-            opacity: 0.8,
             cursor: shoal_config::schema::Rgb([4, 5, 6]),
             focused: true,
         };

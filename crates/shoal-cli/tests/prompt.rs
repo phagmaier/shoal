@@ -10,6 +10,8 @@ use std::{
 };
 
 const SEP: char = '\u{e0b0}';
+const START: char = '\u{e0b6}';
+const END: char = '\u{e0b4}';
 const BRANCH: char = '\u{e0a0}';
 const NODE: char = '\u{e718}';
 /// M1 spec §8.3's hard cap.
@@ -221,7 +223,7 @@ fn clean_repository() {
         &home,
         &repo,
         "clean",
-        &format!(" parker {SEP} ~/clean {SEP} {BRANCH} main {SEP} ❯ "),
+        &format!("{START} parker {SEP} ~/clean {SEP} {BRANCH} main {END} ❯ "),
     );
 }
 
@@ -234,7 +236,7 @@ fn dirty_repository() {
         &home,
         &repo,
         "dirty",
-        &format!(" parker {SEP} ~/dirty {SEP} {BRANCH} main ● {SEP} ❯ "),
+        &format!("{START} parker {SEP} ~/dirty {SEP} {BRANCH} main ● {END} ❯ "),
     );
 }
 
@@ -256,7 +258,7 @@ fn ahead_and_behind_a_local_bare_remote() {
         &home,
         &repo,
         "ahead_behind",
-        &format!(" parker {SEP} ~/work {SEP} {BRANCH} main ⇡2 ⇣1 {SEP} ❯ "),
+        &format!("{START} parker {SEP} ~/work {SEP} {BRANCH} main ⇡2 ⇣1 {END} ❯ "),
     );
 }
 
@@ -276,7 +278,7 @@ fn detached_head_shows_a_short_hash() {
         &repo,
         "detached",
         &format!(
-            " parker {SEP} ~/detached {SEP} {BRANCH} {} {SEP} ❯ ",
+            "{START} parker {SEP} ~/detached {SEP} {BRANCH} {} {END} ❯ ",
             hash.trim()
         ),
     );
@@ -290,7 +292,7 @@ fn outside_a_repository_there_is_no_git_segment() {
         &home,
         &dir,
         "none",
-        &format!(" parker {SEP} …/deep/er/still {SEP} ❯ "),
+        &format!("{START} parker {SEP} …/deep/er/still {END} ❯ "),
     );
 }
 
@@ -305,7 +307,7 @@ fn a_slow_git_shows_the_branch_and_a_question_mark_within_the_cap() {
         let elapsed = started.elapsed();
         assert_eq!(
             shell.show(&prompt, home.path()),
-            format!(" parker {SEP} ~/slow {SEP} {BRANCH} main ? {SEP} ❯ ")
+            format!("{START} parker {SEP} ~/slow {SEP} {BRANCH} main ? {END} ❯ ")
         );
         assert!(elapsed < CAP, "{shell:?} took {elapsed:?}");
     }
@@ -320,8 +322,8 @@ fn names_that_look_like_shell_code_are_shown_not_run() {
         &["init", "-q", "-b", "$(touch${IFS}pwned)`touch${IFS}pwned`%"],
     );
     let shown = format!(
-        " parker {SEP} ~/$(touch pwned) `touch pwned` 100% {SEP} \
-         {BRANCH} $(touch${{IFS}}pwned)`touch${{IFS}}pwned`% ● {SEP} ❯ "
+        "{START} parker {SEP} ~/$(touch pwned) `touch pwned` 100% {SEP} \
+         {BRANCH} $(touch${{IFS}}pwned)`touch${{IFS}}pwned`% ● {END} ❯ "
     );
     fs::write(dir.join("untracked"), "").expect("untracked file");
     for shell in SHELLS {
@@ -356,7 +358,7 @@ fn ssh_sessions_add_the_host() {
     let prompt = String::from_utf8(output.stdout).expect("UTF-8");
     assert_eq!(
         Shell::Bash.show(prompt.trim_end_matches('\n'), home.path()),
-        format!(" parker@{} {SEP} ~/code {SEP} ❯ ", host.trim_end())
+        format!("{START} parker@{} {SEP} ~/code {END} ❯ ", host.trim_end())
     );
 }
 
@@ -377,7 +379,7 @@ fn a_failure_turns_the_character_red_and_shows_the_time_and_jobs() {
     let prompt = home.prompt_with(Shell::Zsh, &dir, &args);
     assert_eq!(
         Shell::Zsh.show(&prompt, home.path()),
-        format!(" parker {SEP} ~/code {SEP} took 12s ✦2 ❯ ")
+        format!("{START} parker {SEP} ~/code {END} took 12s ✦2 ❯ ")
     );
     // The built-in palette's red, #f7768e.
     assert!(
@@ -427,7 +429,7 @@ fn runtime_versions_are_cached_by_program_path_and_mtime() {
         "node",
         &format!("echo run >> '{}'\necho v22.11.0", runs.display()),
     );
-    let expected = format!(" parker {SEP} ~/app {SEP} {NODE} 22.11 {SEP} ❯ ");
+    let expected = format!("{START} parker {SEP} ~/app {SEP} {NODE} 22.11 {END} ❯ ");
     let count = || {
         fs::read_to_string(&runs)
             .unwrap_or_default()
@@ -475,7 +477,7 @@ fn version_manager_shims_are_asked_every_time() {
         let prompt = home.prompt(Shell::Bash, &dir);
         assert_eq!(
             Shell::Bash.show(&prompt, home.path()),
-            format!(" parker {SEP} ~/app {SEP} {NODE} 22.11 {SEP} ❯ ")
+            format!("{START} parker {SEP} ~/app {SEP} {NODE} 22.11 {END} ❯ ")
         );
     }
     let count = fs::read_to_string(&runs).expect("runs").lines().count();
@@ -494,7 +496,7 @@ fn a_slow_runtime_shows_a_question_mark_within_the_cap() {
     let elapsed = started.elapsed();
     assert_eq!(
         Shell::Zsh.show(&prompt, home.path()),
-        format!(" parker {SEP} ~/app {SEP} \u{e7a8} ? {SEP} ❯ ")
+        format!("{START} parker {SEP} ~/app {SEP} \u{e7a8} ? {END} ❯ ")
     );
     assert!(elapsed < CAP, "took {elapsed:?}");
 }

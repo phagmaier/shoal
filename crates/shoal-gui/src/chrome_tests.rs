@@ -32,11 +32,17 @@ fn window() -> WindowConfig {
 }
 
 fn pane(id: u64, title: &str, bell: bool) -> (String, Value) {
+    let cwd = match id {
+        3 => json!("/home/u/code"),
+        5 => json!("/srv/data"),
+        9 => json!("/home/u"),
+        _ => Value::Null,
+    };
     (
         format!("p{id}"),
         json!({
             "id": format!("p{id}"), "kind": {"kind": "shell", "argv": []},
-            "size": {"cols": 80, "rows": 24}, "cwd": null, "program": null, "title": title,
+            "size": {"cols": 80, "rows": 24}, "cwd": cwd, "program": null, "title": title,
             "status": {"state": "running"}, "bell": bell, "restored_from": null,
         }),
     )
@@ -97,8 +103,7 @@ fn chrome_of(active_tab: &str, width: u32, height: u32) -> Chrome {
         session(1),
         &palette(),
         &window(),
-        width,
-        height,
+        (width, height),
     )
     .unwrap()
 }
@@ -111,11 +116,25 @@ fn the_top_bar_shows_the_session_and_its_tabs() {
         chrome.bar,
         Color {
             rgb: TOP_BAR,
-            alpha: 0.88
+            alpha: 0.5
         }
     );
     assert_eq!(chrome.chip.name, "work");
-    assert_eq!(chrome.chip.text, Color::opaque(FOREGROUND));
+    assert_eq!(chrome.chip.text, Color::opaque(ACCENT));
+    assert_eq!(
+        chrome.chip.hover,
+        Color {
+            rgb: LIGHTER,
+            alpha: 0.5
+        }
+    );
+    assert_eq!(
+        chrome.rule,
+        Color {
+            rgb: LIGHTER,
+            alpha: 0.6
+        }
+    );
 
     let titles: Vec<_> = chrome.tabs.iter().map(|tab| tab.title.as_str()).collect();
     // A tab shows its focused pane's title, or the name the user gave it.
@@ -123,12 +142,19 @@ fn the_top_bar_shows_the_session_and_its_tabs() {
     let [active, ringing, zoomed] = &chrome.tabs[..] else {
         panic!("three tabs")
     };
-    assert_eq!(active.text, Color::opaque(FOREGROUND));
-    assert_eq!(active.underline, Some(Color::opaque(ACCENT)));
+    // The active tab is a pill: accent text on a faint accent fill.
+    assert_eq!(active.text, Color::opaque(ACCENT));
+    assert_eq!(
+        active.fill,
+        Some(Color {
+            rgb: ACCENT,
+            alpha: 0.16
+        })
+    );
     assert_eq!(active.bell, None);
     assert_eq!(active.glyph, Glyph::Terminal);
     assert_eq!(ringing.text, Color::opaque(INACTIVE));
-    assert_eq!(ringing.underline, None);
+    assert_eq!(ringing.fill, None);
     assert_eq!(ringing.bell, Some(Color::opaque(ACCENT)));
     assert_eq!(zoomed.glyph, Glyph::Zoomed);
 }
@@ -140,31 +166,44 @@ fn split_panes_fill_the_padded_area_and_the_focused_one_is_marked() {
     let chrome = chrome_of("t2", 800, 600);
     let fill = Color {
         rgb: BACKGROUND,
-        alpha: 0.88,
+        alpha: 0.5,
     };
+    let boxes: Vec<_> = chrome
+        .panes
+        .iter()
+        .map(|pane| {
+            (
+                pane.pane.to_string(),
+                pane.rect,
+                pane.radius,
+                pane.fill,
+                pane.focus,
+            )
+        })
+        .collect();
     assert_eq!(
-        chrome.panes,
+        boxes,
         [
-            PaneBox {
-                pane: "p3".parse().unwrap(),
-                rect: rect(8, 8, 389, 584),
-                radius: 10.0,
+            ("p3".to_owned(), rect(8, 8, 389, 584), 10.0, fill, None),
+            (
+                "p5".to_owned(),
+                rect(403, 8, 389, 584),
+                10.0,
                 fill,
-                border: Color {
-                    rgb: LIGHTER,
-                    alpha: 0.6
-                },
-                border_width: 1.0,
-            },
-            PaneBox {
-                pane: "p5".parse().unwrap(),
-                rect: rect(403, 8, 389, 584),
-                radius: 10.0,
-                fill,
-                border: Color::opaque(ACCENT),
-                border_width: 1.5,
-            },
+                Some(Color {
+                    rgb: ACCENT,
+                    alpha: 0.70
+                })
+            ),
         ]
+    );
+    assert_eq!(chrome.panes[0].edge, None);
+    assert_eq!(
+        chrome.panes[1].edge,
+        Some(Color {
+            rgb: ACCENT,
+            alpha: 0.34
+        })
     );
     // A point finds its box; the gap and the padding find none.
     let at = |x, y| pane_at(&chrome.panes, (x, y)).map(|pane| pane.to_string());
@@ -188,32 +227,22 @@ fn split_panes_fill_the_padded_area_and_the_focused_one_is_marked() {
 }
 
 #[test]
-fn one_visible_pane_has_no_focus_border() {
-    let unfocused = (
-        Color {
-            rgb: LIGHTER,
-            alpha: 0.6,
-        },
-        1.0,
-    );
+fn one_visible_pane_has_no_focus_line() {
     let single = chrome_of("t6", 800, 600);
-    let borders: Vec<_> = single
-        .panes
-        .iter()
-        .map(|pane| (pane.border, pane.border_width))
-        .collect();
-    assert_eq!(borders, [unfocused]);
+    assert!(
+        single
+            .panes
+            .iter()
+            .all(|pane| pane.focus.is_none() && pane.edge.is_none())
+    );
     assert_eq!(single.panes[0].rect, rect(8, 8, 784, 584));
-
-    // A zoomed pane fills the area alone; the other keeps running unseen.
     let zoomed = chrome_of("t8", 800, 600);
     let shown: Vec<_> = zoomed
         .panes
         .iter()
-        .map(|pane| (pane.pane.to_string(), pane.rect, pane.border_width))
+        .map(|pane| (pane.pane.to_string(), pane.rect, pane.focus))
         .collect();
-    assert_eq!(shown, [("p11".to_owned(), rect(8, 8, 784, 584), 1.0)]);
-    // Nothing to drag while zoomed, or with one pane.
+    assert_eq!(shown, [("p11".to_owned(), rect(8, 8, 784, 584), None)]);
     assert!(zoomed.dividers.is_empty());
     assert!(single.dividers.is_empty());
 }
@@ -226,7 +255,14 @@ fn window_settings_change_the_boxes() {
         gap: 10,
         radius: 4,
     };
-    let chrome = chrome(&workspace("t2"), session(1), &palette(), &config, 210, 100).unwrap();
+    let chrome = chrome(
+        &workspace("t2"),
+        session(1),
+        &palette(),
+        &config,
+        (210, 100),
+    )
+    .unwrap();
     let boxes: Vec<_> = chrome
         .panes
         .iter()
@@ -253,11 +289,141 @@ fn a_window_smaller_than_its_padding_draws_empty_boxes() {
 #[test]
 fn another_session_and_a_closed_one() {
     let workspace = workspace("t2");
-    let other = chrome(&workspace, session(12), &palette(), &window(), 800, 600).unwrap();
+    let other = chrome(&workspace, session(12), &palette(), &window(), (800, 600)).unwrap();
     assert_eq!(other.title, "other — Shoal");
     assert_eq!(other.tabs.len(), 1);
     assert_eq!(
-        chrome(&workspace, session(99), &palette(), &window(), 800, 600),
+        chrome(&workspace, session(99), &palette(), &window(), (800, 600)),
         None
     );
+}
+
+#[test]
+fn terminal_content_starts_at_the_pane_top_without_reserved_chrome() {
+    use crate::metrics::{self, FontMeasure};
+    let chrome = chrome_of("t2", 800, 600);
+    let pane = &chrome.panes[0];
+    assert_eq!(pane.content(), rect(8, 8, 389, 584));
+    // 377 × 572 inside the 6 px inset: 41 columns of 9 and 21 rows of 27.
+    // The 8 and 5 leftover pixels split around the grid, never a header.
+    let cell = metrics::cell_metrics(
+        15.0,
+        FontMeasure {
+            advance: 9.0,
+            ascent: 15.0,
+            descent: 4.0,
+        },
+        1.4,
+        1.0,
+    );
+    assert_eq!(
+        metrics::grid_size(pane.content(), &cell).map(|g| (g.cols, g.rows)),
+        Some((41, 21))
+    );
+    assert_eq!(metrics::grid_origin(pane.content(), &cell), (18.0, 16.0));
+    assert_eq!(
+        metrics::grid_clip(pane.content(), &cell, 21),
+        (14.0, 16.0, 377.0, 567.0)
+    );
+    assert_eq!(pane_at(&chrome.panes, (18.0, 16.0)), Some(pane.pane));
+    // Single and zoomed panes reclaim their top space as well.
+    for tab in ["t6", "t8"] {
+        let single = chrome_of(tab, 800, 600);
+        assert_eq!(single.panes[0].content(), rect(8, 8, 784, 584));
+    }
+}
+
+#[test]
+fn an_exited_pane_reserves_its_footer_below_the_grid() {
+    let mut workspace = workspace("t2");
+    workspace
+        .panes
+        .get_mut(&"p5".parse().unwrap())
+        .unwrap()
+        .status = PaneStatus::Exited {
+        code: Some(3),
+        signal: None,
+    };
+    let chrome = chrome(&workspace, session(1), &palette(), &window(), (800, 600)).unwrap();
+    let exited = &chrome.panes[1];
+    assert_eq!(exited.footer, 30);
+    // Only the 30 px exited footer is reserved from the 584 px pane.
+    assert_eq!(exited.content(), rect(403, 8, 389, 554));
+    // A box shorter than its footer has no room left for a grid.
+    let squeezed = PaneBox {
+        rect: rect(0, 0, 100, 20),
+        ..exited.clone()
+    };
+    assert_eq!(squeezed.content(), rect(0, 0, 100, 0));
+}
+
+#[test]
+fn glass_and_pane_layers_preserve_the_requested_effective_opacity() {
+    // Independent transmission examples: 24% through the glass, half of
+    // that through the pane, leaves 12% wallpaper at the default 88%.
+    for (opacity, glass_alpha, pane_alpha) in [
+        (0.0, 0.0, 0.0),
+        (0.25, 0.0, 0.25),
+        (0.5, 0.0, 0.5),
+        (0.88, 0.76, 0.5),
+        (1.0, 1.0, 1.0),
+    ] {
+        let window = WindowConfig {
+            opacity,
+            ..window()
+        };
+        let chrome = chrome(
+            &workspace("t2"),
+            session(1),
+            &palette(),
+            &window,
+            (800, 600),
+        )
+        .unwrap();
+        assert!((glass(&palette(), &window).alpha - glass_alpha).abs() < 1e-6);
+        assert!((chrome.bar.alpha - pane_alpha).abs() < 1e-6);
+        for pane in chrome.panes {
+            assert!((pane.fill.alpha - pane_alpha).abs() < 1e-6);
+            let transmission = (1.0 - glass_alpha) * (1.0 - pane.fill.alpha);
+            assert!((transmission - (1.0 - opacity as f32)).abs() < 1e-6);
+        }
+    }
+}
+
+#[test]
+fn polished_split_chrome() {
+    use std::fmt::Write as _;
+    let chrome = chrome_of("t2", 800, 600);
+    let mut out = format!(
+        "{}\nglass {:?}\nbar {:?}\nchip {:?}\nrule {:?}\n",
+        chrome.title,
+        glass(&palette(), &window()),
+        chrome.bar,
+        chrome.chip,
+        chrome.rule
+    );
+    for tab in chrome.tabs {
+        writeln!(out, "tab {tab:?}").unwrap();
+    }
+    for pane in chrome.panes {
+        writeln!(
+            out,
+            "pane {} {:?} radius {}",
+            pane.pane, pane.rect, pane.radius
+        )
+        .unwrap();
+        writeln!(out, "  fill {:?}; focus {:?}", pane.fill, pane.focus).unwrap();
+        writeln!(out, "  edge {:?}", pane.edge).unwrap();
+        writeln!(
+            out,
+            "  content {:?}; footer {}",
+            pane.content(),
+            pane.footer
+        )
+        .unwrap();
+    }
+    for divider in chrome.dividers {
+        writeln!(out, "divider {divider:?}").unwrap();
+    }
+    insta::assert_snapshot!(out);
 }

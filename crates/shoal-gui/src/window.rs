@@ -226,9 +226,17 @@ impl ShoalRoot {
 
 impl Render for ShoalRoot {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Chrome uses a proportional UI face at one size everywhere,
+        // banners and the reconnect overlay included (§7.2).
         let mut root = div()
             .relative()
             .size_full()
+            .font_family(crate::fonts::UI_FAMILY)
+            .bg(crate::view::rgba(crate::chrome::glass(
+                &self.palette,
+                &self.config.window,
+            )))
+            .text_size(px(crate::view::TEXT_SIZE))
             .text_color(self.color(self.palette.foreground));
         if let Some(content) = &self.content {
             root = root.child(content.clone());
