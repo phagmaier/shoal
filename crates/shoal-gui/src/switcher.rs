@@ -16,6 +16,13 @@ pub struct Row {
     pub on_screen: bool,
 }
 
+/// What a row's buttons, or F2 and Ctrl+Backspace, start.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edit {
+    Rename,
+    Close,
+}
+
 pub enum Mode {
     Browse,
     Rename {
@@ -93,6 +100,27 @@ impl Switcher {
             self.mode = Mode::Browse;
             self.error = None;
         }
+    }
+
+    /// Select `session`'s row and start renaming or confirming its close.
+    /// False, changing nothing, when the session is gone.
+    pub fn edit(&mut self, sessions: &[Session], session: SessionId, edit: Edit) -> bool {
+        let Some(found) = sessions.iter().find(|s| s.id == session) else {
+            return false;
+        };
+        self.selected = Target::Session(session);
+        self.mode = match edit {
+            Edit::Rename => Mode::Rename {
+                session,
+                field: TextField::new(&found.name),
+            },
+            Edit::Close => Mode::Confirm {
+                session,
+                name: found.name.clone(),
+            },
+        };
+        self.error = None;
+        true
     }
 
     pub fn step(&mut self, sessions: &[Session], current: SessionId, forward: bool) -> usize {
@@ -292,6 +320,32 @@ mod tests {
         picker.filtered(&all, current);
         assert_eq!(picker.selected, Target::New);
         assert_eq!(picker.step(&all, current, false), 0);
+    }
+    #[test]
+    fn a_row_button_selects_its_session_and_starts_the_edit() {
+        let all = sessions(&["main", "work"]);
+        let current = all[0].id;
+        let mut picker = Switcher::new(current);
+        picker.error = Some("stale".into());
+        assert!(picker.edit(&all, all[1].id, Edit::Rename));
+        assert_eq!(picker.selected, Target::Session(all[1].id));
+        assert!(picker.error.is_none());
+        match &picker.mode {
+            Mode::Rename { session, field } => {
+                assert_eq!((*session, field.text()), (all[1].id, "work"));
+                assert!(field.all_selected(), "typing replaces the old name");
+            }
+            _ => panic!("expected rename"),
+        }
+        assert!(picker.edit(&all, current, Edit::Close));
+        assert!(matches!(
+            &picker.mode,
+            Mode::Confirm { session, name } if *session == current && name == "main"
+        ));
+        // A session closed elsewhere leaves the switcher as it was.
+        assert!(!picker.edit(&all, SessionId::new(99), Edit::Rename));
+        assert_eq!(picker.selected, Target::Session(current));
+        assert!(matches!(picker.mode, Mode::Confirm { .. }));
     }
     #[test]
     fn next_and_previous_wrap_in_creation_order_after_renaming() {

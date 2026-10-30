@@ -425,7 +425,6 @@ impl Render for ShoalWindow {
             self.title = chrome.title.clone();
         }
         let Chrome {
-            bar,
             chip,
             rule,
             tabs,
@@ -433,7 +432,7 @@ impl Render for ShoalWindow {
             dividers,
             ..
         } = chrome;
-        let top_bar = self.top_bar(bar, chip, rule, tabs, cx);
+        let top_bar = self.top_bar(chip, rule, tabs, cx);
         let cell = self.cell_metrics(window);
         if self.available && !self.awaiting_workspace {
             self.request_sizes(&panes, &cell, cx);

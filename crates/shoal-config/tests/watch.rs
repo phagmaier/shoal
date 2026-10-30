@@ -47,7 +47,7 @@ fn atomic_saves_bad_edits_and_recovery_keep_the_last_good_config() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("config.toml");
     let (_watcher, initial, rx) = watch(&path);
-    assert_eq!(initial.loaded.config.font.size, 11.0);
+    assert_eq!(initial.loaded.config.font.size, 10.0);
     let staging = dir.path().join("staging.toml");
     fs::write(&staging, "[font]\nsize = 18").unwrap();
     fs::rename(&staging, &path).unwrap();
@@ -66,7 +66,7 @@ fn atomic_saves_bad_edits_and_recovery_keep_the_last_good_config() {
     fs::rename(&staging, &path).unwrap();
     next(&rx, 22.0);
     fs::remove_file(&path).unwrap();
-    next(&rx, 11.0);
+    next(&rx, 10.0);
     fs::write(&path, "[font]\nsize = 24").unwrap();
     next(&rx, 24.0);
 }
@@ -100,7 +100,7 @@ fn invalid_startup_reports_defaults_then_recovers_and_keeps_warnings_on_error() 
     fs::write(&path, "[font]\nsize = 0").unwrap();
     let (_watcher, initial, rx) = watch(&path);
     assert!(initial.error.is_some());
-    assert_eq!(initial.loaded.config.font.size, 11.0);
+    assert_eq!(initial.loaded.config.font.size, 10.0);
     fs::write(&path, "[font]\nsize = 17\ntypo = true").unwrap();
     let update = rx.recv_timeout(TIMEOUT).unwrap();
     assert!(update.error.is_none());
@@ -137,7 +137,7 @@ fn symlink_targets_and_retargeting_are_watched() {
     fs::write(&second, "[font]\nsize = 22").unwrap();
     next(&rx, 22.0);
     fs::remove_file(&second).unwrap();
-    next(&rx, 11.0);
+    next(&rx, 10.0);
     fs::write(&second, "[font]\nsize = 24").unwrap();
     next(&rx, 24.0);
 }

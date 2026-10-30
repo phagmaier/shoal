@@ -1,7 +1,7 @@
 //! GPUI input-method contract. Preedit stays local until commit. The
 //! inline rename field uses the same handler, with UTF-16 range conversion.
 
-use super::{ShoalWindow, TEXT_SIZE, rgba};
+use super::{ShoalWindow, rgba};
 use crate::{
     chrome::{Color, TOP_BAR_HEIGHT},
     field::{TextField, byte_offset},
@@ -12,6 +12,9 @@ use gpui::{
     SharedString, UTF16Selection, Window, div, point, prelude::*, px, size,
 };
 use std::ops::Range;
+
+/// An empty field's placeholder reads as a hint, a step below typed text.
+const PLACEHOLDER_ALPHA: f32 = 0.6;
 
 impl ShoalWindow {
     pub(super) fn editing(&self) -> Option<&TextField> {
@@ -43,6 +46,7 @@ impl ShoalWindow {
         focus: &FocusHandle,
         id: &'static str,
         placeholder: &'static str,
+        text_size: f32,
         cx: &mut Context<Self>,
     ) -> gpui::Stateful<Div> {
         let input = cx.entity();
@@ -72,6 +76,7 @@ impl ShoalWindow {
             .px(px(4.0))
             .rounded(px(4.0))
             .bg(color(self.palette.unfocused_border))
+            .text_size(px(text_size))
             .text_color(color(self.palette.foreground))
             .child(
                 gpui::canvas(
@@ -92,7 +97,7 @@ impl ShoalWindow {
                 div()
                     .flex_none()
                     .w(px(1.5))
-                    .h(px(TEXT_SIZE + 3.0))
+                    .h(px(text_size + 3.0))
                     .bg(color(self.palette.cursor)),
             )
             .child(
@@ -106,7 +111,7 @@ impl ShoalWindow {
                     div()
                         .text_color(rgba(Color {
                             rgb: self.palette.foreground,
-                            alpha: 0.9,
+                            alpha: PLACEHOLDER_ALPHA,
                         }))
                         .child(placeholder),
                 )

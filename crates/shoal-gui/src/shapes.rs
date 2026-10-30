@@ -28,6 +28,12 @@ pub fn is_shape(ch: char) -> bool {
     matches!(ch, '\u{2500}'..='\u{259f}' | '\u{e0b0}'..='\u{e0b7}')
 }
 
+/// Whether `ch` is a powerline separator or cap, which ends with the
+/// backgrounds it joins rather than filling the cell (§7.3).
+pub fn is_powerline(ch: char) -> bool {
+    matches!(ch, '\u{e0b0}'..='\u{e0b7}')
+}
+
 /// The light line thickness for a cell `h` device pixels tall.
 fn light(h: f32) -> f32 {
     (h / 16.0).round().max(1.0)

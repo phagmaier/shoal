@@ -33,7 +33,7 @@ impl Default for FontConfig {
     fn default() -> Self {
         Self {
             family: "JetBrains Mono".into(),
-            size: 11.0,
+            size: 10.0,
             line_height: 1.4,
         }
     }

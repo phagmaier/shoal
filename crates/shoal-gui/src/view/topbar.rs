@@ -33,7 +33,6 @@ const SPLIT_DOWN_GLYPH: &str = "\u{eb57}";
 impl ShoalWindow {
     pub(super) fn top_bar(
         &self,
-        bar: Color,
         chip: Chip,
         rule: Color,
         tabs: Vec<TabLabel>,
@@ -55,7 +54,6 @@ impl ShoalWindow {
             .gap(px(2.0))
             .px(px(8.0))
             .overflow_hidden()
-            .bg(rgba(bar))
             .child(
                 div()
                     .id("session-chip")
@@ -242,7 +240,10 @@ impl ShoalWindow {
             .cursor_pointer()
             .font_family(fonts::SYMBOLS_FAMILY)
             .text_size(px(15.0))
-            .text_color(rgba(Color::opaque(palette.inactive_text)))
+            .text_color(rgba(Color {
+                rgb: palette.foreground,
+                alpha: chrome::QUIET_TEXT_ALPHA,
+            }))
             .hover(move |style| style.bg(rgba(hover_fill)).text_color(rgba(hover_text)))
             .child(glyph)
             .tooltip(move |_, cx| cx.new(|_| tooltip.clone()).into())
@@ -274,13 +275,20 @@ impl ShoalWindow {
     /// The inline rename field in place of a tab's title: the text, its
     /// caret, and the whole label selected until the first key.
     fn rename_field(&self, rename: &Rename, cx: &mut Context<Self>) -> AnyElement {
-        self.text_field(&rename.field, &self.rename_focus, "rename", "", cx)
-            .on_key_down(cx.listener(Self::rename_key))
-            .on_mouse_down_out(cx.listener(|view, _, window, cx| {
-                let name = view.rename.as_ref().and_then(Rename::name);
-                view.finish_rename(name, window, cx);
-            }))
-            .into_any_element()
+        self.text_field(
+            &rename.field,
+            &self.rename_focus,
+            "rename",
+            "",
+            super::TEXT_SIZE,
+            cx,
+        )
+        .on_key_down(cx.listener(Self::rename_key))
+        .on_mouse_down_out(cx.listener(|view, _, window, cx| {
+            let name = view.rename.as_ref().and_then(Rename::name);
+            view.finish_rename(name, window, cx);
+        }))
+        .into_any_element()
     }
 
     pub(super) fn start_rename(&mut self, tab: TabId, window: &mut Window, cx: &mut Context<Self>) {

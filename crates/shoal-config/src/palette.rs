@@ -170,7 +170,7 @@ pub struct Palette {
     /// Focus border, active-tab underline, bell dot and prompt character.
     pub accent: Rgb,
     pub unfocused_border: Rgb,
-    /// Inactive tab text and tooltips.
+    /// Tooltip and key-hint text.
     pub inactive_text: Rgb,
 }
 

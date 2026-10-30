@@ -10,6 +10,7 @@ builtin zmodload zsh/parameter
 builtin typeset -gF __shoal_command_started=0
 builtin typeset -gi __shoal_command_active=0
 builtin typeset -g __shoal_prompt_start='' __shoal_prompt_end=''
+builtin typeset -gi __shoal_prompted=0
 
 # Do not change the user's prompt expansion options in shell mode. The native
 # renderer escapes literals for PROMPT_SUBST, so native mode requires it.
@@ -48,14 +49,19 @@ __shoal_directory() {
 __shoal_update_prompt() {
     emulate -L zsh
     local -i command_status=$1 duration_ms=$2
-    local percent_enabled=$3 prompt_text
+    local percent_enabled=$3 prompt_text lead=''
     local -i job_count=${#jobstates}
 
     if [[ ${SHOAL_PROMPT_MODE:-native} == native ]]; then
         prompt_text=$("${SHOAL_BIN:-shoal}" prompt --shell zsh \
             --status "$command_status" --duration-ms "$duration_ms" \
             --jobs "$job_count" --cols "${COLUMNS:-80}")
-        PROMPT=$'%{\e]133;A\e\\%}'"$prompt_text"$'%{\e]133;B\e\\%}'
+        # A blank line between a command's output and every native prompt
+        # after the first, outside the prompt's marks.
+        if (( __shoal_prompted )); then
+            lead=$'\n'
+        fi
+        PROMPT=$lead$'%{\e]133;A\e\\%}'"$prompt_text"$'%{\e]133;B\e\\%}'
     else
         # Remove only our previous decorations. A user's precmd can replace or
         # modify PROMPT, and repeated prompts must not grow more OSC markers.
@@ -74,6 +80,7 @@ __shoal_update_prompt() {
         fi
         PROMPT="$__shoal_prompt_start$PROMPT$__shoal_prompt_end"
     fi
+    __shoal_prompted=1
 }
 
 __shoal_precmd() {

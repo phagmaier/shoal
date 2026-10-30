@@ -14,6 +14,9 @@ __shoal_command_start_us=0
 __shoal_ps0_empty=''
 __shoal_prompt_prefix='\[\e]133;A\a\]'
 __shoal_prompt_suffix='\[\e]133;B\a\]'
+# What precedes the A mark in the PS1 we set last, and whether one was set.
+__shoal_prompt_lead=''
+__shoal_prompted=0
 __shoal_command_marker=$'\e]133;C\a'
 __shoal_ps0_timer='${__shoal_ps0_empty:0:$((__shoal_command_start_us=10#${EPOCHREALTIME/./},0))}'
 __shoal_ps0_prefix=''
@@ -61,11 +64,17 @@ __shoal_prompt() {
 
     # Remove only our previous wrappers. A user's PROMPT_COMMAND may replace
     # PS1 on every prompt; neither that nor a static prompt accumulates marks.
-    if [[ $prompt == "$__shoal_prompt_prefix"* && $prompt == *"$__shoal_prompt_suffix" ]]; then
-        prompt=${prompt#"$__shoal_prompt_prefix"}
+    if [[ $prompt == "$__shoal_prompt_lead$__shoal_prompt_prefix"* && $prompt == *"$__shoal_prompt_suffix" ]]; then
+        prompt=${prompt#"$__shoal_prompt_lead$__shoal_prompt_prefix"}
         prompt=${prompt%"$__shoal_prompt_suffix"}
     fi
+    __shoal_prompt_lead=''
     if [[ ${SHOAL_PROMPT_MODE:-native} == native ]]; then
+        # A blank line between a command's output and every native prompt
+        # after the first, outside the prompt's marks.
+        if (( __shoal_prompted )); then
+            __shoal_prompt_lead=$'\n'
+        fi
         while IFS= read -r job; do
             [[ -z $job ]] || (( jobs += 1 ))
         done <<< "$(jobs -p)"
@@ -77,7 +86,8 @@ __shoal_prompt() {
             prompt=$rendered
         fi
     fi
-    PS1=$__shoal_prompt_prefix$prompt$__shoal_prompt_suffix
+    __shoal_prompted=1
+    PS1=$__shoal_prompt_lead$__shoal_prompt_prefix$prompt$__shoal_prompt_suffix
 
     if [[ -n $__shoal_ps0_prefix && $ps0 == "$__shoal_ps0_prefix"* ]]; then
         ps0=${ps0#"$__shoal_ps0_prefix"}

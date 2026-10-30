@@ -9,16 +9,30 @@ they are what lets one agent change one crate without breaking another.
 
 ## Read first
 
-- `docs/spec/` is the spec:
-  - `decisions.md`: the key technical decisions and the milestone plan.
-  - `m1-spec.md`: the milestone 1 spec. Tasks cite it as "M1 spec §N".
-  - `tasks.md`: status table plus full **Needs / Build / Done when** for active tasks only (T49+). Completed work is one row each; T00–T46 verbatim history is in `docs/spec/completed.md` (read-only archive), and later task history is in Git.
-  - `completed.md`: read-only archive of T00–T46. Never extend it with new prose.
-- `docs/agent-env.md`: disposable sandbox, Wayland/Hyprland discovery, tmpfs, fake systemctl. Read before running checks or manual scripts.
-- `docs/flakes.md`: known intermittent failures. Check before re-investigating a flake.
-- The spec wins over intuition. If the spec and the code disagree, or the spec is
-  ambiguous, stop and ask. Do not invent behaviour.
+- For a planned task, read its entry in `docs/spec/tasks.md`, check its **Needs**,
+  and read the cited sections of `docs/spec/m1-spec.md`. For other work, read the
+  relevant spec sections before changing behavior.
+- Read `docs/agent-env.md` before checks or manual scripts; consult `docs/flakes.md`
+  when a failure may match a known symptom.
+- `docs/spec/decisions.md` records design rationale and the milestone plan. Consult
+  it when needed; the current M1 spec governs M1 behavior. `docs/spec/completed.md`
+  and `docs/spike-00.md` are read-only historical archives; consult them for
+  provenance, not current status. Never extend them with new prose.
+- The spec wins over intuition. When a requested fix addresses a clear mismatch,
+  implement the specified behavior. If the spec is ambiguous, conflicts with the
+  requested outcome, or a mismatch calls its intended behavior into question, stop
+  and ask. Do not invent behavior.
 - The "Never build" list at the end of this file is permanent.
+
+### Where to look
+
+| Work | Starting points |
+| --- | --- |
+| Protocol, attach and streaming | M1 spec §5; `crates/shoal-proto/`, `crates/shoal-client/` |
+| Daemon lifecycle and persistence | M1 spec §4 and §6; `crates/shoal-daemon/` |
+| Terminal rendering and input | M1 spec §7; `crates/shoal-term/`, `crates/shoal-gui/` |
+| Config, theme and prompt | M1 spec §8–§10; `crates/shoal-config/`, `crates/shoal-cli/` |
+| Tests and user-facing behavior | `docs/agent-env.md`, `crates/shoal-testkit/`, `docs/using-shoal.md` |
 
 ## Architecture on one screen
 
@@ -146,7 +160,7 @@ cargo insta review    # accept snapshot changes deliberately, never blindly
 
 ## Working on a task
 
-1. Read the task in `tasks.md` and the spec sections it cites. Completed work is summarized in the status table; full history is in `docs/spec/completed.md` (read-only, never edit it).
+1. Read the task in `tasks.md` and the spec sections it cites. Completed work is summarized in the status table; T00–T46 history is in `docs/spec/completed.md` and later history is in Git.
 2. Check that everything in **Needs** is done (rows marked done in the status table).
 3. Stay in scope. Extra work you discover goes in your summary as a proposed new task.
 4. If the task is bigger than one sitting, stop, propose a split, and update `tasks.md`.

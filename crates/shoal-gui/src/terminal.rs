@@ -1,6 +1,7 @@
 //! Painting a mirror's draw list with GPUI (M1 spec §7.3). Each row's
-//! glyphs, shapes and quads are resolved once per row version, so a clean
-//! row costs only its paint calls.
+//! glyphs, shapes and quads are resolved once per version of the row and
+//! its neighbours, whose backgrounds decide how far its own reach, so a
+//! clean row costs only its paint calls.
 
 use std::{collections::HashMap, rc::Rc, time::Instant};
 
@@ -11,7 +12,7 @@ use gpui::{
 use shoal_term::{CursorShape, Underline};
 
 use crate::{
-    draw::{CursorDraw, DrawList, LineKind, RowDraw, RunKind},
+    draw::{CursorDraw, DrawList, LineKind, RowDraw, RunKind, Span},
     glyphs::{GlyphCache, Placed},
     metrics::CellMetrics,
     shapes::{self, Shape},
@@ -44,12 +45,23 @@ enum Mark {
     },
 }
 
+/// A background or shape's horizontal and vertical extent within its row.
+#[derive(Debug, Clone, Copy)]
+struct Extent {
+    x: f32,
+    w: f32,
+    top: f32,
+    h: f32,
+}
+
 #[derive(Debug)]
 struct PaintedRow {
-    version: u64,
-    backgrounds: Vec<(f32, f32, Hsla)>,
+    /// The versions of this row and the rows above and below it.
+    versions: (Option<u64>, u64, Option<u64>),
+    backgrounds: Vec<(Extent, Hsla)>,
     glyphs: Vec<Glyph>,
-    shapes: Vec<(u16, Rc<[Shape]>, Hsla)>,
+    /// The column, the top of the shapes and the shapes.
+    shapes: Vec<(u16, f32, Rc<[Shape]>, Hsla)>,
     lines: Vec<Mark>,
 }
 
@@ -60,7 +72,8 @@ pub struct Painter {
     /// The cell metrics and glyph cache generation the rows were resolved
     /// with; a new font family, size or line height starts over.
     metrics: Option<(CellMetrics, u64)>,
-    shapes: HashMap<char, Rc<[Shape]>>,
+    /// By character and whether it reaches the cell's top and bottom.
+    shapes: HashMap<(char, bool, bool), Rc<[Shape]>>,
 }
 
 /// Everything one pane's paint needs, owned so the paint closure can take it.
@@ -106,14 +119,25 @@ impl Painter {
         }
         self.rows.truncate(list.rows.len());
         for (y, row) in list.rows.iter().enumerate() {
+            let above = y.checked_sub(1).and_then(|y| list.rows.get(y));
+            let below = list.rows.get(y + 1);
+            let versions = (
+                above.map(|r| r.version),
+                row.version,
+                below.map(|r| r.version),
+            );
             if self
                 .rows
                 .get(y)
-                .is_some_and(|done| done.version == row.version)
+                .is_some_and(|done| done.versions == versions)
             {
                 continue;
             }
-            let painted = Rc::new(self.resolve(row, &metrics, glyphs, text));
+            let neighbours = (
+                above.map_or(&[][..], |r| &r.backgrounds[..]),
+                below.map_or(&[][..], |r| &r.backgrounds[..]),
+            );
+            let painted = Rc::new(self.resolve(row, versions, neighbours, &metrics, glyphs, text));
             match self.rows.get_mut(y) {
                 Some(slot) => *slot = painted,
                 None => self.rows.push(painted),
@@ -134,23 +158,32 @@ impl Painter {
         }
     }
 
+    /// Resolve `row`, whose backgrounds and powerline cells reach up or
+    /// down only where `(above, below)` have backgrounds in the same columns.
     fn resolve(
         &mut self,
         row: &RowDraw,
+        versions: (Option<u64>, u64, Option<u64>),
+        (above, below): (&[Span], &[Span]),
         m: &CellMetrics,
         glyphs: &mut GlyphCache,
         text: &WindowTextSystem,
     ) -> PaintedRow {
         let x = |col: u16| f32::from(col) * m.width;
+        let reach = |span: &Span| (span.meets(above), span.meets(below));
         let backgrounds = row
             .backgrounds
             .iter()
             .map(|span| {
-                (
-                    x(span.col),
-                    f32::from(span.cells) * m.width,
-                    hsla(span.color),
-                )
+                let (up, down) = reach(span);
+                let (top, h) = m.reach(up, down);
+                let extent = Extent {
+                    x: x(span.col),
+                    w: f32::from(span.cells) * m.width,
+                    top,
+                    h,
+                };
+                (extent, hsla(span.color))
             })
             .collect();
         let mut out_glyphs = Vec::new();
@@ -189,17 +222,30 @@ impl Painter {
                 }
             }
         }
-        let (device_w, device_h) = (m.width * m.scale, m.height * m.scale);
         let shapes = row
             .shapes
             .iter()
             .map(|cell| {
+                // Powerline caps and arrows end where the backgrounds they
+                // join do; box drawing and blocks always fill the cell.
+                let (up, down) = if shapes::is_powerline(cell.ch) {
+                    reach(&Span {
+                        col: cell.col,
+                        cells: 1,
+                        color: cell.color,
+                    })
+                } else {
+                    (true, true)
+                };
+                let (top, h) = m.reach(up, down);
                 let drawn = self
                     .shapes
-                    .entry(cell.ch)
-                    .or_insert_with(|| shapes::shapes(cell.ch, device_w, device_h).into())
+                    .entry((cell.ch, up, down))
+                    .or_insert_with(|| {
+                        shapes::shapes(cell.ch, m.width * m.scale, h * m.scale).into()
+                    })
                     .clone();
-                (cell.col, drawn, hsla(cell.color))
+                (cell.col, top, drawn, hsla(cell.color))
             })
             .collect();
         let mut lines = Vec::new();
@@ -247,7 +293,7 @@ impl Painter {
             }
         }
         PaintedRow {
-            version: row.version,
+            versions,
             backgrounds,
             glyphs: out_glyphs,
             shapes,
@@ -263,9 +309,9 @@ pub fn paint(frame: &PaneFrame, origin: Point<Pixels>, window: &mut Window) {
     let top = |y: usize| origin.y + px(y as f32 * m.height);
     let cell = |x: f32, y: usize| point(origin.x + px(x), top(y));
     for (y, row) in frame.rows.iter().enumerate() {
-        for &(x, w, color) in &row.backgrounds {
+        for &(Extent { x, w, top, h }, color) in &row.backgrounds {
             window.paint_quad(fill(
-                Bounds::new(cell(x, y), size(px(w), px(m.height))),
+                Bounds::new(cell(x, y) + point(px(0.0), px(top)), size(px(w), px(h))),
                 color,
             ));
         }
@@ -310,9 +356,9 @@ pub fn paint(frame: &PaneFrame, origin: Point<Pixels>, window: &mut Window) {
         _ => color,
     };
     for (y, row) in frame.rows.iter().enumerate() {
-        for &(col, ref drawn, color) in &row.shapes {
+        for &(col, shape_top, ref drawn, color) in &row.shapes {
             let color = under(y, col, color);
-            let at = cell(f32::from(col) * m.width, y);
+            let at = cell(f32::from(col) * m.width, y) + point(px(0.0), px(shape_top));
             paint_shapes(drawn, at, m.scale, color, window);
         }
         let baseline = top(y) + px(m.baseline);

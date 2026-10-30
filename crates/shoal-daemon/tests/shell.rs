@@ -278,3 +278,20 @@ fn native_prompt_gets_live_status_duration_jobs_and_size_after_user_hooks() {
         assert!(args.contains("--jobs\n1\n"), "{shell}: {args}");
     }
 }
+
+#[test]
+fn native_prompts_after_the_first_leave_a_blank_line_above() {
+    for shell in ["bash", "zsh"] {
+        let rc = "SHOAL_BIN=\"$HOME/prompt-fixture\"\n";
+        let mut sh = Shell::start(shell, "native", "auto", rc, false);
+        sh.ready("native>");
+        let first = sh.screen();
+        assert!(first.starts_with("native>"), "{shell}: {first:?}");
+        sh.round("echo out", 0);
+        eventually("a blank line before the next prompt", || {
+            sh.screen().contains("\nout\n\nnative>").then_some(())
+        });
+        // The previous prompt's line keeps no extra blank line of its own.
+        assert!(sh.screen().starts_with("native> echo out\n"), "{shell}");
+    }
+}

@@ -45,6 +45,16 @@ pub struct Span {
     pub color: Color,
 }
 
+impl Span {
+    /// Whether any of these columns also has one of `row`'s spans: a
+    /// background directly above or below meets this one.
+    pub fn meets(&self, row: &[Span]) -> bool {
+        let end = self.col + self.cells;
+        row.iter()
+            .any(|other| other.col < end && self.col < other.col + other.cells)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunKind {
     /// One character per column; spaces draw nothing.

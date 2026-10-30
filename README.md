@@ -26,7 +26,7 @@ to drive it.
 
 ## Development
 
-Milestone 1 is being built task by task (`docs/spec/tasks.md`; T00–T46 done, T47 next). `AGENTS.md` has the canonical check command and the agent runbook (`docs/agent-env.md`, `docs/flakes.md`).
+Milestone 1 is being built task by task; see [the task list](docs/spec/tasks.md) for current status. [AGENTS.md](AGENTS.md) has the canonical check command and links to the agent runbook and known flakes. Use that command for the full check in an agent environment.
 
 ```sh
 mise exec -- just check        # fmt, clippy -D warnings, tests, dependency gates
@@ -37,18 +37,14 @@ mise exec -- just dev-gui
 
 The development launchers share `target/dev-env/` within this checkout, with
 isolated `HOME` and XDG folders. They preserve the real Wayland socket and tool
-stores. These skeleton binaries currently exit immediately. No production
-Shoal state or socket is used.
+stores. No production Shoal state or socket is used.
 
 `deny.toml` enforces the M1 crate edges and the exclusive GPUI/Ghostty wrappers.
 `scripts/check-boundaries.sh` covers protocol/tokio and testkit dependency-kind
 rules. The deny gate checks dependency bans; a full license/advisory/source
-policy is not part of this scaffold. The GPUI/Ghostty pins are declared but not
-linked into the empty crates; Cargo's unused-patch and deny's unused-wrapper
-warnings are expected until those dependencies are used.
+policy is not part of this gate.
 
 `mise exec -- just fuzz-proto` runs `cargo +nightly fuzz run frame_decoder`.
-T04 supplies that target and its `fuzz/Cargo.toml`; it cannot run before then.
 Normal workspace checks use stable Rust, not nightly.
 
 ## Reference sources

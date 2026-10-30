@@ -7,12 +7,14 @@ use shoal_config::Palette;
 
 use crate::{chrome::Color, fonts, view::rgba};
 
-/// Codicons `warning`, `arrow-down`, `search` and `add`, from the bundled
-/// symbols font.
+/// Codicons `warning`, `arrow-down`, `search`, `add`, `edit` and `close`,
+/// from the bundled symbols font.
 pub const WARNING_GLYPH: &str = "\u{ea6c}";
 pub const DOWN_GLYPH: &str = "\u{ea9a}";
 pub const SEARCH_GLYPH: &str = "\u{ea6d}";
 pub const ADD_GLYPH: &str = "\u{ea60}";
+pub const EDIT_GLYPH: &str = "\u{ea73}";
+pub const CLOSE_GLYPH: &str = "\u{ea76}";
 
 /// The colors controls are drawn in, from the palette.
 #[derive(Debug, Clone, Copy)]

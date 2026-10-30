@@ -112,20 +112,17 @@ fn chrome_of(active_tab: &str, width: u32, height: u32) -> Chrome {
 fn the_top_bar_shows_the_session_and_its_tabs() {
     let chrome = chrome_of("t2", 800, 600);
     assert_eq!(chrome.title, "work — Shoal");
-    assert_eq!(
-        chrome.bar,
-        Color {
-            rgb: TOP_BAR,
-            alpha: 0.5
-        }
-    );
+    // The bar has no fill of its own: it is part of the glass frame.
+    let frame = glass(&palette(), &window());
+    assert_eq!(frame.rgb, TOP_BAR);
+    assert!((frame.alpha - 0.6).abs() < 0.001, "{frame:?}");
     assert_eq!(chrome.chip.name, "work");
     assert_eq!(chrome.chip.text, Color::opaque(ACCENT));
     assert_eq!(
         chrome.chip.hover,
         Color {
             rgb: LIGHTER,
-            alpha: 0.5
+            alpha: 0.6
         }
     );
     assert_eq!(
@@ -153,7 +150,14 @@ fn the_top_bar_shows_the_session_and_its_tabs() {
     );
     assert_eq!(active.bell, None);
     assert_eq!(active.glyph, Glyph::Terminal);
-    assert_eq!(ringing.text, Color::opaque(INACTIVE));
+    // Inactive tabs stay readable on the glass, as Tern's do.
+    assert_eq!(
+        ringing.text,
+        Color {
+            rgb: FOREGROUND,
+            alpha: 0.8
+        }
+    );
     assert_eq!(ringing.fill, None);
     assert_eq!(ringing.bell, Some(Color::opaque(ACCENT)));
     assert_eq!(zoomed.glyph, Glyph::Zoomed);
@@ -164,9 +168,10 @@ fn split_panes_fill_the_padded_area_and_the_focused_one_is_marked() {
     // 800 × 600 less 8 px padding is 784 × 584 at (8, 8). The 6 px gap leaves
     // 778 px to split evenly: 389 each, the second starting at 8 + 389 + 6.
     let chrome = chrome_of("t2", 800, 600);
+    // The layer alphas themselves are checked against worked examples below.
     let fill = Color {
         rgb: BACKGROUND,
-        alpha: 0.5,
+        alpha: surface_alphas(0.88).1,
     };
     let boxes: Vec<_> = chrome
         .panes
@@ -250,7 +255,7 @@ fn one_visible_pane_has_no_focus_line() {
 #[test]
 fn window_settings_change_the_boxes() {
     let config = WindowConfig {
-        opacity: 0.5,
+        opacity: 1.0,
         padding: 0,
         gap: 10,
         radius: 4,
@@ -271,11 +276,10 @@ fn window_settings_change_the_boxes() {
     assert_eq!(
         boxes,
         [
-            (rect(0, 0, 100, 100), 4.0, 0.5),
-            (rect(110, 0, 100, 100), 4.0, 0.5)
+            (rect(0, 0, 100, 100), 4.0, 1.0),
+            (rect(110, 0, 100, 100), 4.0, 1.0)
         ]
     );
-    assert_eq!(chrome.bar.alpha, 0.5);
 }
 
 #[test]
@@ -359,13 +363,13 @@ fn an_exited_pane_reserves_its_footer_below_the_grid() {
 
 #[test]
 fn glass_and_pane_layers_preserve_the_requested_effective_opacity() {
-    // Independent transmission examples: 24% through the glass, half of
-    // that through the pane, leaves 12% wallpaper at the default 88%.
+    // Worked examples: at the default 88%, the frame's glass is 0.88⁴ ≈ 0.6
+    // (Tern's measured frame tint), passing 40% of the wallpaper; the pane
+    // passes 30% of that, leaving 12% through a pane.
     for (opacity, glass_alpha, pane_alpha) in [
         (0.0, 0.0, 0.0),
-        (0.25, 0.0, 0.25),
-        (0.5, 0.0, 0.5),
-        (0.88, 0.76, 0.5),
+        (0.5, 0.0625, 0.466_666_7),
+        (0.88, 0.599_695_4, 0.700_228_3),
         (1.0, 1.0, 1.0),
     ] {
         let window = WindowConfig {
@@ -381,7 +385,6 @@ fn glass_and_pane_layers_preserve_the_requested_effective_opacity() {
         )
         .unwrap();
         assert!((glass(&palette(), &window).alpha - glass_alpha).abs() < 1e-6);
-        assert!((chrome.bar.alpha - pane_alpha).abs() < 1e-6);
         for pane in chrome.panes {
             assert!((pane.fill.alpha - pane_alpha).abs() < 1e-6);
             let transmission = (1.0 - glass_alpha) * (1.0 - pane.fill.alpha);
@@ -395,10 +398,9 @@ fn polished_split_chrome() {
     use std::fmt::Write as _;
     let chrome = chrome_of("t2", 800, 600);
     let mut out = format!(
-        "{}\nglass {:?}\nbar {:?}\nchip {:?}\nrule {:?}\n",
+        "{}\nglass {:?}\nchip {:?}\nrule {:?}\n",
         chrome.title,
         glass(&palette(), &window()),
-        chrome.bar,
         chrome.chip,
         chrome.rule
     );

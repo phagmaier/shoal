@@ -25,11 +25,14 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
 - The window shows the session's tabs in the top bar and its panes in their
   boxes, with the terminal content drawn live (T40, T41). The active tab is a
   highlighted pill. Panes have clean tops with no grips or reserved header
-  space. A faint edge and soft top line mark the focused pane of a split. The window has one tinted glass surface, including its gaps
-  and padding. Tabs, cards, banners and tooltips use proportional UI text (T49).
-- Terminal rows use an airy `font.line_height = 1.4` by default. Explicit cell
-  backgrounds are solid and meet across rows for TUIs. `window.opacity` controls
-  the combined pane opacity; 1.0 makes the entire window opaque.
+  space. A faint edge and soft top line mark the focused pane of a split. The top bar,
+  gaps and padding form one lighter glass frame around darker pane cards. Tabs,
+  cards, banners and tooltips use proportional UI text (T49).
+- Terminal text defaults to 10 pt with an airy `font.line_height = 1.4`.
+  Explicit cell backgrounds are solid. Stacked background rows meet for TUIs,
+  while a lone row, like a prompt segment, is a pill around its text. The native
+  prompt leaves a blank line after each command's output. `window.opacity`
+  controls the combined pane opacity; 1.0 makes the entire window opaque.
 - Panes follow the window's size, including fullscreen (T43).
 - With the mouse (T43): click a tab to switch to it, middle-click to close it,
   double-click to rename it (Enter keeps the name, Escape cancels, an empty name
@@ -52,8 +55,9 @@ Milestone 1 is being built task by task (`docs/spec/tasks.md`). Right now:
   live. The switcher always confirms a session close and adds running-program
   details when that setting is enabled. Closing a window still only detaches it.
 - Ctrl+Shift+S or the session chip opens the centered session switcher. Type to
-  filter, use arrows and Enter to choose, F2 to rename, Ctrl+Backspace to close,
-  and Escape to dismiss. The list scrolls in short windows; hints wrap in narrow ones.
+  filter, use arrows and Enter to choose, F2 or the row's pencil to rename,
+  Ctrl+Backspace or its × to close, and Escape to dismiss. The list scrolls in
+  short windows; hints wrap in narrow ones.
 - A shell that starts then fails with a nonzero exit code within one second
   stays visible with its error output, exit status and a **Close pane** button.
   This also labels panes retained by `behavior.close_pane_on_exit = false`.

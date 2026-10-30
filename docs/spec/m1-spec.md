@@ -13,7 +13,7 @@ Milestone 1 delivers a terminal you can use every day: one window per Hyprland t
 
 **Not in milestone 1** (each lands in the milestone named in `decisions.md`)
 
-- Command palette, notifications, scrollback search, settings screen, theme picker, layout presets, drag-to-rearrange and the pane drag handle (M2).
+- Command palette, notifications, scrollback search, settings screen, theme picker, layout presets, drag-to-rearrange and a draggable pane handle (M2).
 - Showing inline images. libghostty already parses them; drawing them waits for M2.
 - Agent panes, remote hosts, git palette actions, the Markdown pane, orchestration (M3 to M7).
 - Everything on the vision's "explicitly not building" list, permanently.
@@ -518,8 +518,8 @@ A GPUI window with `app_id` `dev.shoal.Shoal`, title `<session> — Shoal`, a tr
 
 Sizes are logical pixels before scaling.
 
-- **Glass surface.** The whole window, including gaps and padding, is tinted with `darker_background`. For opacity `o`, the glass alpha is `max(0, 2o - 1)` and the pane/bar layer alpha is `(o - glass) / (1 - glass)`; at `o = 1`, both are opaque. At the default 0.88, glass is 0.76 and the second layer is 0.5, preserving 0.88 combined pane opacity. Hyprland supplies blur.
-- **Top bar, 34 px.** Fill `darker_background` over the glass at the pane layer alpha. Left: the session chip, a session glyph and the session name in `accent` (click or Ctrl+Shift+S for the switcher), then a short divider. Then the tabs: a terminal glyph and the title, at most 200 px with an ellipsis. Active tab: `accent` text on a rounded `accent` pill at 16% alpha; inactive: `dark_foreground`; a ringing tab gets a small `accent` dot. A `+` button follows the tabs. Right: split-right and split-down buttons. Every button's tooltip shows its shortcut as key caps.
+- **Glass surface.** The whole window is tinted with `darker_background`; the top bar, gaps and padding show only this glass, a lighter frame around darker pane cards. For opacity `o`, the glass alpha is `o⁴` and the pane layer alpha is `(o - glass) / (1 - glass)`; at `o = 1`, both are opaque. At the default 0.88, glass is about 0.60 (the frame tint measured in the Tern reference) and the pane layer about 0.70, preserving 0.88 combined pane opacity. Hyprland supplies blur.
+- **Top bar, 34 px.** No fill of its own: it sits on the glass frame. Left: the session chip, a session glyph and the session name in `accent` (click or Ctrl+Shift+S for the switcher), then a short divider. Then the tabs: a terminal glyph and the title, at most 200 px with an ellipsis. Active tab: `accent` text on a rounded `accent` pill at 16% alpha; inactive tabs and the bar's buttons: `foreground` at 80%; a ringing tab gets a small `accent` dot. A `+` button follows the tabs. Right: split-right and split-down buttons. Every button's tooltip shows its shortcut as key caps.
 - **Pane area.** 8 px padding (`window.padding`), 6 px between panes (`window.gap`). Each pane is a rounded rectangle (10 px radius) filled with `background` over the glass at the pane layer alpha, with a 6 px grid inset on every side and no pane-top controls or reserved header space.
 - **Focus.** The focused pane of a split has a faint 1 px `accent` outline at 34% alpha and a 1.5 px line on its top edge, fading linearly from 70% alpha at the centre to transparent before the rounded corners. Other panes, including lone or zoomed panes, have no focus marks.
 - **Zoom.** The zoomed pane fills the pane area, and its tab shows a zoom glyph.
@@ -529,7 +529,7 @@ Sizes are logical pixels before scaling.
 **Chrome details (T40, 2026-10-25).** `shoal-gui`'s `chrome` module turns the workspace into the title, top bar and pane boxes; the view only paints them.
 
 - A tab's label is its name, otherwise its focused pane's title. A tab rings when any of its panes has `bell`. The glyphs are Octicons `terminal` (U+F489) and, for a zoomed tab, `screen-full` (U+F50C), from the bundled symbols font, which T40 embeds (settled with the user).
-- Chrome text uses the installed proportional Noto Sans face: 13 px for the bar, banners and cards, 12 px for tooltips and key caps (T49). Terminal text, including input-method preedit, stays in `font.family`. The symbols font still supplies icons. No new config key or bundled UI font is added.
+- Chrome text uses the installed proportional Noto Sans face: 13 px for the bar, banners and cards, 16 px for the switcher's search row, 12 px for tooltips and key caps (T49). Terminal text, including input-method preedit, stays in `font.family`. The symbols font still supplies icons. No new config key or bundled UI font is added.
 - When only one pane is in view (a one-pane tab, or a zoomed pane), it has no focus line.
 - Pane boxes fill the pane area less `window.padding`, split by `rects` with `window.gap`. A window smaller than its padding draws empty boxes.
 - T43 adds the `+` and split buttons, and all clicking.
@@ -548,7 +548,7 @@ Sizes are logical pixels before scaling.
 - *Top bar:* the Tern-style active tab above replaces T40's underline. The chip's glyph is Codicons `layers` (U+EBD2); the chip, tabs and buttons are 24 px tall, and an inactive tab or the chip brightens on hover.
 - *Clean pane tops:* no grips, title strips or reserved top zone. Clicks near the top use the same terminal input and selection behavior as the rest of the pane. The tab strip keeps the zoom glyph and bell dot.
 - *Content area:* the grid, its size, the mouse's cells and the input-method position all use the full box above an exited pane's 30 px footer, with the 6 px inset inside it. The grid paints only over its rows, so the extra row a scrolled view draws below it appears only as it scrolls in.
-- *Cards and bars:* the close bar, banners, the exited-pane footer and the switcher share one look: chrome text, a warning glyph (Codicons `warning`) where something needs attention, key caps followed by what they do (`[Enter] Close  [Esc] Cancel`), and buttons on `lighter_background` that tint `accent` on hover. The close bar is 34 px, like the top bar. The switcher is a centered panel, 640 px wide with 16 px rounded corners and at least 16 px to the window edges. A lightly tinted scrim separates it from the panes. Its search row is 54 px tall, with a search glyph and Esc cap; 42 px session rows show their glyph (a check for Current, `add` for New session), name, tab count and Current / On screen markers. The selected row has a quiet foreground tint and a short `accent` edge; compact key-cap hints sit below. Rows scroll when the window cannot fit the list; hints wrap in narrow windows. Filtering, editing and confirmation keep the existing §7.6 behavior. The exited-pane footer sits inside the box and follows its rounded corners.
+- *Cards and bars:* the close bar, banners, the exited-pane footer and the switcher share one look: chrome text, a warning glyph (Codicons `warning`) where something needs attention, key caps followed by what they do (`[Enter] Close  [Esc] Cancel`), and buttons on `lighter_background` that tint `accent` on hover. The close bar is 34 px, like the top bar. The switcher is a centered panel, 640 px wide with 16 px rounded corners and at least 16 px to the window edges. A lightly tinted scrim separates it from the panes. Its search row is 54 px tall, with 16 px text, a placeholder at 60% `foreground`, a search glyph and Esc cap; 42 px session rows show their glyph (a check for Current, `add` for New session), then the name with its tab count and Current / On screen markers beside it in smaller, dimmer text. The selected row and the row under the pointer show rename and close buttons (Codicons `edit` U+EA73 and `close` U+EA76) at the right; they select that row and start the same edit as F2 and Ctrl+Backspace, including the close confirmation. The selected row has a quiet foreground tint and a short `accent` edge; compact key-cap hints sit below. Rows scroll when the window cannot fit the list; hints wrap in narrow windows. Filtering, editing and confirmation keep the existing §7.6 behavior. The exited-pane footer sits inside the box and follows its rounded corners.
 - *Keys before T42:* the window acts only on the chords bound to `tab.rename` and `pane.zoom`, so zoom can be checked by hand; T42's dispatcher takes over. The rename field takes typed text without input-method composition, which T42 adds.
 
 ### 7.3 Drawing the grid
@@ -556,7 +556,7 @@ Sizes are logical pixels before scaling.
 - **Mirrors.** Each attached pane has a mirror: a `shoal-term` terminal plus exactly one render state. A second render state on the same terminal would consume the first one's dirty flags. New bytes are fed in and a frame is requested; nothing redraws while nothing changes.
 - **Per frame.** Only dirty rows are rebuilt, chosen by the render state's dirty flags: merged background rectangles, text, underline and strike lines, selection, cursor. Clean rows reuse their cached entries. The renderer produces an internal draw list first, so it is testable without a GPU and portable to the fallback toolkit.
 - **Text.** Glyphs are placed cell by cell from a cache keyed by font, style and grapheme. A cell holding one codepoint uses its cached glyph. A cell holding a multi-codepoint grapheme cluster is shaped as one unit. Positions and widths always come from libghostty's cells, never from the shaper. There are no ligatures across cells. Changing font family, size or line height clears the glyph cache and every row cache. The T00 spike measured this design: per-run shaping missed the 4 ms full-redraw target, and cached per-cell glyphs met it (`docs/spike-00.md`).
-- **Colors.** Default-background cells are not painted, so the pane's translucent fill shows. Explicit and inverse backgrounds are solid, covering the full cell height even with extra line spacing, so adjacent background rows in TUIs meet. Dim text is drawn at 60% alpha.
+- **Colors.** Default-background cells are not painted, so the pane's translucent fill shows. Explicit and inverse backgrounds are solid. A background reaches its cell's top or bottom edge only where a background in the row above or below shares a column, so stacked background rows in TUIs meet; otherwise it covers the text height plus 1 px each side, centred in the row, so a lone run such as a prompt segment reads as a pill (T49, settled with the user). Powerline separators and caps (U+E0B0–E0B7) follow the same rule; box drawing and block elements always fill the cell. Dim text is drawn at 60% alpha.
 - **Fonts.** `font.family` (default JetBrains Mono), then the bundled Symbols Nerd Font Mono, then the system emoji font, then system fallback. Wide characters take two cells, as libghostty reports. The bundled font is embedded from Nerd Fonts v3.5.1. It is not under one license: its icon sets carry MIT, CC BY 4.0, OFL 1.1 and Apache 2.0 terms, and one set (Font Logos) has no license at all. T50 settles packaging and attribution (`docs/spike-00.md`, "Font provenance").
 - **Drawn as shapes, not glyphs:** box drawing (U+2500–257F), block elements (U+2580–259F) and powerline separators (U+E0B0–E0B7).
 - **Cursor.** The shape a program asks for, else `cursor.style`; color `cursor.color` (default `accent`). An unfocused pane shows a hollow block.
@@ -714,7 +714,7 @@ The native prompt is a normal shell prompt computed by `shoal prompt` and instal
 - Prompt marks (OSC 133): `A` at prompt start, `B` where input begins, `C` before command output, `D;<exit code>` when it finishes.
 - Reports the directory (OSC 7) at every prompt.
 - Times each command (`EPOCHREALTIME` in bash 5 and zsh).
-- With `prompt.mode = "native"` (default): sets `PS1` (bash) or `PROMPT` (zsh) at every prompt from `shoal prompt`. Existing `PROMPT_COMMAND` and `precmd` hooks still run, first. With `prompt.mode = "shell"`: marks and directory only.
+- With `prompt.mode = "native"` (default): sets `PS1` (bash) or `PROMPT` (zsh) at every prompt from `shoal prompt`. Every native prompt after the shell's first starts with a newline before its `A` mark, leaving a blank line between a command's output and the next prompt, as starship's `add_newline` does (T49, settled with the user). Existing `PROMPT_COMMAND` and `precmd` hooks still run, first. With `prompt.mode = "shell"`: marks and directory only.
 
 **Settled details (T30, 2026-10-25).**
 
@@ -766,7 +766,7 @@ Every key is optional; values below are defaults. Window and daemon watch the fi
 ```toml
 [font]
 family = "JetBrains Mono"   # icons, powerline and box drawing work with any family
-size = 11.0                 # points
+size = 10.0                 # points (13.33 px)
 line_height = 1.4
 
 [window]
@@ -838,11 +838,12 @@ Lookup order: `[theme.colors]` in config, then `shoal.toml` in the active Omarch
 | ANSI 1–6 | `red`, `green`, `yellow`, `blue`, `magenta`, `cyan` |
 | ANSI 9–14 | `bright_red` ... `bright_cyan` |
 | ANSI 7 white · 15 bright white | `foreground` · `bright_foreground` |
-| Window glass and top bar fill | `darker_background` |
+| Window glass (top bar, gaps, padding) | `darker_background` |
 | Focus edge and line, active tab text and pill, session chip, bell dot, prompt character | `accent` |
-| Chrome hairlines, buttons, shared key caps | `lighter_background` |
+| Switcher card, chrome hairlines, buttons, shared key caps | `lighter_background` |
 | Switcher secondary text / rows, hairlines and caps | `foreground` at 90% / low-alpha tints |
-| Inactive tab text, action tooltips, hints | `dark_foreground` |
+| Inactive tab text and top-bar buttons | `foreground` at 80% |
+| Action tooltips, hints | `dark_foreground` |
 
 **Resolution rules (T06, settled 2026-10-25).** These follow Omarchy's own resolver (`omarchy-theme-color`), so Shoal shows what every other Omarchy app shows.
 

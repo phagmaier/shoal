@@ -7,7 +7,7 @@ Isolated, disposable environment rules for every agent session. `AGENTS.md` poin
 - Never touch real state: no `~/.local/state/shoal`, no real socket, no real config. Use `shoal_testkit::TempEnv` in tests and disposable `HOME` plus every XDG path per child in manual scripts (`scripts/manual/t45.sh` is the model).
 - Fresh sandboxes per task. Do not reuse old saved workspace. Preserve passing guided-result files before a script overwrites them.
 - Build before isolating `HOME`: `CARGO_BUILD_JOBS=8 mise exec -- cargo build --locked --release -p shoal-gui -p shoal-cli -p shoal-daemon --bins --example call`. Release assets need `target/share -> ../share`, as the guided scripts arrange.
-- Required checks run outside the execution sandbox (Unix sockets and PTYs). Use a runtime tmpfs:
+- Required checks need Unix sockets and PTYs and a writable runtime tmpfs. Run them in the sandbox if it permits those capabilities; otherwise use an authorized environment that does. If sandbox policy prevents this, report the blocked checks rather than weakening them. Use:
   ```sh
   mkdir -p /run/user/$(id -u)/shoal-check
   ulimit -c 0

@@ -19,6 +19,8 @@ pub const FOOTER_HEIGHT: u32 = 30;
 const BORDER_ALPHA: f32 = 0.6;
 /// The active tab's pill is `accent` at this alpha.
 const ACTIVE_TAB_ALPHA: f32 = 0.16;
+/// Inactive tabs and the bar's buttons are `foreground` at this alpha.
+pub const QUIET_TEXT_ALPHA: f32 = 0.8;
 
 /// A theme color with the alpha it is drawn at.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,7 +39,6 @@ impl Color {
 pub struct Chrome {
     /// `<session> — Shoal`.
     pub title: String,
-    pub bar: Color,
     pub chip: Chip,
     /// The hairline after the session chip.
     pub rule: Color,
@@ -116,12 +117,13 @@ impl PaneBox {
     }
 }
 
-/// Two layers with the requested combined opacity. Above 0.5, half the
-/// remaining transmission belongs to each layer. At 1 both are opaque.
-/// Below 0.5 the pane keeps all the tint, leaving the glass transparent.
+/// The glass and pane layer alphas, with the requested combined opacity
+/// over the panes. The glass, which alone tints the top bar, gaps and
+/// padding, is the opacity to the fourth power: a lighter frame around
+/// darker pane cards, both opaque at 1.
 pub fn surface_alphas(opacity: f64) -> (f32, f32) {
     let opacity = opacity as f32;
-    let glass = (2.0 * opacity - 1.0).max(0.0);
+    let glass = opacity.powi(4);
     let pane = if glass < 1.0 {
         (opacity - glass) / (1.0 - glass)
     } else {
@@ -130,7 +132,7 @@ pub fn surface_alphas(opacity: f64) -> (f32, f32) {
     (glass, pane)
 }
 
-/// The window-wide tint, including the gaps and padding.
+/// The window-wide tint: the top bar, gaps and padding show only this.
 pub fn glass(palette: &Palette, window: &WindowConfig) -> Color {
     Color {
         rgb: palette.top_bar,
@@ -149,11 +151,6 @@ pub fn chrome(
     (width, height): (u32, u32),
 ) -> Option<Chrome> {
     let session = workspace.sessions.iter().find(|s| s.id == session)?;
-    let opacity = surface_alphas(window.opacity).1;
-    let translucent = |rgb| Color {
-        rgb,
-        alpha: opacity,
-    };
     let tabs = session
         .tabs
         .iter()
@@ -172,11 +169,14 @@ pub fn chrome(
                     Glyph::Terminal
                 },
                 title,
-                text: Color::opaque(if active {
-                    palette.accent
+                text: if active {
+                    Color::opaque(palette.accent)
                 } else {
-                    palette.inactive_text
-                }),
+                    Color {
+                        rgb: palette.foreground,
+                        alpha: QUIET_TEXT_ALPHA,
+                    }
+                },
                 fill: active.then_some(Color {
                     rgb: palette.accent,
                     alpha: ACTIVE_TAB_ALPHA,
@@ -198,11 +198,13 @@ pub fn chrome(
         .unwrap_or_default();
     Some(Chrome {
         title: format!("{} — Shoal", session.name),
-        bar: translucent(palette.top_bar),
         chip: Chip {
             name: session.name.clone(),
             text: Color::opaque(palette.accent),
-            hover: translucent(palette.unfocused_border),
+            hover: Color {
+                rgb: palette.unfocused_border,
+                alpha: BORDER_ALPHA,
+            },
         },
         rule: Color {
             rgb: palette.unfocused_border,

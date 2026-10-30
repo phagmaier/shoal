@@ -34,7 +34,26 @@ pub struct CellMetrics {
     pub strike: f32,
     /// Underline and strike thickness.
     pub thickness: f32,
+    /// A background with no background above or below it covers only this
+    /// band: the text plus 1 px each side, centred in the row (§7.3).
+    pub band_top: f32,
+    pub band_height: f32,
     pub scale: f32,
+}
+
+impl CellMetrics {
+    /// The top and height a background or powerline cell covers: it
+    /// reaches the cell's top or bottom edge only where another background
+    /// meets it there, so stacked rows join and a lone row is a pill.
+    pub fn reach(&self, up: bool, down: bool) -> (f32, f32) {
+        let top = if up { 0.0 } else { self.band_top };
+        let bottom = if down {
+            self.height
+        } else {
+            self.band_top + self.band_height
+        };
+        (top, bottom - top)
+    }
 }
 
 /// The font size in logical pixels for `font.size` points.
@@ -64,6 +83,9 @@ pub fn cell_metrics(
     let thickness = snap(font_size / 14.0);
     let underline = snap(baseline + descent / 2.0).min(height - thickness);
     let strike = snap(baseline - ascent * 0.3);
+    let band_height = snap(ascent + descent + 2.0).min(height);
+    // Rounded down, so the band stays inside the cell.
+    let band_top = ((height - band_height) / 2.0 * scale).floor() / scale;
     CellMetrics {
         font_size,
         width,
@@ -72,6 +94,8 @@ pub fn cell_metrics(
         underline,
         strike,
         thickness,
+        band_top,
+        band_height,
         scale,
     }
 }
@@ -175,6 +199,16 @@ mod tests {
         // the 27 px row: (27 - 19.36) / 2 + 14.96 = 18.78.
         let airy = cell_metrics(size, measure, 1.4, 1.0);
         assert_eq!((airy.width, airy.height, airy.baseline), (9.0, 27.0, 19.0));
+        // A lone background covers the 19.36 px text plus 1 px each side,
+        // 21 px, centred in the 27 px row; a neighbour above or below
+        // extends it to that edge.
+        assert_eq!((airy.band_top, airy.band_height), (3.0, 21.0));
+        assert_eq!(airy.reach(false, false), (3.0, 21.0));
+        assert_eq!(airy.reach(true, false), (0.0, 24.0));
+        assert_eq!(airy.reach(false, true), (3.0, 24.0));
+        assert_eq!(airy.reach(true, true), (0.0, 27.0));
+        // Without extra line height the band is the whole 19 px cell.
+        assert_eq!(one.reach(false, false), (0.0, 19.0));
         // Line height scales the row, with the text centred in it.
         let tall = cell_metrics(size, measure, 1.5, 1.0);
         assert_eq!(tall.height, 29.0);

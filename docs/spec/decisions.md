@@ -2,6 +2,8 @@
 
 As of Oct 24, 2026.
 
+This document records dated design rationale and milestone plans. For current M1 behavior, use `m1-spec.md`; for current task status, use `tasks.md`. Historical recommendations and version details here may have changed.
+
 ## Summary
 
 Shoal is three Rust binaries built around one rule: the daemon owns everything, and the window only mirrors it.

@@ -228,3 +228,27 @@ fn explicit_and_inverse_backgrounds_are_solid_while_default_cells_show_the_pane(
     assert_eq!(backgrounds[1].color.alpha, 1.0);
     assert!(list.rows[1].backgrounds.is_empty());
 }
+
+#[test]
+fn backgrounds_meet_only_where_rows_share_columns() {
+    // A two-row panel at columns 2–5, then a lone prompt-like run below a
+    // blank row, and a run that only touches the panel's corner diagonally.
+    let mut terminal = Terminal::new(10, 5, 100).unwrap();
+    let bg = "\x1b[48;2;10;20;30m";
+    terminal.feed(
+        format!(
+            "  {bg}abcd\x1b[0m\r\n  {bg}efgh\x1b[0m\r\n\r\n{bg}pill\x1b[0m\r\n      {bg}x\x1b[0m"
+        )
+        .as_bytes(),
+    );
+    let list = Builder::default()
+        .build(&mut terminal, &settings(true))
+        .unwrap();
+    let row = |y: usize| &list.rows[y].backgrounds;
+    assert!(row(0)[0].meets(row(1)), "stacked panel rows join");
+    assert!(row(1)[0].meets(row(0)));
+    assert!(!row(1)[0].meets(row(2)), "nothing below the panel");
+    assert!(!row(3)[0].meets(row(2)) && !row(3)[0].meets(row(4)));
+    // Columns 0–3 above column 6: no shared column, so no join.
+    assert!(!row(4)[0].meets(row(3)));
+}
